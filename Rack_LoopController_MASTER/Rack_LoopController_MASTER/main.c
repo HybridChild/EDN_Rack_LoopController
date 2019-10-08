@@ -24,17 +24,6 @@ int main(void)
 	Init_IO_Expanders();
 	System_Init();
 	
-	/* Check button for MIDI channel select */
-	if ( GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK )
-	{
-		unsigned char done = 0;
-		
-		while (!done)
-		{
-			
-		}
-	}
-	
     /* Main loop */
     while (1) 
     {

@@ -26,6 +26,10 @@ void UI_Write_7seg_Display(short val)
 	{
 		SP10281_WriteChar('o', 'u', 't', 0, 0, 0);
 	}
+	else if (val == UI_WRITE_7SEG_OMN)
+	{
+		SP10281_WriteChar('o', 'm', 'n', 0, 0, 0);
+	}
 	else
 	{
 		SP10281_WriteNumber(val);

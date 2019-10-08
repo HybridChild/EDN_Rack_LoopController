@@ -12,8 +12,13 @@
 #define NUMBER_OF_PRESETS			  8
 
 #define MIDI_CC_OFF					0xFF
+#define MIDI_CH_MAX					16
+#define MIDI_CH_OMNI				0
 
 enum SystemState {
+	EDIT_MIDI_CHANNEL,
+	STARTUP,
+	ENTER_RUN_PRESET_CTRL,
 	RUN_PRESET_CTRL,
 	RUN_LOOP_CTRL,
 	TUNER,
@@ -38,7 +43,7 @@ enum SystemPreset {
 enum System_UI_Mode {
 	MODE_RUN			= 0,
 	MODE_EDIT_LOOPS_SW	= 1,
-	MODE_EDIT_MIDI_CC	= 2
+	MODE_EDIT_MIDI		= 2
 	};
 	
 enum System_SetMIDI_Edit {
@@ -59,25 +64,12 @@ volatile enum SystemState Next_SystemState;
 volatile enum SystemPreset sysPreset;
 volatile enum System_UI_Mode sysUI_Mode;
 volatile Preset PresetTable[8];
+volatile unsigned char sysMIDI_Channel;
 
 void System_Init()
 {
 	Present_SystemState = RUN_PRESET_CTRL;
-	Next_SystemState = RUN_PRESET_CTRL;
-	sysPreset = PRESET_1;
-	sysUI_Mode = MODE_RUN;
-	
-	eeprom_read_block((void*)PresetTable, (void*)EEPROM_PRESETS_BASE_ADDR, PRESET_BYTE_SIZE * NUMBER_OF_PRESETS);
-	
-	UI_Write_7seg_Display((short)(sysPreset + 1));
-	UI_Update_Preset_Loop_LEDs(PresetTable[sysPreset].Active_Loops);
-	UI_Update_SW_Ctrl_LEDs(PresetTable[sysPreset].Active_SW_Ctrl);
-	UI_Update_Mode_LEDs((unsigned char)sysUI_Mode);
-	
-	UI_UserAction_TimoutFlag = 0;
-	UI_MarkSelection_TimoutFlag = 0;
-	
-	// Send preset data to pedal
+	Next_SystemState = STARTUP;
 }
 
 void System_Run()
@@ -102,6 +94,100 @@ void System_Run()
 		
 		switch (Present_SystemState)
 		{
+			case STARTUP:
+				/* Check button for MIDI channel select */
+				if ( GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK )
+				{
+					Next_SystemState = EDIT_MIDI_CHANNEL;
+					sysUI_Mode = MODE_EDIT_MIDI;
+					UI_MarkSelection_OvfCnt = 1;
+				}
+				else
+				{
+					Next_SystemState = ENTER_RUN_PRESET_CTRL;
+					sysUI_Mode = MODE_RUN;
+				}
+				
+				eeprom_read_block((void*)PresetTable, (void*)EEPROM_PRESETS_BASE_ADDR, PRESET_BYTE_SIZE * NUMBER_OF_PRESETS);
+				sysMIDI_Channel = eeprom_read_byte((uint8_t*)EEPROM_MIDI_CH_ADDR);
+				
+				if (sysMIDI_Channel > MIDI_CH_MAX)
+				{
+					sysMIDI_Channel = MIDI_CH_OMNI;
+					eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, sysMIDI_Channel);
+				}
+				
+				sysPreset = PRESET_1;
+				UI_UserAction_TimoutFlag = 0;
+				UI_MarkSelection_TimoutFlag = 0;
+						
+				// Send preset data to pedal
+				break;
+			case EDIT_MIDI_CHANNEL:
+				if (UI_MarkSelection_TimoutFlag)
+				{
+					UI_MarkSelection_TimoutFlag = 0;
+									
+					if (Blink_var)
+					{
+						Blink_var = 0;
+						UI_Update_Mode_LEDs(UI_MODE_LEDS_OFF);
+					}
+					else
+					{
+						Blink_var = 1;
+						UI_Update_Mode_LEDs(sysUI_Mode);
+					}
+									
+					UI_MarkSelection_OvfCnt = 1;
+				}
+				
+				if (RotEnc_State == SHORT_PRESS)
+				{
+				}
+				else if (RotEnc_State == LONG_PRESS)
+				{
+					eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, sysMIDI_Channel);
+					UI_MarkSelection_OvfCnt = 0;
+					Next_SystemState = ENTER_RUN_PRESET_CTRL;
+				}
+				else if (RotEnc_State == ROT_RIGHT)
+				{
+					if (sysMIDI_Channel < MIDI_CH_MAX)
+					{
+						sysMIDI_Channel++;
+					}
+				}
+				else if (RotEnc_State == ROT_LEFT)
+				{
+					if (sysMIDI_Channel > MIDI_CH_OMNI)
+					{
+						sysMIDI_Channel--;
+					}
+				}
+				
+				if (sysMIDI_Channel == MIDI_CH_OMNI)
+				{
+					UI_Write_7seg_Display(UI_WRITE_7SEG_OMN);
+				}
+				else
+				{
+					UI_Write_7seg_Display((short)sysMIDI_Channel);
+				}
+				
+				RotEnc_State = IDLE;
+				RotaryEncoder_EnableInterrupt();
+				
+				break;
+			case ENTER_RUN_PRESET_CTRL:
+				sysUI_Mode = MODE_RUN;
+				UI_Write_7seg_Display((short)(sysPreset + 1));
+				UI_Update_Preset_Loop_LEDs(PresetTable[sysPreset].Active_Loops);
+				UI_Update_SW_Ctrl_LEDs(PresetTable[sysPreset].Active_SW_Ctrl);
+				UI_Update_Mode_LEDs((unsigned char)sysUI_Mode);
+				Next_SystemState = RUN_PRESET_CTRL;
+				
+				break;
 			case RUN_PRESET_CTRL:
 				if (UI_UserAction_TimoutFlag)
 				{
@@ -186,7 +272,7 @@ void System_Run()
 					{
 						Next_SystemState = ENTER_EDIT_LOOPS_SW;
 					}
-					else if (TempSelect_UI_Mode == MODE_EDIT_MIDI_CC)
+					else if (TempSelect_UI_Mode == MODE_EDIT_MIDI)
 					{
 						Next_SystemState = ENTER_EDIT_MIDI_CC;
 					}
@@ -199,7 +285,7 @@ void System_Run()
 				}
 				else if (RotEnc_State == ROT_RIGHT)
 				{
-					if (TempSelect_UI_Mode < MODE_EDIT_MIDI_CC)
+					if (TempSelect_UI_Mode < MODE_EDIT_MIDI)
 					{
 						TempSelect_UI_Mode++;
 						UI_Update_Mode_LEDs(TempSelect_UI_Mode);
