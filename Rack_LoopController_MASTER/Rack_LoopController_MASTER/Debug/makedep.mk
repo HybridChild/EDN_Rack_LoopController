@@ -8,6 +8,10 @@ main.c
 
 MCP23017.c
 
+MIDI.c
+
+PedalCom.c
+
 RotaryEncoder.c
 
 SP10281_3x7segment.c
@@ -15,6 +19,8 @@ SP10281_3x7segment.c
 System.c
 
 Timer.c
+
+UART.c
 
 User_Interface.c
 

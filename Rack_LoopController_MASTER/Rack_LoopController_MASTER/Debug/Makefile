@@ -40,10 +40,13 @@ C_SRCS +=  \
 ../i2cmaster.c \
 ../main.c \
 ../MCP23017.c \
+../MIDI.c \
+../PedalCom.c \
 ../RotaryEncoder.c \
 ../SP10281_3x7segment.c \
 ../System.c \
 ../Timer.c \
+../UART.c \
 ../User_Interface.c \
 ../Util.c
 
@@ -58,10 +61,13 @@ OBJS +=  \
 i2cmaster.o \
 main.o \
 MCP23017.o \
+MIDI.o \
+PedalCom.o \
 RotaryEncoder.o \
 SP10281_3x7segment.o \
 System.o \
 Timer.o \
+UART.o \
 User_Interface.o \
 Util.o
 
@@ -69,10 +75,13 @@ OBJS_AS_ARGS +=  \
 i2cmaster.o \
 main.o \
 MCP23017.o \
+MIDI.o \
+PedalCom.o \
 RotaryEncoder.o \
 SP10281_3x7segment.o \
 System.o \
 Timer.o \
+UART.o \
 User_Interface.o \
 Util.o
 
@@ -80,10 +89,13 @@ C_DEPS +=  \
 i2cmaster.d \
 main.d \
 MCP23017.d \
+MIDI.d \
+PedalCom.d \
 RotaryEncoder.d \
 SP10281_3x7segment.d \
 System.d \
 Timer.d \
+UART.d \
 User_Interface.d \
 Util.d
 
@@ -91,10 +103,13 @@ C_DEPS_AS_ARGS +=  \
 i2cmaster.d \
 main.d \
 MCP23017.d \
+MIDI.d \
+PedalCom.d \
 RotaryEncoder.d \
 SP10281_3x7segment.d \
 System.d \
 Timer.d \
+UART.d \
 User_Interface.d \
 Util.d
 
@@ -133,6 +148,20 @@ LINKER_SCRIPT_DEP+=
 	@echo Finished building: $<
 	
 
+./MIDI.o: .././MIDI.c
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU C Compiler : 5.4.0
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\include"  -O1 -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g2 -Wall -mmcu=atmega324pa -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\gcc\dev\atmega324pa" -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
+./PedalCom.o: .././PedalCom.c
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU C Compiler : 5.4.0
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\include"  -O1 -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g2 -Wall -mmcu=atmega324pa -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\gcc\dev\atmega324pa" -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
 ./RotaryEncoder.o: .././RotaryEncoder.c
 	@echo Building file: $<
 	@echo Invoking: AVR/GNU C Compiler : 5.4.0
@@ -155,6 +184,13 @@ LINKER_SCRIPT_DEP+=
 	
 
 ./Timer.o: .././Timer.c
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU C Compiler : 5.4.0
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\include"  -O1 -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g2 -Wall -mmcu=atmega324pa -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\gcc\dev\atmega324pa" -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
+./UART.o: .././UART.c
 	@echo Building file: $<
 	@echo Invoking: AVR/GNU C Compiler : 5.4.0
 	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\include"  -O1 -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -g2 -Wall -mmcu=atmega324pa -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\Atmel\ATmega_DFP\1.3.300\gcc\dev\atmega324pa" -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 

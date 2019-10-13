@@ -4,29 +4,26 @@
 #include "System.h"
 #include "User_Interface.h"
 #include "RotaryEncoder.h"
-
-#define EEPROM_MIDI_CH_ADDR			  0
-#define EEPROM_PRESETS_BASE_ADDR	100
+#include "UART.h"
+#include "PedalCom.h"
+#include "MIDI.h"
 
 #define PRESET_BYTE_SIZE			  4
 #define NUMBER_OF_PRESETS			  8
-
-#define MIDI_CC_OFF					0xFF
-#define MIDI_CH_MAX					16
-#define MIDI_CH_OMNI				0
 
 enum SystemState {
 	EDIT_MIDI_CHANNEL,
 	STARTUP,
 	ENTER_RUN_PRESET_CTRL,
 	RUN_PRESET_CTRL,
+	ENTER_RUN_LOOP_CTRL,
 	RUN_LOOP_CTRL,
 	TUNER,
 	EDIT_UI_MODE,
 	ENTER_EDIT_LOOPS_SW,
 	EDIT_LOOPS_SW,
-	ENTER_EDIT_MIDI_CC,
-	EDIT_MIDI_CC,
+	ENTER_EDIT_MIDI_PC,
+	EDIT_MIDI_PC,
 	EDIT_MIDI_IN_OUT };
 
 enum SystemPreset {
@@ -47,24 +44,25 @@ enum System_UI_Mode {
 	};
 	
 enum System_SetMIDI_Edit {
-	MIDI_IN		= UI_WRITE_7SEG_IN,
-	MIDI_OUT	= UI_WRITE_7SEG_OUT
+	MIDI_IN	= UI_WRITE_7SEG_IN,
+	MIDI_OUT = UI_WRITE_7SEG_OUT
 	};
 
 typedef struct Preset
 {
 	unsigned char Active_Loops;
 	unsigned char Active_SW_Ctrl;
-	unsigned char MIDI_CC_in;
-	unsigned char MIDI_CC_out;
+	unsigned char MIDI_PC_in;
+	unsigned char MIDI_PC_out;
 } Preset;
+
+void System_UpdatePreset_UI(enum SystemPreset newPreset);
 
 volatile enum SystemState Present_SystemState;
 volatile enum SystemState Next_SystemState;
 volatile enum SystemPreset sysPreset;
 volatile enum System_UI_Mode sysUI_Mode;
 volatile Preset PresetTable[8];
-volatile unsigned char sysMIDI_Channel;
 
 void System_Init()
 {
@@ -74,21 +72,19 @@ void System_Init()
 
 void System_Run()
 {
-	static Preset TempEdit_Preset = {0, 0, 0};
+	static Preset TempEdit_Preset = {0};
 	static enum SystemPreset TempSelect_Preset = PRESET_1;
 	static enum System_UI_Mode TempSelect_UI_Mode = MODE_RUN;
 	static enum System_SetMIDI_Edit TempSetMIDI_Edit = MIDI_IN;
-	static unsigned char TempSelect_MIDI_CC = MIDI_CC_OFF;
+	static unsigned char TempSelect_MIDI_PC = MIDI_PC_OFF;
 	static unsigned char TempSelect_PresetLoopSW_Ctrl = 0;
 	static unsigned char Blink_var = 0;
-	
 	
 	if (Next_SystemState != Present_SystemState
 		|| (RotEnc_State != IDLE && RotEnc_State != PRESSED)
 		|| UI_UserAction_TimoutFlag
-		|| UI_MarkSelection_TimoutFlag /*
-		|| MIDI_RX_Flag
-		|| Pedal_RX_Flag */)
+		|| UI_MarkSelection_TimoutFlag
+		|| MIDI_PC_Flag)
 	{
 		Present_SystemState = Next_SystemState;
 		
@@ -109,13 +105,6 @@ void System_Run()
 				}
 				
 				eeprom_read_block((void*)PresetTable, (void*)EEPROM_PRESETS_BASE_ADDR, PRESET_BYTE_SIZE * NUMBER_OF_PRESETS);
-				sysMIDI_Channel = eeprom_read_byte((uint8_t*)EEPROM_MIDI_CH_ADDR);
-				
-				if (sysMIDI_Channel > MIDI_CH_MAX)
-				{
-					sysMIDI_Channel = MIDI_CH_OMNI;
-					eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, sysMIDI_Channel);
-				}
 				
 				sysPreset = PRESET_1;
 				UI_UserAction_TimoutFlag = 0;
@@ -181,14 +170,28 @@ void System_Run()
 				break;
 			case ENTER_RUN_PRESET_CTRL:
 				sysUI_Mode = MODE_RUN;
-				UI_Write_7seg_Display((short)(sysPreset + 1));
-				UI_Update_Preset_Loop_LEDs(PresetTable[sysPreset].Active_Loops);
-				UI_Update_SW_Ctrl_LEDs(PresetTable[sysPreset].Active_SW_Ctrl);
 				UI_Update_Mode_LEDs((unsigned char)sysUI_Mode);
+				System_UpdatePreset_UI(sysPreset);
 				Next_SystemState = RUN_PRESET_CTRL;
 				
 				break;
 			case RUN_PRESET_CTRL:
+				if (MIDI_PC_Flag)
+				{
+					enum SystemPreset i = PRESET_1;
+					
+					for (i = 0; i < NUMBER_OF_PRESETS; i++)
+					{
+						if (MIDI_PC_In == PresetTable[i].MIDI_PC_in)
+						{
+							sysPreset = i;
+							System_UpdatePreset_UI(sysPreset);
+						}
+					}
+						
+					MIDI_PC_Flag = 0;
+				}
+			
 				if (UI_UserAction_TimoutFlag)
 				{
 					TempSelect_Preset = sysPreset;
@@ -199,8 +202,14 @@ void System_Run()
 				if (RotEnc_State == SHORT_PRESS)
 				{
 					sysPreset = TempSelect_Preset;
-					UI_Update_Preset_Loop_LEDs(PresetTable[sysPreset].Active_Loops);
-					UI_Update_SW_Ctrl_LEDs(PresetTable[sysPreset].Active_SW_Ctrl);
+					System_UpdatePreset_UI(sysPreset);
+					
+					if (PresetTable[sysPreset].MIDI_PC_out != MIDI_PC_OFF)
+					{
+						MIDI_TransmitProgramChange(PresetTable[sysPreset].MIDI_PC_out);
+					}
+					
+					// Send update to Pedal
 				}
 				else if (RotEnc_State == LONG_PRESS)
 				{
@@ -235,6 +244,9 @@ void System_Run()
 				RotaryEncoder_EnableInterrupt();
 							
 				break;
+			case ENTER_RUN_LOOP_CTRL:	
+				
+				break;
 			case RUN_LOOP_CTRL:
 		
 				break;
@@ -266,7 +278,7 @@ void System_Run()
 					
 					if (TempSelect_UI_Mode == MODE_RUN)
 					{
-						Next_SystemState = RUN_PRESET_CTRL;
+						Next_SystemState = ENTER_RUN_PRESET_CTRL;
 					}
 					else if (TempSelect_UI_Mode == MODE_EDIT_LOOPS_SW)
 					{
@@ -274,7 +286,7 @@ void System_Run()
 					}
 					else if (TempSelect_UI_Mode == MODE_EDIT_MIDI)
 					{
-						Next_SystemState = ENTER_EDIT_MIDI_CC;
+						Next_SystemState = ENTER_EDIT_MIDI_PC;
 					}
 					
 					UI_Update_Mode_LEDs(TempSelect_UI_Mode);
@@ -310,7 +322,7 @@ void System_Run()
 				TempEdit_Preset = PresetTable[sysPreset];
 				TempSelect_PresetLoopSW_Ctrl = 0;
 				
-				UI_Write_7seg_Display((short)sysPreset);
+				UI_Write_7seg_Display((short)sysPreset + 1);
 				UI_Update_Preset_Loop_LEDs(1 << TempSelect_PresetLoopSW_Ctrl);
 				UI_Update_SW_Ctrl_LEDs(0);
 				UI_MarkSelection_OvfCnt = 1;
@@ -394,23 +406,23 @@ void System_Run()
 				RotaryEncoder_EnableInterrupt();
 						
 				break;
-			case ENTER_EDIT_MIDI_CC:
+			case ENTER_EDIT_MIDI_PC:
 				UI_Write_7seg_Display(TempSetMIDI_Edit);
-				Next_SystemState = EDIT_MIDI_CC;
+				Next_SystemState = EDIT_MIDI_PC;
 				break;
-			case EDIT_MIDI_CC:
+			case EDIT_MIDI_PC:
 				if (RotEnc_State == SHORT_PRESS)
 				{
 					if (TempSetMIDI_Edit == MIDI_IN)
 					{
-						TempSelect_MIDI_CC = PresetTable[sysPreset].MIDI_CC_in;
+						TempSelect_MIDI_PC = PresetTable[sysPreset].MIDI_PC_in;
 					}
 					else
 					{
-						TempSelect_MIDI_CC = PresetTable[sysPreset].MIDI_CC_out;
+						TempSelect_MIDI_PC = PresetTable[sysPreset].MIDI_PC_out;
 					}
 					
-					UI_Write_7seg_MIDI_CC(TempSelect_MIDI_CC);
+					UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
 					Next_SystemState = EDIT_MIDI_IN_OUT;
 				}
 				else if (RotEnc_State == LONG_PRESS)
@@ -454,16 +466,16 @@ void System_Run()
 			{
 				if (TempSetMIDI_Edit == MIDI_IN)
 				{
-					PresetTable[sysPreset].MIDI_CC_in = TempSelect_MIDI_CC;
-					eeprom_write_block((void*)&TempSelect_MIDI_CC, (void*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 2), 1);
+					PresetTable[sysPreset].MIDI_PC_in = TempSelect_MIDI_PC;
+					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 2), TempSelect_MIDI_PC);
 				}
 				else
 				{
-					PresetTable[sysPreset].MIDI_CC_out = TempSelect_MIDI_CC;
-					eeprom_write_block((void*)&TempSelect_MIDI_CC, (void*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 3), 1);
+					PresetTable[sysPreset].MIDI_PC_out = TempSelect_MIDI_PC;
+					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 3), TempSelect_MIDI_PC);
 				}
 				
-				Next_SystemState = ENTER_EDIT_MIDI_CC;
+				Next_SystemState = ENTER_EDIT_MIDI_PC;
 			}
 			else if (RotEnc_State == LONG_PRESS)
 			{
@@ -471,25 +483,25 @@ void System_Run()
 			}
 			else if (RotEnc_State == ROT_RIGHT)
 			{
-				if (TempSelect_MIDI_CC != 127)
+				if (TempSelect_MIDI_PC != MIDI_PC_MAX)
 				{
-					TempSelect_MIDI_CC++;
+					TempSelect_MIDI_PC++;
 				}
 				
-				UI_Write_7seg_MIDI_CC(TempSelect_MIDI_CC);
+				UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
 			}
 			else if (RotEnc_State == ROT_LEFT)
 			{
-				if (TempSelect_MIDI_CC > 127 || TempSelect_MIDI_CC == 0)
+				if (TempSelect_MIDI_PC > MIDI_PC_MAX || TempSelect_MIDI_PC == 0)
 				{
-					TempSelect_MIDI_CC = MIDI_CC_OFF;
+					TempSelect_MIDI_PC = MIDI_PC_OFF;
 				}
-				else if (TempSelect_MIDI_CC > 0)
+				else if (TempSelect_MIDI_PC > 0)
 				{
-					TempSelect_MIDI_CC--;
+					TempSelect_MIDI_PC--;
 				}
 								
-				UI_Write_7seg_MIDI_CC(TempSelect_MIDI_CC);
+				UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
 			}
 			
 			RotEnc_State = IDLE;
@@ -501,4 +513,12 @@ void System_Run()
 				break;
 		}
 	}
+}
+
+
+void System_UpdatePreset_UI(enum SystemPreset newPreset)
+{
+	UI_Write_7seg_Display((short)(newPreset + 1));
+	UI_Update_Preset_Loop_LEDs(PresetTable[newPreset].Active_Loops);
+	UI_Update_SW_Ctrl_LEDs(PresetTable[newPreset].Active_SW_Ctrl);
 }

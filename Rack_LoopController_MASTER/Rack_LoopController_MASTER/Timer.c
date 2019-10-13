@@ -18,7 +18,7 @@ void Timer0_Init()
 
 ISR(TIMER0_OVF_vect)
 {
-	Timer0_TickFlag = 1;
+	//Timer0_TickFlag = 1;
 	
 	if (UI_UserAction_OvfCnt)
 	{
