@@ -5,6 +5,7 @@
 #include "RotaryEncoder.h"
 #include "SP10281_3x7segment.h"
 #include "System.h"
+#include "PedalCom.h"
 
 void Timer0_Init()
 {
@@ -19,6 +20,15 @@ void Timer0_Init()
 ISR(TIMER0_OVF_vect)
 {
 	//Timer0_TickFlag = 1;
+	
+	if (PedalCom_OvfCnt)
+	{
+		if (++PedalCom_OvfCnt > PEDAL_COM_TIMEOUT)
+		{
+			PedalCom_TimeoutFlag = 1;
+			PedalCom_OvfCnt = 0;
+		}
+	}
 	
 	if (UI_UserAction_OvfCnt)
 	{

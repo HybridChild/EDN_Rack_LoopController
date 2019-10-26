@@ -9,11 +9,6 @@
 #define F_CPU 20000000UL
 #endif
 
-#define UART0_RECEIVE_INTERRUPT   USART0_RX_vect
-#define UART0_TRANSMIT_INTERRUPT  USART0_UDRE_vect
-#define UART1_RECEIVE_INTERRUPT   USART1_RX_vect
-#define UART1_TRANSMIT_INTERRUPT  USART1_UDRE_vect
-
 /* Size of the circular receive/transmit buffers, must be power of 2 */
 #define UART0_RX_BUFFER_SIZE 32
 #define UART0_TX_BUFFER_SIZE 32
@@ -211,7 +206,7 @@ void UART0_Flush(void)
 Function: UART0 Receive Complete interrupt
 Purpose:  called when the UART has received a character
 **************************************************************************/
-ISR(UART0_RECEIVE_INTERRUPT)
+ISR(USART0_RX_vect)
 {
 	unsigned char tmphead;
 	unsigned char data;
@@ -252,7 +247,7 @@ ISR(UART0_RECEIVE_INTERRUPT)
 Function: UART0 Data Register Empty interrupt
 Purpose:  called when the UART is ready to transmit the next byte
 **************************************************************************/
-ISR(UART0_TRANSMIT_INTERRUPT)
+ISR(USART0_UDRE_vect)
 {
 	unsigned char tmptail;
     
@@ -440,7 +435,7 @@ void UART1_Flush(void)
 Function: UART1 Receive Complete interrupt
 Purpose:  called when the UART has received a character
 **************************************************************************/
-ISR(UART1_RECEIVE_INTERRUPT)
+ISR(USART1_RX_vect)
 {
 	unsigned char tmphead;
 	unsigned char data;
@@ -481,7 +476,7 @@ ISR(UART1_RECEIVE_INTERRUPT)
 Function: UART1 Data Register Empty interrupt
 Purpose:  called when the UART is ready to transmit the next byte
 **************************************************************************/
-ISR(UART1_TRANSMIT_INTERRUPT)
+ISR(USART1_UDRE_vect)
 {
 	unsigned char tmptail;
 	

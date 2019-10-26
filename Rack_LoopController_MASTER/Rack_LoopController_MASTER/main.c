@@ -11,6 +11,7 @@
 #include "System.h"
 #include "UART.h"
 #include "MIDI.h"
+#include "PedalCom.h"
 
 #define PEDAL_UART				0
 #define MIDI_UART				1
@@ -33,6 +34,7 @@ int main(void)
 	
 	Init_IO_Expanders();
 	MIDI_Init();
+	PedalCom_Init();
 	System_Init();
 	
     /* Main loop */
@@ -56,6 +58,18 @@ int main(void)
 		if (UART0_RX_Flag)
 		{
 			UART0_RX_Flag = 0;
+			PedalCom_Receive();
+		}
+		
+		/* If no response from pedal */
+		if (PedalCom_TimeoutFlag)
+		{
+			PedalCom_TimeoutFlag = 0;
+			
+			/* Stop timeout Timer */
+			PedalCom_OvfCnt = 0;
+			
+			PedalCom_Retransmit();
 		}
 		
 		System_Run();

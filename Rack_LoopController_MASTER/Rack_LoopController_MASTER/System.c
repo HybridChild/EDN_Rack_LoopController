@@ -18,6 +18,7 @@ enum SystemState {
 	RUN_PRESET_CTRL,
 	ENTER_RUN_LOOP_CTRL,
 	RUN_LOOP_CTRL,
+	ENTER_TUNER,
 	TUNER,
 	EDIT_UI_MODE,
 	ENTER_EDIT_LOOPS_SW,
@@ -84,7 +85,8 @@ void System_Run()
 		|| (RotEnc_State != IDLE && RotEnc_State != PRESSED)
 		|| UI_UserAction_TimoutFlag
 		|| UI_MarkSelection_TimoutFlag
-		|| MIDI_PC_Flag)
+		|| MIDI_PC_Flag
+		|| PedalCom_CommandReceivedFlag)
 	{
 		Present_SystemState = Next_SystemState;
 		
@@ -109,8 +111,7 @@ void System_Run()
 				sysPreset = PRESET_1;
 				UI_UserAction_TimoutFlag = 0;
 				UI_MarkSelection_TimoutFlag = 0;
-						
-				// Send preset data to pedal
+				
 				break;
 			case EDIT_MIDI_CHANNEL:
 				if (UI_MarkSelection_TimoutFlag)
@@ -131,51 +132,65 @@ void System_Run()
 					UI_MarkSelection_OvfCnt = 1;
 				}
 				
-				if (RotEnc_State == SHORT_PRESS)
+				if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
 				{
-				}
-				else if (RotEnc_State == LONG_PRESS)
-				{
-					eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, sysMIDI_Channel);
-					UI_MarkSelection_OvfCnt = 0;
-					Next_SystemState = ENTER_RUN_PRESET_CTRL;
-				}
-				else if (RotEnc_State == ROT_RIGHT)
-				{
-					if (sysMIDI_Channel < MIDI_CH_MAX)
+					if (RotEnc_State == SHORT_PRESS)
 					{
-						sysMIDI_Channel++;
 					}
-				}
-				else if (RotEnc_State == ROT_LEFT)
-				{
-					if (sysMIDI_Channel > MIDI_CH_OMNI)
+					else if (RotEnc_State == LONG_PRESS)
 					{
-						sysMIDI_Channel--;
+						eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, sysMIDI_Channel);
+						UI_MarkSelection_OvfCnt = 0;
+						Next_SystemState = ENTER_RUN_PRESET_CTRL;
 					}
+					else if (RotEnc_State == ROT_RIGHT)
+					{
+						if (sysMIDI_Channel < MIDI_CH_MAX)
+						{
+							sysMIDI_Channel++;
+						}
+					}
+					else if (RotEnc_State == ROT_LEFT)
+					{
+						if (sysMIDI_Channel > MIDI_CH_OMNI)
+						{
+							sysMIDI_Channel--;
+						}
+					}
+									
+					if (sysMIDI_Channel == MIDI_CH_OMNI)
+					{
+						UI_Write_7seg_Display(UI_WRITE_7SEG_OMN);
+					}
+					else
+					{
+						UI_Write_7seg_Display((short)sysMIDI_Channel);
+					}
+									
+					RotEnc_State = IDLE;
+					RotaryEncoder_EnableInterrupt();
 				}
-				
-				if (sysMIDI_Channel == MIDI_CH_OMNI)
-				{
-					UI_Write_7seg_Display(UI_WRITE_7SEG_OMN);
-				}
-				else
-				{
-					UI_Write_7seg_Display((short)sysMIDI_Channel);
-				}
-				
-				RotEnc_State = IDLE;
-				RotaryEncoder_EnableInterrupt();
 				
 				break;
 			case ENTER_RUN_PRESET_CTRL:
 				sysUI_Mode = MODE_RUN;
 				UI_Update_Mode_LEDs((unsigned char)sysUI_Mode);
 				System_UpdatePreset_UI(sysPreset);
+				
+				/* Update Pedal 7-segments */
+				PedalCom_Update7segments('P', 'r', 'e', ' ');
+				
+				/* Send Preset to pedal */
+				PedalCom_UpdatePresetLoopLEDs((unsigned char)sysPreset);
+				
+				/* Update Tuner LEDs */
+				PedalCom_UpdateTunerLEDs(0, 0);
+				
 				Next_SystemState = RUN_PRESET_CTRL;
 				
 				break;
 			case RUN_PRESET_CTRL:
+				/* Handle incoming MIDI PC */
 				if (MIDI_PC_Flag)
 				{
 					enum SystemPreset i = PRESET_1;
@@ -198,57 +213,122 @@ void System_Run()
 					UI_Write_7seg_Display((short)(TempSelect_Preset + 1));
 					UI_UserAction_TimoutFlag = 0;
 				}
-			
-				if (RotEnc_State == SHORT_PRESS)
+				
+				/* Handle incoming data from pedal */
+				if (PedalCom_CommandReceivedFlag)
 				{
-					sysPreset = TempSelect_Preset;
-					System_UpdatePreset_UI(sysPreset);
+					PedalCom_CommandReceivedFlag = 0;
 					
-					if (PresetTable[sysPreset].MIDI_PC_out != MIDI_PC_OFF)
+					if (PedalCom_CMD_Byte == PEDAL_COM_CMD_SHORT_PRESS)
 					{
-						MIDI_TransmitProgramChange(PresetTable[sysPreset].MIDI_PC_out);
+						unsigned char idx = 0;
+						
+						while (PedalCom_Data_Byte)
+						{
+							PedalCom_Data_Byte >>= 1;
+							idx++;
+						}
+						
+						sysPreset = idx;
+						System_UpdatePreset_UI(sysPreset);
+						
+						if (PresetTable[sysPreset].MIDI_PC_out != MIDI_PC_OFF)
+						{
+							MIDI_TransmitProgramChange(PresetTable[sysPreset].MIDI_PC_out);
+						}
 					}
-					
-					// Send update to Pedal
-				}
-				else if (RotEnc_State == LONG_PRESS)
-				{
-					sysPreset = TempSelect_Preset;
-					UI_Update_Preset_Loop_LEDs(PresetTable[sysPreset].Active_Loops);
-					UI_Update_SW_Ctrl_LEDs(PresetTable[sysPreset].Active_SW_Ctrl);
-					Next_SystemState = EDIT_UI_MODE;
-					UI_MarkSelection_OvfCnt = 1;
-				}
-				else if (RotEnc_State == ROT_RIGHT)
-				{
-					if (TempSelect_Preset < PRESET_8)
+					else if (PedalCom_CMD_Byte == PEDAL_COM_CMD_LONG_PRESS)
 					{
-						TempSelect_Preset++;
+						Next_SystemState = ENTER_RUN_LOOP_CTRL;
 					}
-					
-					UI_Write_7seg_Display((short)(TempSelect_Preset + 1));
-					UI_UserAction_OvfCnt = 1;
-				}
-				else if (RotEnc_State == ROT_LEFT)
-				{
-					if (TempSelect_Preset > PRESET_1)
+					else if (PedalCom_CMD_Byte == PEDAL_COM_CMD_LONG_LONG_PRESS)
 					{
-						TempSelect_Preset--;
+						Next_SystemState = ENTER_TUNER;
 					}
-					
-					UI_Write_7seg_Display((short)(TempSelect_Preset + 1));
-					UI_UserAction_OvfCnt = 1;
 				}
 				
-				RotEnc_State = IDLE;
-				RotaryEncoder_EnableInterrupt();
+				/* Handle input from front panel */
+				if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
+				{
+					if (RotEnc_State == SHORT_PRESS)
+					{
+						sysPreset = TempSelect_Preset;
+						System_UpdatePreset_UI(sysPreset);
+										
+						if (PresetTable[sysPreset].MIDI_PC_out != MIDI_PC_OFF)
+						{
+							MIDI_TransmitProgramChange(PresetTable[sysPreset].MIDI_PC_out);
+						}
+										
+						/* Send update to Pedal */
+						PedalCom_UpdatePresetLoopLEDs((unsigned char)sysPreset);
+					}
+					else if (RotEnc_State == LONG_PRESS)
+					{
+						sysPreset = TempSelect_Preset;
+						UI_Update_Preset_Loop_LEDs(PresetTable[sysPreset].Active_Loops);
+						UI_Update_SW_Ctrl_LEDs(PresetTable[sysPreset].Active_SW_Ctrl);
+						Next_SystemState = EDIT_UI_MODE;
+						UI_MarkSelection_OvfCnt = 1;
+					}
+					else if (RotEnc_State == ROT_RIGHT)
+					{
+						if (TempSelect_Preset < PRESET_8)
+						{
+							TempSelect_Preset++;
+						}
+										
+						UI_Write_7seg_Display((short)(TempSelect_Preset + 1));
+						UI_UserAction_OvfCnt = 1;
+					}
+					else if (RotEnc_State == ROT_LEFT)
+					{
+						if (TempSelect_Preset > PRESET_1)
+						{
+							TempSelect_Preset--;
+						}
+										
+						UI_Write_7seg_Display((short)(TempSelect_Preset + 1));
+						UI_UserAction_OvfCnt = 1;
+					}
+									
+					RotEnc_State = IDLE;
+					RotaryEncoder_EnableInterrupt();
+				}
 							
 				break;
 			case ENTER_RUN_LOOP_CTRL:	
 				
 				break;
 			case RUN_LOOP_CTRL:
-		
+				/* Handle incoming data from pedal */
+				if (PedalCom_CommandReceivedFlag)
+				{
+					PedalCom_CommandReceivedFlag = 0;
+					
+					if (PedalCom_CMD_Byte == PEDAL_COM_CMD_SHORT_PRESS)
+					{
+						
+					}
+					else if (PedalCom_CMD_Byte == PEDAL_COM_CMD_LONG_PRESS)
+					{
+						Next_SystemState = ENTER_RUN_PRESET_CTRL;
+					}
+					else if (PedalCom_CMD_Byte == PEDAL_COM_CMD_LONG_LONG_PRESS)
+					{
+						Next_SystemState = ENTER_TUNER;
+					}
+				}
+				
+				/* Handle input from front panel */
+				if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
+				{
+					
+				}
+				
+				break;
+			case ENTER_TUNER:
+			
 				break;
 			case TUNER:
 		
@@ -272,50 +352,54 @@ void System_Run()
 					UI_MarkSelection_OvfCnt = 1;
 				}
 				
-				if (RotEnc_State == SHORT_PRESS)
+				/* Handle input from front panel */
+				if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
 				{
-					sysUI_Mode = TempSelect_UI_Mode;
-					
-					if (TempSelect_UI_Mode == MODE_RUN)
+					if (RotEnc_State == SHORT_PRESS)
 					{
-						Next_SystemState = ENTER_RUN_PRESET_CTRL;
-					}
-					else if (TempSelect_UI_Mode == MODE_EDIT_LOOPS_SW)
-					{
-						Next_SystemState = ENTER_EDIT_LOOPS_SW;
-					}
-					else if (TempSelect_UI_Mode == MODE_EDIT_MIDI)
-					{
-						Next_SystemState = ENTER_EDIT_MIDI_PC;
-					}
-					
-					UI_Update_Mode_LEDs(TempSelect_UI_Mode);
-				}
-				else if (RotEnc_State == LONG_PRESS)
-				{
-					
-				}
-				else if (RotEnc_State == ROT_RIGHT)
-				{
-					if (TempSelect_UI_Mode < MODE_EDIT_MIDI)
-					{
-						TempSelect_UI_Mode++;
+						sysUI_Mode = TempSelect_UI_Mode;
+						
+						if (TempSelect_UI_Mode == MODE_RUN)
+						{
+							Next_SystemState = ENTER_RUN_PRESET_CTRL;
+						}
+						else if (TempSelect_UI_Mode == MODE_EDIT_LOOPS_SW)
+						{
+							Next_SystemState = ENTER_EDIT_LOOPS_SW;
+						}
+						else if (TempSelect_UI_Mode == MODE_EDIT_MIDI)
+						{
+							Next_SystemState = ENTER_EDIT_MIDI_PC;
+						}
+						
 						UI_Update_Mode_LEDs(TempSelect_UI_Mode);
-						UI_MarkSelection_OvfCnt = 1;
 					}
-				}
-				else if (RotEnc_State == ROT_LEFT)
-				{
-					if (TempSelect_UI_Mode > MODE_RUN)
+					else if (RotEnc_State == LONG_PRESS)
 					{
-						TempSelect_UI_Mode--;
-						UI_Update_Mode_LEDs(TempSelect_UI_Mode);
-						UI_MarkSelection_OvfCnt = 1;
+						
 					}
+					else if (RotEnc_State == ROT_RIGHT)
+					{
+						if (TempSelect_UI_Mode < MODE_EDIT_MIDI)
+						{
+							TempSelect_UI_Mode++;
+							UI_Update_Mode_LEDs(TempSelect_UI_Mode);
+							UI_MarkSelection_OvfCnt = 1;
+						}
+					}
+					else if (RotEnc_State == ROT_LEFT)
+					{
+						if (TempSelect_UI_Mode > MODE_RUN)
+						{
+							TempSelect_UI_Mode--;
+							UI_Update_Mode_LEDs(TempSelect_UI_Mode);
+							UI_MarkSelection_OvfCnt = 1;
+						}
+					}
+					
+					RotEnc_State = IDLE;
+					RotaryEncoder_EnableInterrupt();
 				}
-				
-				RotEnc_State = IDLE;
-				RotaryEncoder_EnableInterrupt();
 				
 				break;
 			case ENTER_EDIT_LOOPS_SW:
@@ -339,177 +423,186 @@ void System_Run()
 					UI_Update_SW_Ctrl_LEDs(TempEdit_Preset.Active_SW_Ctrl);
 				}
 				
-				if (RotEnc_State == SHORT_PRESS)
+				/* Handle input from front panel */
+				if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
 				{
-					if (TempSelect_PresetLoopSW_Ctrl < NUMBER_OF_PRESETS)
+					if (RotEnc_State == SHORT_PRESS)
 					{
-						TempEdit_Preset.Active_Loops ^= (1 << TempSelect_PresetLoopSW_Ctrl);
-					}
-					else
-					{
-						TempEdit_Preset.Active_SW_Ctrl ^= (1 << (TempSelect_PresetLoopSW_Ctrl - NUMBER_OF_PRESETS));
-					}
-					
-					UI_Update_Preset_Loop_LEDs(TempEdit_Preset.Active_Loops);
-					UI_Update_SW_Ctrl_LEDs(TempEdit_Preset.Active_SW_Ctrl);
-				}
-				else if (RotEnc_State == LONG_PRESS)
-				{
-					eeprom_write_block((void*)&TempEdit_Preset, (void*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE)), 2);
-					PresetTable[sysPreset].Active_Loops = TempEdit_Preset.Active_Loops;
-					PresetTable[sysPreset].Active_SW_Ctrl = TempEdit_Preset.Active_SW_Ctrl;
-					Next_SystemState = EDIT_UI_MODE;
-					UI_MarkSelection_OvfCnt = 1;
-				}
-				else if (RotEnc_State == ROT_RIGHT)
-				{
-					if (TempSelect_PresetLoopSW_Ctrl < 11)
-					{
-						TempSelect_PresetLoopSW_Ctrl++;
-					}
-					
-					if (TempSelect_PresetLoopSW_Ctrl < NUMBER_OF_PRESETS)
-					{
-						UI_Update_Preset_Loop_LEDs(1 << TempSelect_PresetLoopSW_Ctrl);
-						UI_Update_SW_Ctrl_LEDs(0);
-					}
-					else
-					{
-						UI_Update_Preset_Loop_LEDs(0);
-						UI_Update_SW_Ctrl_LEDs(1 << (TempSelect_PresetLoopSW_Ctrl - NUMBER_OF_PRESETS));
-					}
-						
-					UI_MarkSelection_OvfCnt = 1;
-				}
-				else if (RotEnc_State == ROT_LEFT)
-				{
-					if (TempSelect_PresetLoopSW_Ctrl > 0)
-					{
-						TempSelect_PresetLoopSW_Ctrl--;
-					}
+						if (TempSelect_PresetLoopSW_Ctrl < NUMBER_OF_PRESETS)
+						{
+							TempEdit_Preset.Active_Loops ^= (1 << TempSelect_PresetLoopSW_Ctrl);
+						}
+						else
+						{
+							TempEdit_Preset.Active_SW_Ctrl ^= (1 << (TempSelect_PresetLoopSW_Ctrl - NUMBER_OF_PRESETS));
+						}
 										
-					if (TempSelect_PresetLoopSW_Ctrl < NUMBER_OF_PRESETS)
-					{
-						UI_Update_Preset_Loop_LEDs(1 << TempSelect_PresetLoopSW_Ctrl);
-						UI_Update_SW_Ctrl_LEDs(0);
+						UI_Update_Preset_Loop_LEDs(TempEdit_Preset.Active_Loops);
+						UI_Update_SW_Ctrl_LEDs(TempEdit_Preset.Active_SW_Ctrl);
 					}
-					else
+					else if (RotEnc_State == LONG_PRESS)
 					{
-						UI_Update_Preset_Loop_LEDs(0);
-						UI_Update_SW_Ctrl_LEDs(1 << (TempSelect_PresetLoopSW_Ctrl - NUMBER_OF_PRESETS));
+						eeprom_write_block((void*)&TempEdit_Preset, (void*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE)), 2);
+						PresetTable[sysPreset].Active_Loops = TempEdit_Preset.Active_Loops;
+						PresetTable[sysPreset].Active_SW_Ctrl = TempEdit_Preset.Active_SW_Ctrl;
+						Next_SystemState = EDIT_UI_MODE;
+						UI_MarkSelection_OvfCnt = 1;
 					}
+					else if (RotEnc_State == ROT_RIGHT)
+					{
+						if (TempSelect_PresetLoopSW_Ctrl < 11)
+						{
+							TempSelect_PresetLoopSW_Ctrl++;
+						}
 										
-					UI_MarkSelection_OvfCnt = 1;
+						if (TempSelect_PresetLoopSW_Ctrl < NUMBER_OF_PRESETS)
+						{
+							UI_Update_Preset_Loop_LEDs(1 << TempSelect_PresetLoopSW_Ctrl);
+							UI_Update_SW_Ctrl_LEDs(0);
+						}
+						else
+						{
+							UI_Update_Preset_Loop_LEDs(0);
+							UI_Update_SW_Ctrl_LEDs(1 << (TempSelect_PresetLoopSW_Ctrl - NUMBER_OF_PRESETS));
+						}
+										
+						UI_MarkSelection_OvfCnt = 1;
+					}
+					else if (RotEnc_State == ROT_LEFT)
+					{
+						if (TempSelect_PresetLoopSW_Ctrl > 0)
+						{
+							TempSelect_PresetLoopSW_Ctrl--;
+						}
+										
+						if (TempSelect_PresetLoopSW_Ctrl < NUMBER_OF_PRESETS)
+						{
+							UI_Update_Preset_Loop_LEDs(1 << TempSelect_PresetLoopSW_Ctrl);
+							UI_Update_SW_Ctrl_LEDs(0);
+						}
+						else
+						{
+							UI_Update_Preset_Loop_LEDs(0);
+							UI_Update_SW_Ctrl_LEDs(1 << (TempSelect_PresetLoopSW_Ctrl - NUMBER_OF_PRESETS));
+						}
+										
+						UI_MarkSelection_OvfCnt = 1;
+					}
+									
+					RotEnc_State = IDLE;
+					RotaryEncoder_EnableInterrupt();
 				}
-						
-				RotEnc_State = IDLE;
-				RotaryEncoder_EnableInterrupt();
-						
+				
 				break;
 			case ENTER_EDIT_MIDI_PC:
 				UI_Write_7seg_Display(TempSetMIDI_Edit);
 				Next_SystemState = EDIT_MIDI_PC;
 				break;
 			case EDIT_MIDI_PC:
+				/* Handle input from front panel */
+				if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
+				{
+					if (RotEnc_State == SHORT_PRESS)
+					{
+						if (TempSetMIDI_Edit == MIDI_IN)
+						{
+							TempSelect_MIDI_PC = PresetTable[sysPreset].MIDI_PC_in;
+						}
+						else
+						{
+							TempSelect_MIDI_PC = PresetTable[sysPreset].MIDI_PC_out;
+						}
+										
+						UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
+						Next_SystemState = EDIT_MIDI_IN_OUT;
+					}
+					else if (RotEnc_State == LONG_PRESS)
+					{
+						TempSetMIDI_Edit = MIDI_IN;
+						UI_Write_7seg_Display(sysPreset + 1);
+						Next_SystemState = EDIT_UI_MODE;
+					}
+					else if (RotEnc_State == ROT_RIGHT)
+					{
+						if (TempSetMIDI_Edit == MIDI_IN)
+						{
+							TempSetMIDI_Edit = MIDI_OUT;
+						}
+						else
+						{
+							TempSetMIDI_Edit = MIDI_IN;
+						}
+										
+						UI_Write_7seg_Display(TempSetMIDI_Edit);
+					}
+					else if (RotEnc_State == ROT_LEFT)
+					{
+						if (TempSetMIDI_Edit == MIDI_IN)
+						{
+							TempSetMIDI_Edit = MIDI_OUT;
+						}
+						else
+						{
+							TempSetMIDI_Edit = MIDI_IN;
+						}
+										
+						UI_Write_7seg_Display(TempSetMIDI_Edit);
+					}
+									
+					RotEnc_State = IDLE;
+					RotaryEncoder_EnableInterrupt();
+				}
+				
+				break;
+			case EDIT_MIDI_IN_OUT:
 				if (RotEnc_State == SHORT_PRESS)
 				{
 					if (TempSetMIDI_Edit == MIDI_IN)
 					{
-						TempSelect_MIDI_PC = PresetTable[sysPreset].MIDI_PC_in;
+						PresetTable[sysPreset].MIDI_PC_in = TempSelect_MIDI_PC;
+						eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 2), TempSelect_MIDI_PC);
 					}
 					else
 					{
-						TempSelect_MIDI_PC = PresetTable[sysPreset].MIDI_PC_out;
+						PresetTable[sysPreset].MIDI_PC_out = TempSelect_MIDI_PC;
+						eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 3), TempSelect_MIDI_PC);
 					}
-					
-					UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
-					Next_SystemState = EDIT_MIDI_IN_OUT;
+				
+					Next_SystemState = ENTER_EDIT_MIDI_PC;
 				}
 				else if (RotEnc_State == LONG_PRESS)
 				{
-					TempSetMIDI_Edit = MIDI_IN;
-					UI_Write_7seg_Display(sysPreset + 1);
-					Next_SystemState = EDIT_UI_MODE;
+				
 				}
 				else if (RotEnc_State == ROT_RIGHT)
 				{
-					if (TempSetMIDI_Edit == MIDI_IN)
+					if (TempSelect_MIDI_PC != MIDI_PC_MAX)
 					{
-						TempSetMIDI_Edit = MIDI_OUT;
+						TempSelect_MIDI_PC++;
 					}
-					else
-					{
-						TempSetMIDI_Edit = MIDI_IN;
-					}
-					
-					UI_Write_7seg_Display(TempSetMIDI_Edit);
+				
+					UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
 				}
 				else if (RotEnc_State == ROT_LEFT)
 				{
-					if (TempSetMIDI_Edit == MIDI_IN)
+					if (TempSelect_MIDI_PC > MIDI_PC_MAX || TempSelect_MIDI_PC == 0)
 					{
-						TempSetMIDI_Edit = MIDI_OUT;
+						TempSelect_MIDI_PC = MIDI_PC_OFF;
 					}
-					else
+					else if (TempSelect_MIDI_PC > 0)
 					{
-						TempSetMIDI_Edit = MIDI_IN;
+						TempSelect_MIDI_PC--;
 					}
-										
-					UI_Write_7seg_Display(TempSetMIDI_Edit);
+								
+					UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
 				}
-				
+			
 				RotEnc_State = IDLE;
 				RotaryEncoder_EnableInterrupt();
-			break;
-		case EDIT_MIDI_IN_OUT:
-			if (RotEnc_State == SHORT_PRESS)
-			{
-				if (TempSetMIDI_Edit == MIDI_IN)
-				{
-					PresetTable[sysPreset].MIDI_PC_in = TempSelect_MIDI_PC;
-					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 2), TempSelect_MIDI_PC);
-				}
-				else
-				{
-					PresetTable[sysPreset].MIDI_PC_out = TempSelect_MIDI_PC;
-					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(sysPreset*PRESET_BYTE_SIZE) + 3), TempSelect_MIDI_PC);
-				}
-				
-				Next_SystemState = ENTER_EDIT_MIDI_PC;
-			}
-			else if (RotEnc_State == LONG_PRESS)
-			{
-				
-			}
-			else if (RotEnc_State == ROT_RIGHT)
-			{
-				if (TempSelect_MIDI_PC != MIDI_PC_MAX)
-				{
-					TempSelect_MIDI_PC++;
-				}
-				
-				UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
-			}
-			else if (RotEnc_State == ROT_LEFT)
-			{
-				if (TempSelect_MIDI_PC > MIDI_PC_MAX || TempSelect_MIDI_PC == 0)
-				{
-					TempSelect_MIDI_PC = MIDI_PC_OFF;
-				}
-				else if (TempSelect_MIDI_PC > 0)
-				{
-					TempSelect_MIDI_PC--;
-				}
-								
-				UI_Write_7seg_MIDI_CC(TempSelect_MIDI_PC);
-			}
 			
-			RotEnc_State = IDLE;
-			RotaryEncoder_EnableInterrupt();
-			
-			break;
-			
+				break;
 			default:
+			
 				break;
 		}
 	}
