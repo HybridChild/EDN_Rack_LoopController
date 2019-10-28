@@ -10,10 +10,10 @@
 #define SP10281_DIGIT_1	1
 #define SP10281_DIGIT_2	2
 
-unsigned char SP10281_DigitData[3] = {0};
-unsigned char SP10281_DigitCnt = 0;
+volatile unsigned char SP10281_DigitData[3] = {0};
+volatile unsigned char SP10281_DigitCnt = 0;
 	
-const unsigned char SP10281_DigitTable[38] = {	
+volatile const unsigned char SP10281_DigitTable[38] = {	
 	~(0b00111111),	/* [0]		Character: 0 */
 	~(0b00000110),	/* [1]		Character: 1 */
 	~(0b01011011),	/* [2]		Character: 2 */
@@ -27,7 +27,7 @@ const unsigned char SP10281_DigitTable[38] = {
 	~(0b01110111),	/* [10]		Character: A */
 	~(0b01111100),	/* [11]		Character: b */
 	~(0b00111001),	/* [12]		Character: C */
-	~(0b00111001),	/* [13]		Character: d */
+	~(0b01011110),	/* [13]		Character: d */
 	~(0b01111001),	/* [14]		Character: E */
 	~(0b01110001),	/* [15]		Character: F */
 	~(0b00111101),	/* [16]		Character: G */
@@ -83,7 +83,7 @@ void SP10281_Update()
 	GPIO_SP10281_SEGMENT_PORT = SP10281_DigitData[SP10281_DigitCnt];	
 }
 
-void SP10281_WriteDigit(unsigned char dig, unsigned char data, unsigned char dot)
+void SP10281_WriteDigit(unsigned char dig, char data, unsigned char dot)
 {
 	if (data >= '0' && data <= '9')
 	{

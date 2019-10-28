@@ -2,79 +2,99 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "main.h"
 #include "i2cmaster.h"
-#include "mcp23017.h"
+#include "MCP23017.h"
+#include "UART.h"
+#include "Timer.h"
+#include "MasterCom.h"
+#include "Footswitch.h"
+#include "Segment_7.h"
 
-#define SWITCH_INDICATOR_ADDR	0b000
-#define DIGIT_0_1_ADDR			0b010
-#define DIGIT_2_3_ADDR			0b001
-#define TUNER_DISPLAY_ADDR		0b100
+#define MASTER_UART_BAUDRATE	19200
 
 void Init_IO_Expander();
-
-volatile unsigned char Footswitch_IntFlag = 0;
-
-ISR (PCINT1_vect)	// Pin Change Interrupt 1 (PCINT1) Service Routine
-{
-	Footswitch_IntFlag = 1;
-}
 
 int main(void)
 {
 	DDRB |= (1 << PORTB0);	// Setup output pin for Tuner display green LED (PortB 0)
 	
 	i2c_init();
+	UART_Init(MASTER_UART_BAUDRATE, UART_2_STOP_BITS, UART_EVEN_PARITY);
+	Timer0_Init();
+	
+	sei();	// Global interrupt enable
+	
+	MasterCom_Init();
 	Init_IO_Expander();
-
-	sei();
+	Footswitch_Init();
 	
-	MCP23017_WriteReg(DIGIT_0_1_ADDR, OLATA, 0xAF);	// 'r'
-	MCP23017_WriteReg(DIGIT_0_1_ADDR, OLATB, 0xEF);	// 'i'
-	MCP23017_WriteReg(DIGIT_2_3_ADDR, OLATA, 0x8E);	// 'F'
-	MCP23017_WriteReg(DIGIT_2_3_ADDR, OLATB, 0x8E);	// 'F'
-	
-	unsigned char i = 0;
-	unsigned char Footswitch_PortState = 0;
-	unsigned char Footswitch_IntMask = 0;
+	Segment_7_WriteAll('r', 'i', 'f', 'f', 0, 0, 0, 0);
+	MCP23017_WriteReg(TUNER_DISPLAY_ADDR, OLATA, 0x00);
 	
 	/* Main loop */
     while (1)
     {
+		/* Handle incoming data from Master */
+		if (UART_RX_Flag)
+		{
+			UART_RX_Flag = 0;
+			MasterCom_Receive();
+		}
+		
+		/* Handle received command from Master */
+		if (MasterCom_CommandReceivedFlag)
+		{
+			MasterCom_CommandReceivedFlag = 0;
+		}
+		
+		/* Handle footswitch press */
 		if (Footswitch_IntFlag)
 		{
 			Footswitch_IntFlag = 0;
-			Footswitch_IntMask = MCP23017_ReadReg(SWITCH_INDICATOR_ADDR, INTFB);		// Read what pin caused the interrupt
-			Footswitch_PortState = MCP23017_ReadReg(SWITCH_INDICATOR_ADDR, INTCAPB);	// Read state of Port when interrupt occurred (Clear interrupt B)
 			
-			if (Footswitch_PortState != 0x00)	// Only react on Rising-edge
-			{
-				for (i = 0; i < 8; i++)
-				{
-					if (Footswitch_IntMask & (1 << i))
-					{
-						MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, OLATA, (1 << i));	// Set Indicator light
-					}
-				}
-			}
+			Footswitch_HandlePress();
 		}
-
+		
+		if (Footswitch_PressState == SHORT_PRESS ||
+			Footswitch_PressState == LONG_PRESS ||
+			Footswitch_PressState == LONG_LONG_PRESS ||
+			Footswitch_PressState == ABORTED)
+		{
+			if (Footswitch_PressState == SHORT_PRESS)
+			{
+				Segment_7_WriteAll('s', 'h', 'r', 't', 0, 0, 0, 0);
+			}
+			else if (Footswitch_PressState == LONG_PRESS)
+			{
+				Segment_7_WriteAll('l', 'o', 'n', 'g', 0, 0, 0, 0);
+			}
+			else if (Footswitch_PressState == LONG_LONG_PRESS)
+			{
+				Segment_7_WriteAll('2', 'x', 'l', 'o', 0, 0, 0, 0);
+			}
+			else if (Footswitch_PressState == ABORTED)
+			{
+				Segment_7_WriteAll('i', 'd', 'l', 'e', 0, 0, 0, 0);
+			}
+			
+			Footswitch_PressState = IDLE;
+			Footswitch_EnableInterrupt();
+		}
     }
 }
 
 void Init_IO_Expander()
 {
-	DDRC &= ~(1 << PORTC1);		// Set PortC 1 as input
-	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PC1 for interrupt
-	PCICR |= (1 << PCIE1);		// Pin Change Interrupt Enable (PCIE1) (PCINT[14:8])
-	
 	/* Footswitch and Indicator		- Addr: 000
 		- Port A: Indicator lights	- Outputs
 		- Port B: Footswitches		- Inputs */
-	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, IODIRA, 0x00);    // Set Port A to output
-	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, IODIRB, 0xFF);    // Set Port B to input
-	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, GPINTENB, 0xFF);  // Enables all pins on Port B for interrupt-on-change event
-	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, INTCONB, 0x00);   // Set Port B to compare to previous value for interrupts
-	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, GPPUB, 0xFF);     // Enable pull up resistors for Port B
+	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, IODIRA, 0x00);		// Set Port A to output
+	
+	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, IODIRB, 0xFF);		// Set Port B to input
+	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, GPINTENB, 0xFF);	// Enables all pins on Port B for interrupt-on-change event
+	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, INTCONB, 0x00);	// Set Port B to compare to previous value for interrupts
+	MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, GPPUB, 0xFF);		// Enable pull up resistors for Port B
 	MCP23017_ReadReg(SWITCH_INDICATOR_ADDR, INTCAPB);			// Clear interrupt B
 	
 	/* 7-segment digit 0 & 1		- Addr: 010

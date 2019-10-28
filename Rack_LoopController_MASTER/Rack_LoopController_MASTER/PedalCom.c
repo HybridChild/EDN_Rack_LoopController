@@ -144,9 +144,14 @@ void PedalCom_Receive()
 	{
 		if (PedalCom_RX_Buffer[PedalCom_RX_Length - 1] == PEDAL_COM_EOF)	// If full frame received
 		{
-			PedalCom_CommandReceivedFlag = 1;
 			PedalCom_CMD_Byte = PedalCom_RX_Buffer[2];
 			PedalCom_Data_Byte = PedalCom_RX_Buffer[3];
+
+			/* Send Ack */
+			PedalCom_TX_Buffer[0] = PEDAL_COM_ACK;
+			PedalCom_Transmit(1);
+
+			PedalCom_CommandReceivedFlag = 1;
 		}
 		else
 		{
@@ -172,8 +177,12 @@ void PedalCom_Transmit(unsigned char length)
 		UART0_PutChar(PedalCom_TX_Buffer[i]);
 	}
 	
-	/* Start timeout Timer */
-	PedalCom_OvfCnt = 1;
+	/* Only start timeout timer if transmitted data is a command */
+	if (length != 1)
+	{
+		/* Start timeout Timer */
+		PedalCom_OvfCnt = 1;
+	}
 }
 
 

@@ -27,7 +27,7 @@ volatile unsigned char SP10281_OvfFlag;
 void SP10281_Init();
 void SP10281_Update();
 void SP10281_WriteChar(char d2, char d1, char d0, unsigned char dot2, unsigned char dot1, unsigned char dot0);
-void SP10281_WriteDigit(unsigned char dig, unsigned char data, unsigned char dot);
+void SP10281_WriteDigit(unsigned char dig, char data, unsigned char dot);
 void SP10281_WriteNumber(short num);
 
 #endif /* SP10281_3X7SEGMENT_H_ */
