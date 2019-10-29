@@ -4,6 +4,8 @@
 #include <string.h>
 #include "MasterCom.h"
 #include "UART.h"
+#include "MCP23017.h"
+#include "main.h"
 
 #define SELECT_RX_TX_DDR				DDRD
 #define SELECT_RX_TX_PORT				PORTD
@@ -53,12 +55,45 @@ void MasterCom_Init()
 }
 
 
-void MasterCom_FootswitchPress(char switch_num, char duration)
+void MasterCom_HandleReceived()
+{
+	if (MasterCom_CMD_Byte == MASTER_COM_CMD_PRE_LOOP_LEDS)
+	{
+		MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, OLATA, MasterCom_RX_Data[0]);
+	}
+	else if (MasterCom_CMD_Byte == MASTER_COM_CMD_TUNER_LEDS)
+	{
+		MCP23017_WriteReg(TUNER_DISPLAY_ADDR, OLATA, MasterCom_RX_Data[0]);
+					
+		if (MasterCom_RX_Data[1])
+		{
+			PORTB |= (1 << PORTB0);
+		}
+		else
+		{
+			PORTB &= ~(1 << PORTB0);
+		}
+	}
+	else if (MasterCom_CMD_Byte == MASTER_COM_CMD_7_SEGMENTS)
+	{
+		MCP23017_WriteReg(DIGIT_0_1_ADDR, OLATB, MasterCom_RX_Data[0]);
+		MCP23017_WriteReg(DIGIT_0_1_ADDR, OLATA, MasterCom_RX_Data[1]);
+		MCP23017_WriteReg(DIGIT_2_3_ADDR, OLATB, MasterCom_RX_Data[2]);
+		MCP23017_WriteReg(DIGIT_2_3_ADDR, OLATA, MasterCom_RX_Data[3]);
+	}
+	else if (MasterCom_CMD_Byte == MASTER_COM_CMD_TUNER)
+	{
+					
+	}
+}
+
+
+void MasterCom_FootswitchPress(unsigned char switch_num, unsigned char press_type)
 {
 	MasterCom_TX_Buffer[0] = MASTER_COM_SOF;
 	MasterCom_TX_Buffer[1] = 5;
-	MasterCom_TX_Buffer[2] = duration;
-	MasterCom_TX_Buffer[3] = switch_num;
+	MasterCom_TX_Buffer[2] = (char)(0xB0 | press_type);
+	MasterCom_TX_Buffer[3] = (char)switch_num;
 	MasterCom_TX_Buffer[4] = MASTER_COM_EOF;
 	
 	MasterCom_Transmit(MasterCom_TX_Buffer[1]);
@@ -75,7 +110,11 @@ void MasterCom_Receive()
 		if (MasterCom_RX_Buffer[0] != MASTER_COM_SOF)
 		{
 			MasterCom_RX_ByteCnt = 0;
-			MasterCom_NackCnt = 0;
+			
+			if (MasterCom_RX_Buffer[0] == MASTER_COM_ACK)
+			{
+				MasterCom_NackCnt = 0;
+			}
 		}
 		
 		if (MasterCom_RX_Buffer[0] == MASTER_COM_NACK)

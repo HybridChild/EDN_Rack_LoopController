@@ -23,11 +23,11 @@ int main(void)
 	UART_Init(MASTER_UART_BAUDRATE, UART_2_STOP_BITS, UART_EVEN_PARITY);
 	Timer0_Init();
 	
-	sei();	// Global interrupt enable
-	
 	MasterCom_Init();
 	Init_IO_Expander();
 	Footswitch_Init();
+	
+	sei();	// Global interrupt enable
 	
 	Segment_7_WriteAll('r', 'i', 'f', 'f', 0, 0, 0, 0);
 	MCP23017_WriteReg(TUNER_DISPLAY_ADDR, OLATA, 0x00);
@@ -46,14 +46,28 @@ int main(void)
 		if (MasterCom_CommandReceivedFlag)
 		{
 			MasterCom_CommandReceivedFlag = 0;
+			MasterCom_HandleReceived();
+		}
+		
+		if (MasterCom_TimeoutFlag)
+		{
+			MasterCom_TimeoutFlag = 0;
+			MasterCom_OvfCnt = 0;	// Stop timeout timer
+			MasterCom_Retransmit();
 		}
 		
 		/* Handle footswitch press */
-		if (Footswitch_IntFlag)
+		if (Footswitch_PressFlag)
 		{
-			Footswitch_IntFlag = 0;
-			
+			Footswitch_PressFlag = 0;
 			Footswitch_HandlePress();
+		}
+		
+		/* Handle footswitch timing */
+		if (Footswitch_TimerFlag)
+		{
+			Footswitch_TimerFlag = 0;
+			Footswitch_HandleTimer();
 		}
 		
 		if (Footswitch_PressState == SHORT_PRESS ||
@@ -73,9 +87,10 @@ int main(void)
 			{
 				Segment_7_WriteAll('2', 'x', 'l', 'o', 0, 0, 0, 0);
 			}
-			else if (Footswitch_PressState == ABORTED)
+			
+			if (Footswitch_PressState != ABORTED)
 			{
-				Segment_7_WriteAll('i', 'd', 'l', 'e', 0, 0, 0, 0);
+				MasterCom_FootswitchPress(Footswitch_MCP_IntMask, (unsigned char)Footswitch_PressState);
 			}
 			
 			Footswitch_PressState = IDLE;

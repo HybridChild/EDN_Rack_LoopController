@@ -29,7 +29,7 @@ static volatile unsigned char UART_LastRxError;
 
 /*************************************************************************
 Function: UART_Init()
-Purpose:  initialize UART0 and set baudrate
+Purpose:  initialize UART and set baudrate
 Input:    baudrate, stop bits, parity
 Returns:  none
 **************************************************************************/
@@ -144,7 +144,7 @@ void UART_PutString(const char *s )
 {
     while (*s)
 	{
-		UART0_PutChar(*s++);
+		UART_PutChar(*s++);
 	}
 }
 
@@ -184,7 +184,7 @@ Purpose:  Flush bytes waiting the receive buffer. Acutally ignores them.
 Input:    None
 Returns:  None
 **************************************************************************/
-void UART0_Flush(void)
+void UART_Flush(void)
 {
 	UART_RxHead = UART_RxTail;
 }

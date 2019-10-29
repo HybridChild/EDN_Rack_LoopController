@@ -49,8 +49,9 @@ volatile unsigned char MasterCom_Data_Length_Byte;
 volatile unsigned char MasterCom_RX_Data[MASTER_COM_RX_DATA_MAX_SIZE];
 
 void MasterCom_Init();
-void MasterCom_FootswitchPress(char switch_num, char duration);
+void MasterCom_FootswitchPress(unsigned char switch_num, unsigned char duration);
 void MasterCom_Retransmit();
 void MasterCom_Receive();
+void MasterCom_HandleReceived();
 
 #endif /* MASTERCOM_H_ */

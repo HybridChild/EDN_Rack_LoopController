@@ -8,19 +8,20 @@
 
 enum Footswitch_State
 {
-	IDLE,
-	PRESS_SENSED,
-	WAITING,
-	SHORT_PRESS,
-	PRESSED,
-	ABORTED,
-	STILL_PRESSED,
-	LONG_PRESS,
-	LONG_LONG_PRESS
+	IDLE			= 0,
+	PRESS_SENSED	= 3,
+	WAITING			= 5,
+	SHORT_PRESS		= 1,
+	PRESSED			= 6,
+	ABORTED			= 7,
+	STILL_PRESSED	= 8,
+	LONG_PRESS		= 2,
+	LONG_LONG_PRESS = 4
 };
 
+volatile unsigned char Footswitch_PressFlag;
+volatile unsigned char Footswitch_TimerFlag;
 volatile unsigned short Footswitch_OvfCnt;
-volatile unsigned char Footswitch_IntFlag;
 volatile enum Footswitch_State Footswitch_PressState;
 volatile unsigned char Footswitch_MCP_PortState;
 volatile unsigned char Footswitch_MCP_IntMask;
@@ -28,5 +29,6 @@ volatile unsigned char Footswitch_MCP_IntMask;
 void Footswitch_Init();
 void Footswitch_EnableInterrupt();
 void Footswitch_HandlePress();
+void Footswitch_HandleTimer();
 
 #endif /* FOOTSWITCH_H_ */

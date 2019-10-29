@@ -24,7 +24,6 @@ ISR(TIMER0_OVF_vect)
 		if (++MasterCom_OvfCnt > MASTER_COM_TIMEOUT)
 		{
 			MasterCom_TimeoutFlag = 1;
-			MasterCom_OvfCnt = 0;
 		}
 	}
 	
@@ -34,18 +33,18 @@ ISR(TIMER0_OVF_vect)
 		
 		if (Footswitch_OvfCnt > FOOTSWITCH_LONG_LONG_PRESS_OVF && Footswitch_PressState == PRESSED)
 		{
-			Footswitch_IntFlag = 1;
+			Footswitch_TimerFlag = 1;
 			Footswitch_PressState = STILL_PRESSED;
 		}
 		else if (Footswitch_OvfCnt > FOOTSWITCH_LONG_PRESS_OVF  && Footswitch_PressState == WAITING)
 		{
 			Footswitch_PressState = PRESSED;
-			Footswitch_IntFlag = 1;
+			Footswitch_TimerFlag = 1;
 		}
 		else if (Footswitch_OvfCnt > FOOTSWITCH_SHORT_PRESS_OVF && Footswitch_PressState == PRESS_SENSED)
 		{
 			Footswitch_PressState = WAITING;
-			Footswitch_IntFlag = 1;
+			Footswitch_TimerFlag = 1;
 		}
 	}
 }
