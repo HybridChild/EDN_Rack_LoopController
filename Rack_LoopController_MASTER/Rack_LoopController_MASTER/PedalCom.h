@@ -17,6 +17,10 @@
 #define PEDAL_COM_CMD_LONG_PRESS		0xB2
 #define PEDAL_COM_CMD_LONG_LONG_PRESS	0xB3
 
+#define PEDAL_STATE_PRESET_CTRL	0
+#define PEDAL_STATE_LOOP_CTRL	1
+#define PEDAL_STATE_TUNER		2
+
 enum PedalCom_Tuner_Note {
 	Unknown	,
 	C		,

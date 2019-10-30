@@ -32,6 +32,8 @@ int main(void)
 	Segment_7_WriteAll('r', 'i', 'f', 'f', 0, 0, 0, 0);
 	MCP23017_WriteReg(TUNER_DISPLAY_ADDR, OLATA, 0x00);
 	
+	StateOfSystem = PRESET_CTRL;
+	
 	/* Main loop */
     while (1)
     {
@@ -75,17 +77,23 @@ int main(void)
 			Footswitch_PressState == LONG_LONG_PRESS ||
 			Footswitch_PressState == ABORTED)
 		{
-			if (Footswitch_PressState == SHORT_PRESS)
+			if (Footswitch_PressState == LONG_PRESS)
 			{
-				Segment_7_WriteAll('s', 'h', 'r', 't', 0, 0, 0, 0);
-			}
-			else if (Footswitch_PressState == LONG_PRESS)
-			{
-				Segment_7_WriteAll('l', 'o', 'n', 'g', 0, 0, 0, 0);
+				if (StateOfSystem == PRESET_CTRL)
+				{
+					StateOfSystem = LOOP_CTRL;
+					Segment_7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
+				}
+				else if (StateOfSystem == LOOP_CTRL || StateOfSystem == TUNER)
+				{
+					StateOfSystem = PRESET_CTRL;
+					Segment_7_WriteAll('P', 'r', 'E', ' ', 0, 0, 0, 0);
+				}
 			}
 			else if (Footswitch_PressState == LONG_LONG_PRESS)
 			{
-				Segment_7_WriteAll('2', 'x', 'l', 'o', 0, 0, 0, 0);
+				StateOfSystem = TUNER;
+				Segment_7_WriteAll('t', 'u', 'n', 'r', 0, 0, 0, 0);
 			}
 			
 			if (Footswitch_PressState != ABORTED)

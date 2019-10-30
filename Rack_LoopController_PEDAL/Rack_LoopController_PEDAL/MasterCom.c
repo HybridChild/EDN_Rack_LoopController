@@ -5,6 +5,7 @@
 #include "MasterCom.h"
 #include "UART.h"
 #include "MCP23017.h"
+#include "Segment_7.h"
 #include "main.h"
 
 #define SELECT_RX_TX_DDR				DDRD
@@ -18,6 +19,27 @@
 #define MASTER_COM_RX_BUF_SIZE			9
 #define MASTER_COM_SET_RX				0
 #define MASTER_COM_SET_TX				1
+
+#define TUNER_GREEN_LED					(1 << 7)
+#define TUNER_NOTE_MASK					0x0F
+#define TUNER_NOTE_UNKNOWN				0x00
+#define TUNER_NOTE_C					0x01
+#define TUNER_NOTE_Db					0x02
+#define TUNER_NOTE_D					0x03
+#define TUNER_NOTE_Eb					0x04
+#define TUNER_NOTE_E					0x05
+#define TUNER_NOTE_F					0x06
+#define TUNER_NOTE_Gb					0x07
+#define TUNER_NOTE_G					0x08
+#define TUNER_NOTE_Ab					0x09
+#define	TUNER_NOTE_A					0x0A
+#define TUNER_NOTE_Bb					0x0B
+#define TUNER_NOTE_B					0x0C
+#define TUNER_SIDE_BAR_MASK				0x30
+#define TUNER_SIDE_BAR_OFF				0x00
+#define TUNER_SIDE_BAR_SHARP			0x10
+#define TUNER_SIDE_BAR_FLAT				0x20
+#define TUNER_SIDE_BAR_SPOT_ON			0x30
 
 void MasterCom_Select_RX_TX(unsigned char dir);
 void MasterCom_Transmit(unsigned char length);
@@ -57,7 +79,24 @@ void MasterCom_Init()
 
 void MasterCom_HandleReceived()
 {
-	if (MasterCom_CMD_Byte == MASTER_COM_CMD_PRE_LOOP_LEDS)
+	if (MasterCom_CMD_Byte == MASTER_COM_CMD_SET_SYSTEM_STATE)
+	{
+		StateOfSystem = MasterCom_RX_Data[0];
+		
+		if (StateOfSystem == PRESET_CTRL)
+		{
+			Segment_7_WriteAll('P', 'r', 'E', ' ', 0, 0, 0, 0);
+		}
+		else if (StateOfSystem == LOOP_CTRL)
+		{
+			Segment_7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
+		}
+		else if (StateOfSystem == TUNER)
+		{
+			Segment_7_WriteAll('T', 'u', 'n', 'r', 0, 0, 0, 0);
+		}
+	}
+	else if (MasterCom_CMD_Byte == MASTER_COM_CMD_PRE_LOOP_LEDS)
 	{
 		MCP23017_WriteReg(SWITCH_INDICATOR_ADDR, OLATA, MasterCom_RX_Data[0]);
 	}
@@ -83,7 +122,96 @@ void MasterCom_HandleReceived()
 	}
 	else if (MasterCom_CMD_Byte == MASTER_COM_CMD_TUNER)
 	{
-					
+		MCP23017_WriteReg(TUNER_DISPLAY_ADDR, OLATA, MasterCom_RX_Data[0]);
+		
+		if (MasterCom_RX_Data[1] & TUNER_GREEN_LED)
+		{
+			PORTB |= (1 << PORTB0);
+		}
+		else
+		{
+			PORTB &= ~(1 << PORTB0);
+		}
+		
+		switch (MasterCom_RX_Data[1] & TUNER_NOTE_MASK)
+		{
+			case TUNER_NOTE_UNKNOWN:
+				Segment_7_WriteDigit(2, ' ', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_C:
+				Segment_7_WriteDigit(2, 'C', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_Db:
+				Segment_7_WriteDigit(2, 'D', 0);
+				Segment_7_WriteDigit(1, 'b', 0);
+			break;
+			case TUNER_NOTE_D:
+				Segment_7_WriteDigit(2, 'D', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_Eb:
+				Segment_7_WriteDigit(2, 'E', 0);
+				Segment_7_WriteDigit(1, 'b', 0);
+			break;
+			case TUNER_NOTE_E:
+				Segment_7_WriteDigit(2, 'E', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_F:
+				Segment_7_WriteDigit(2, 'F', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_Gb:
+				Segment_7_WriteDigit(2, 'G', 0);
+				Segment_7_WriteDigit(1, 'b', 0);
+			break;
+			case TUNER_NOTE_G:
+				Segment_7_WriteDigit(2, 'G', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_Ab:
+				Segment_7_WriteDigit(2, 'A', 0);
+				Segment_7_WriteDigit(1, 'b', 0);
+			break;
+			case TUNER_NOTE_A:
+				Segment_7_WriteDigit(2, 'A', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			case TUNER_NOTE_Bb:
+				Segment_7_WriteDigit(2, 'B', 0);
+				Segment_7_WriteDigit(1, 'b', 0);
+			break;
+			case TUNER_NOTE_B:
+				Segment_7_WriteDigit(2, 'B', 0);
+				Segment_7_WriteDigit(1, ' ', 0);
+			break;
+			default:
+			break;
+		}
+		
+		switch (MasterCom_RX_Data[1] & TUNER_SIDE_BAR_MASK)
+		{
+			case TUNER_SIDE_BAR_OFF:
+				Segment_7_WriteDigit(3, ' ', 0);
+				Segment_7_WriteDigit(0, ' ', 0);
+			break;
+			case TUNER_SIDE_BAR_SHARP:
+				Segment_7_WriteDigit(3, ' ', 0);
+				Segment_7_WriteDigit(0, '-', 0);
+			break;
+			case TUNER_SIDE_BAR_FLAT:
+				Segment_7_WriteDigit(3, '-', 0);
+				Segment_7_WriteDigit(0, ' ', 0);
+			break;
+			case TUNER_SIDE_BAR_SPOT_ON:
+				Segment_7_WriteDigit(3, '-', 0);
+				Segment_7_WriteDigit(0, '-', 0);
+			break;
+			default:
+			break;
+		}
 	}
 }
 
@@ -114,6 +242,7 @@ void MasterCom_Receive()
 			if (MasterCom_RX_Buffer[0] == MASTER_COM_ACK)
 			{
 				MasterCom_NackCnt = 0;
+				MasterCom_OvfCnt = 0;	// Stop timeout timer
 			}
 		}
 		
@@ -121,8 +250,7 @@ void MasterCom_Receive()
 		{
 			MasterCom_Retransmit();
 			
-			/* Start timeout Timer */
-			MasterCom_OvfCnt = 1;
+			MasterCom_OvfCnt = 1;	// Start timeout Timer
 		}
 	}
 	else if (MasterCom_RX_ByteCnt == 2)
@@ -131,7 +259,8 @@ void MasterCom_Receive()
 	}
 	else if (MasterCom_RX_ByteCnt == MasterCom_RX_Length)
 	{
-		if (MasterCom_RX_Buffer[MasterCom_RX_Length - 1] == MASTER_COM_EOF)	// If full frame received
+		/* If full frame received */
+		if (MasterCom_RX_Buffer[MasterCom_RX_Length - 1] == MASTER_COM_EOF)
 		{
 			unsigned char i = 0;
 			MasterCom_CMD_Byte = MasterCom_RX_Buffer[2];
@@ -142,7 +271,7 @@ void MasterCom_Receive()
 				MasterCom_RX_Data[i] = MasterCom_RX_Buffer[i + 3];
 			}
 			
-			/* Send Ack */
+			/* Transmit Ack */
 			MasterCom_TX_Buffer[0] = MASTER_COM_ACK;
 			MasterCom_Transmit(1);
 			
@@ -150,7 +279,7 @@ void MasterCom_Receive()
 		}
 		else
 		{
-			/* Send Nack */
+			/* Transmit Nack */
 			MasterCom_TX_Buffer[0] = MASTER_COM_NACK;
 			MasterCom_Transmit(1);
 		}
@@ -164,8 +293,7 @@ void MasterCom_Transmit(unsigned char length)
 {
 	unsigned char i = 0;
 	
-	/* Activate Transmit */
-	MasterCom_Select_RX_TX(MASTER_COM_SET_TX);
+	MasterCom_Select_RX_TX(MASTER_COM_SET_TX);	// Activate Transmit
 	
 	for (i = 0; i < length; i++)
 	{
@@ -211,6 +339,5 @@ void MasterCom_Select_RX_TX(unsigned char dir)
 /* TX Complete Interrupt ISR */
 ISR(USART_TX_vect)
 {
-	/* Deactivate Transmit */
-	MasterCom_Select_RX_TX(MASTER_COM_SET_RX);
+	MasterCom_Select_RX_TX(MASTER_COM_SET_RX);	// Deactivate Transmit
 }

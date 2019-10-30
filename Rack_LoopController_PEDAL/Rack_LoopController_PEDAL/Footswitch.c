@@ -37,8 +37,6 @@ void Footswitch_HandlePress()
 		Footswitch_MCP_IntMask = tmp;
 		Footswitch_PressState = PRESS_SENSED;
 		Footswitch_OvfCnt = 1;		// Start Timer
-		
-		MCP23017_WriteReg(TUNER_DISPLAY_ADDR, OLATA, Footswitch_MCP_IntMask);
 	}
 	else
 	{
@@ -69,7 +67,14 @@ void Footswitch_HandleTimer()
 		}
 		else
 		{
-			Segment_7_WriteAll('w', 'a', 'i', 't', 0, 0, 0, 0);
+			if (StateOfSystem == PRESET_CTRL)
+			{
+				Segment_7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
+			}
+			else if (StateOfSystem == LOOP_CTRL || StateOfSystem == TUNER)
+			{
+				Segment_7_WriteAll('P', 'r', 'E', ' ', 0, 0, 0, 0);
+			}
 		}
 	}
 	else if (Footswitch_PressState == STILL_PRESSED)
