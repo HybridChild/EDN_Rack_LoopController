@@ -20,6 +20,7 @@
 #include "PedalComm.h"
 #include "MIDI.h"
 #include "ActionHandler.h"
+#include "System.h"
 
 #define PEDAL_UART				0
 #define MIDI_UART				1
@@ -81,6 +82,22 @@ int main(void)
 			PedalComm_Transmit();
 		}
 		
+		/* Pedal heartbeat */
+		if (PedalComm_ResponseTimeoutFlag)
+		{
+			PedalComm_ResponseTimeoutFlag = false;
+			
+			if (PedalComm_ConnectionOpen)
+			{
+				PedalComm_ConnectionOpen = false;
+			}
+			else
+			{
+				PedalComm_FlushTxQueue();
+				PedalComm_QueueCommand(Heartbeat, 0, (uint8_t*)0);
+			}
+		}
+		
 		/* Handle Rotary Encoder input */
 		if (RotEnc_State != IDLE && RotEnc_State != PRESSED && RotEnc_State != ABORTED)
 		{
@@ -100,6 +117,9 @@ int main(void)
 			MCP_Output::AutoToggle_Flag = 0;
 			MCP_Output::PerformAutoToggle(MCP23017_UI_LEDS_ADDR);
 		}
+		
+		/* The grand state machine */
+		System_Run();
     }
 }
 

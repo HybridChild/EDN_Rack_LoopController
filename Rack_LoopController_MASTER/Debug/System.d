@@ -1,3 +1,5 @@
-System.d System.o: .././System.cpp .././System.h
+System.d System.o: .././System.cpp .././System.h .././RotaryEncoder.h
 
 .././System.h:
+
+.././RotaryEncoder.h:

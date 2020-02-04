@@ -38,14 +38,11 @@ ISR(TIMER0_COMPA_vect)
 		}
 	}
 
-	/* Overflow counter for Pedal response timeout */
-	if (PedalComm_ResponseTimeout_OvfCnt)
+	/* Overflow counter for Pedal response timeout and heartbeat */
+	if (++PedalComm_ResponseTimeoutOvfCnt > PEDALCOMM_RESPONSE_TIMEOUT)
 	{
-		if (++PedalComm_ResponseTimeout_OvfCnt > PEDALCOMM_RESPONSE_TIMEOUT)
-		{
-			PedalComm_ResponseTimeout_OvfCnt = 0;	// Stop overflow counter
-			PedalComm_FlushTxQueue();
-		}
+		PedalComm_ResponseTimeoutOvfCnt = 1;	// Reset overflow counter
+		PedalComm_ResponseTimeoutFlag = true;
 	}
 	
 	/* Overflow counter for multiplexing 3x7-segment display */

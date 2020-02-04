@@ -26,6 +26,11 @@ void RotaryEncoder_Init()
 	EIMSK |= (1 << INT2);						// Enable External Interrupt Request (INT2)
 }
 
+bool RotaryEncoder_IsPressed()
+{
+	return GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK;
+}
+
 void RotaryEncoder_EnableInterrupt()
 {
 	/* Clear and reenable interrupt */

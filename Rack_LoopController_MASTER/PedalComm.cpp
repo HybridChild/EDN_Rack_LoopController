@@ -13,6 +13,7 @@
 #include "UART.h"
 #include "util.h"
 #include "ActionHandler.h"
+#include "System.h"
 
 
 /* Defines */
@@ -91,7 +92,9 @@ volatile uint8_t TxTail = 0;
 
 volatile bool PedalComm_DelayTxFlag = false;
 volatile uint8_t PedalComm_DelayTXOvfCnt = 0;
-volatile uint16_t PedalComm_ResponseTimeout_OvfCnt = 0;
+volatile uint16_t PedalComm_ResponseTimeoutOvfCnt = 1;
+volatile bool PedalComm_ResponseTimeoutFlag = false;
+volatile bool PedalComm_ConnectionOpen = false;
 volatile uint8_t NackCnt = 0;
 
 /* Function implementations */
@@ -120,6 +123,7 @@ uint8_t PedalComm_TxAvailable()
 void PedalComm_FlushTxQueue()
 {
 	TxTail = TxHead;
+	TX_CommandQueue[TxHead].acked = true;
 }
 
 
@@ -144,10 +148,18 @@ void PedalComm_Receive()
 				
 			if (RX_Buffer[SOF_BYTE_IDX] == ACK_BYTE)
 			{
-				PedalComm_ResponseTimeout_OvfCnt = 0;		// Stop timeout timer
+				PedalComm_ResponseTimeoutOvfCnt = 1;		// Reset timeout timer
 				NackCnt = 0;
 				
 				TX_CommandQueue[TxTail].acked = true;
+				
+				if (!PedalComm_ConnectionOpen)
+				{
+					PedalComm_ConnectionOpen = true;
+					
+					/* Set system state to initialize pedal */
+					SystemState = INITIALIZE_SYSTEM;
+				}
 			}
 			else if (RX_Buffer[SOF_BYTE_IDX] == NACK_BYTE)
 			{
@@ -272,7 +284,7 @@ void PedalComm_PutCommand()
 		TX_CommandQueue[TxTail].sent = true;
 		
 		/* Start response timeout timer */
-		PedalComm_ResponseTimeout_OvfCnt = 1;
+		PedalComm_ResponseTimeoutOvfCnt = 1;
 	}
 }
 

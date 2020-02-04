@@ -11,8 +11,8 @@
 
 #include <stdint-gcc.h>
 
-#define PEDALCOMM_DELAY_TX_TIMEOUT	3
-#define PEDALCOMM_RESPONSE_TIMEOUT	25
+#define PEDALCOMM_DELAY_TX_TIMEOUT	3		// 3*2ms = 6ms
+#define PEDALCOMM_RESPONSE_TIMEOUT	1000	// 1000*2ms = 2 seconds
 
 #define ACK_BYTE			0xAC
 #define NACK_BYTE			0x2A
@@ -26,7 +26,8 @@ typedef enum CMD
 	UpdatePresetLoopLEDs	= 0xD0,
 	UpdateTunerLEDs			= 0xD3,
 	Update7segments			= 0xD7,
-	UpdateTuner				= 0xDE
+	UpdateTuner				= 0xDE,
+	Heartbeat				= 0xEB
 } CMD;
 
 struct CommandStruct
@@ -50,6 +51,8 @@ void PedalComm_Transmit();
 
 volatile extern bool PedalComm_DelayTxFlag;
 volatile extern uint8_t PedalComm_DelayTXOvfCnt;
-volatile extern uint16_t PedalComm_ResponseTimeout_OvfCnt;
+volatile extern uint16_t PedalComm_ResponseTimeoutOvfCnt;
+volatile extern bool PedalComm_ResponseTimeoutFlag;
+volatile extern bool PedalComm_ConnectionOpen;
 
 #endif /* PEDALCOMM_H_ */

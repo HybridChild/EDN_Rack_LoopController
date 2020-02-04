@@ -37,6 +37,7 @@ extern volatile unsigned short RotaryEncoder_OvfCnt;
 extern volatile enum RotaryEncoder_State RotEnc_State;
 
 void RotaryEncoder_Init();
+bool RotaryEncoder_IsPressed();
 void RotaryEncoder_EnableInterrupt();
 
 #endif /* ROTARYENCODER_H_ */
