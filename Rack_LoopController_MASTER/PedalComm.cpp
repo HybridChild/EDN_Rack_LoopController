@@ -5,14 +5,13 @@
  *  Author: Esben
  */ 
 
+/* Includes */
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdint-gcc.h>
 #include <string.h>
 #include "PedalComm.h"
 #include "UART.h"
-#include "util.h"
-#include "ActionHandler.h"
 #include "System.h"
 
 
@@ -42,15 +41,10 @@
 
 #define PEDALCOMM_RX_BUF_SIZE		16
 
+#define DIR_TRANSMIT		0
+#define DIR_RECEIVE			1
 
 /* Enumerations */
-
-typedef enum CommDirection
-{
-	receive = 0,
-	transmit = 1
-} CommDirection;
-
 enum PedalComm_Tuner_Note
 {
 	Unknown = 0,
@@ -78,7 +72,7 @@ enum PedalComm_Tuner_SideBar
 
 
 /* Function prototypes */
-void Select_RX_TX(CommDirection dir);
+void Select_RX_TX(uint8_t dir);
 
 /* Global variables */
 volatile unsigned char RX_Buffer[PEDALCOMM_RX_BUF_SIZE] = {0};
@@ -94,7 +88,7 @@ volatile bool PedalComm_DelayTxFlag = false;
 volatile uint8_t PedalComm_DelayTXOvfCnt = 0;
 volatile uint16_t PedalComm_ResponseTimeoutOvfCnt = 1;
 volatile bool PedalComm_ResponseTimeoutFlag = false;
-volatile bool PedalComm_ConnectionOpen = false;
+volatile bool PedalComm_ConnectionOpen = true;
 volatile uint8_t NackCnt = 0;
 
 /* Function implementations */
@@ -104,7 +98,7 @@ void PedalComm_Init()
 	SELECT_RX_TX_DDR |= (SELECT_RX_MASK | SELECT_TX_MASK);
 	
 	/* Activate receive */
-	Select_RX_TX(receive);
+	Select_RX_TX(DIR_RECEIVE);
 	
 	/* Enable TX Complete Interrupt */
 	UCSR0B |= (1 << TXCIE0);
@@ -213,7 +207,7 @@ void PedalComm_Receive()
 void PedalComm_HandleReceived()
 {
 	unsigned char response;
-	response = Handle_PedalCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].length, (uint8_t *)RX_CommandQueue[RxTail].data);
+	response = System_HandlePedalCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].length, (uint8_t *)RX_CommandQueue[RxTail].data);
 		
 	/* Calculate and store new queue index */
 	RxTail = (RxTail + 1) & RX_QUEUE_MASK;
@@ -292,24 +286,24 @@ void PedalComm_PutCommand()
 void PedalComm_Transmit()
 {
 	/* Activate Transmit */
-	Select_RX_TX(transmit);
+	Select_RX_TX(DIR_TRANSMIT);
 	
 	/* Start transmit */
 	UART0_PutQueue();
 }
 
 
-void Select_RX_TX(CommDirection dir)
+void Select_RX_TX(uint8_t dir)
 {
-	if (dir == transmit)
+	if (dir == DIR_TRANSMIT)
 	{
 		SELECT_RX_TX_PORT &= ~(SELECT_RX_MASK);
 		SELECT_RX_TX_PORT |= SELECT_TX_MASK;
 	}
 	else
 	{
-		SELECT_RX_TX_PORT &= ~(SELECT_TX_MASK);
 		SELECT_RX_TX_PORT |= SELECT_RX_MASK;
+		SELECT_RX_TX_PORT &= ~(SELECT_TX_MASK);
 	}
 }
 
@@ -317,5 +311,5 @@ void Select_RX_TX(CommDirection dir)
 ISR(USART0_TX_vect)
 {
 	/* Deactivate Transmit */
-	Select_RX_TX(receive);
+	Select_RX_TX(DIR_RECEIVE);
 }

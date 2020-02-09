@@ -6,6 +6,7 @@
 #include "SP10281_3x7segment.h"
 #include "MCP23017.h"
 #include "PedalComm.h"
+#include "System.h"
 
 void Timer0_Init()
 {
@@ -28,6 +29,26 @@ uint32_t Timer0_ms2cnt(uint32_t ms)
 /* Timer0 Compare A Match Interrupt Service Routine */
 ISR(TIMER0_COMPA_vect)
 {
+	/* Overflow counter to reset parameter if user doesn't commit */
+	if (System_TempSelectOvfCnt)
+	{
+		if (++System_TempSelectOvfCnt > SYSTEM_TEMP_SELECT_TIMEOUT)
+		{
+			System_TempSelectOvfCnt = 0;
+			System_TempSelectFlag = true;
+		}
+	}
+	
+	/* Overflow counter to shortly blank LEDs to mark selection */
+	if (System_MarkSelectionOvfCnt)
+	{
+		if (++System_MarkSelectionOvfCnt > SYSTEM_MARK_SELECTION_TIMEOUT)
+		{
+			System_MarkSelectionOvfCnt = 0;
+			System_MarkSelectionFlag = true;
+		}
+	}
+	
 	/* Overflow counter for delaying transmit to pedal */
 	if (PedalComm_DelayTXOvfCnt)
 	{
@@ -77,7 +98,7 @@ ISR(TIMER0_COMPA_vect)
 			}
 			else
 			{
-				RotEnc_State = ABORTED;
+				RotEnc_State = IDLE;
 			}
 			
 			RotaryEncoder_OvfCnt = 0;		// Stop overflow counter

@@ -115,7 +115,7 @@ void MCP_Output::Clear()
 		reg = OLATB;
 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
 	}
-	
+		
 	val = MCP23017_ReadReg((unsigned char)Addr, reg);
 	val &= ~(1 << Pin);
 	MCP23017_WriteReg((unsigned char)Addr,  reg, val);

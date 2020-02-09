@@ -19,7 +19,6 @@
 #include "UI.h"
 #include "PedalComm.h"
 #include "MIDI.h"
-#include "ActionHandler.h"
 #include "System.h"
 
 #define PEDAL_UART				0
@@ -34,11 +33,11 @@ int main(void)
 	i2c_init();
 	UART0_Init(PEDAL_UART_BAUDRATE, UART_2_STOP_BITS, UART_NO_PARITY);
 	UART1_Init(MIDI_UART_BAUDRATE, UART_1_STOP_BIT, UART_NO_PARITY);
+	PedalComm_Init();
 	
 	RotaryEncoder_Init();
 	SP10281_Init();
 	UI_Init();
-	MIDI_Init();
 	
 	sei();	// Global Enable Interrupt
 	
@@ -54,7 +53,7 @@ int main(void)
 		if (MIDI_ProgramChangeFlag)
 		{
 			MIDI_ProgramChangeFlag = false;
-			Handle_MIDIProgramChange();
+			System_HandleMIDIProgramChange();
 		}
 		
 		/* Handle incoming data from Pedal */
@@ -87,21 +86,16 @@ int main(void)
 		{
 			PedalComm_ResponseTimeoutFlag = false;
 			
-			if (PedalComm_ConnectionOpen)
+			/* If last command did not get an ACK */
+			if (PedalComm_TxAvailable())
 			{
 				PedalComm_ConnectionOpen = false;
+				PedalComm_FlushTxQueue();
 			}
 			else
 			{
-				PedalComm_FlushTxQueue();
 				PedalComm_QueueCommand(Heartbeat, 0, (uint8_t*)0);
 			}
-		}
-		
-		/* Handle Rotary Encoder input */
-		if (RotEnc_State != IDLE && RotEnc_State != PRESSED && RotEnc_State != ABORTED)
-		{
-			Handle_RotaryEncoderAction();
 		}
 		
 		/* Service 7-segment display */
@@ -118,8 +112,30 @@ int main(void)
 			MCP_Output::PerformAutoToggle(MCP23017_UI_LEDS_ADDR);
 		}
 		
+		/* Handle input from rotary encoder */
+		if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
+		{
+			System_HandleRotaryEncoderInput();
+			
+			RotEnc_State = IDLE;
+			RotaryEncoder_EnableInterrupt();
+		}
+		
+		/* Handle temp select timeout condition */
+		if (System_TempSelectFlag)
+		{
+			System_TempSelectFlag = false;
+			System_HandleTempSelectTimeout();
+		}
+		
+		/* Reset UI LEDs after selection mark */
+		if (System_MarkSelectionFlag)
+		{
+			System_MarkSelectionFlag = false;
+			System_HandleMarkSelection();
+		}
+		
 		/* The grand state machine */
 		System_Run();
     }
 }
-

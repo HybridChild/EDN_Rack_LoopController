@@ -29,7 +29,6 @@ typedef enum RotaryEncoder_State
 	ROT_LEFT,
 	SHORT_PRESS,
 	PRESSED,
-	ABORTED,
 	LONG_PRESS
 } RotaryEncoder_State;
 

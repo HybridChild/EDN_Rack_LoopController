@@ -14,8 +14,7 @@ PedalComm.d PedalComm.o: .././PedalComm.cpp \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint-gcc.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stddef.h \
- .././PedalComm.h .././UART.h .././util.h .././ActionHandler.h \
- .././System.h
+ .././PedalComm.h .././UART.h .././System.h .././MIDI.h
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\io.h:
 
@@ -51,8 +50,6 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\
 
 .././UART.h:
 
-.././util.h:
-
-.././ActionHandler.h:
-
 .././System.h:
+
+.././MIDI.h:

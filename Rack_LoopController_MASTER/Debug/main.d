@@ -13,8 +13,8 @@ main.d main.o: .././main.cpp \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\interrupt.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stdint-gcc.h \
  .././Timer.h .././i2cmaster.h .././UART.h .././RotaryEncoder.h \
- .././SP10281_3x7segment.h .././MCP23017.h .././UI.h .././PedalComm.h \
- .././MIDI.h .././ActionHandler.h .././System.h
+ .././SP10281_3x7segment.h .././MCP23017.h .././UI.h .././System.h \
+ .././PedalComm.h .././MIDI.h
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\avr\io.h:
 
@@ -56,10 +56,8 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\
 
 .././UI.h:
 
+.././System.h:
+
 .././PedalComm.h:
 
 .././MIDI.h:
-
-.././ActionHandler.h:
-
-.././System.h:
