@@ -8,13 +8,12 @@
 **************************************************************************/
 #include <inttypes.h>
 #include <compat/twi.h>
-
 #include "i2cmaster.h"
 
 
 /* define CPU frequency in hz here if not defined in Makefile */
 #ifndef F_CPU
-#define F_CPU 20000000UL
+#define F_CPU 16000000UL
 #endif
 
 /* I2C clock in Hz */

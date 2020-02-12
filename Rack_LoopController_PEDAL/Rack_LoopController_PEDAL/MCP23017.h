@@ -2,7 +2,7 @@
 #ifndef __MCP23017_h_included__
 #define __MCP23017_h_included__
 
-#define START_BYTE_MASK    (0x20)
+#include <stdint-gcc.h>
 
 #define IODIRA    0x00
 #define IODIRB    0x01
@@ -27,9 +27,50 @@
 #define OLATA     0x14
 #define OLATB     0x15
 
-#define MCP23017_ADDR_UI_LEDS	0b000
-
 void MCP23017_WriteReg(unsigned char chip_addr, unsigned char reg, unsigned char val);
 unsigned char MCP23017_ReadReg(unsigned char chip_addr, unsigned char reg);
+
+typedef enum MCP23017_Port {PortA, PortB} MCP23017_Port;
+typedef enum MCP23017_Pin {Pin0, Pin1, Pin2, Pin3, Pin4, Pin5, Pin6, Pin7} MCP23017_Pin;
+
+class MCP_Output
+{
+public:
+	typedef enum Output_State {CLEARED = 0, SET, AUTO_TOGGLE} Output_State;
+	
+	volatile static uint16_t AutoToggle_OvfCnt;
+	volatile static uint16_t AutoToggle_Timeout;
+	volatile static uint8_t AutoToggle_Flag;
+	volatile static uint8_t AutoToggle_PortA;
+	volatile static uint8_t AutoToggle_PortB;
+	
+	MCP_Output();
+	MCP_Output(uint8_t adrr, MCP23017_Port port, MCP23017_Pin pin);
+	uint8_t getState();
+	void Set();
+	void Clear();
+	void Toggle();
+	void AutoToggle();
+	static void SetAutoToggleSpeed(uint16_t ms);
+	static void PerformAutoToggle(uint8_t addr);
+	
+private:
+	uint8_t Addr;
+	MCP23017_Port Port;
+	MCP23017_Pin Pin;
+	Output_State State;
+};
+
+class MCP_Input
+{
+public:
+	MCP_Input();
+	MCP_Input(uint8_t adrr, MCP23017_Port port, MCP23017_Pin pin);
+	bool Read();
+private:
+	uint8_t Addr;
+	MCP23017_Port Port;
+	MCP23017_Pin Pin;
+};
 
 #endif  // __MCP23017_h_included__

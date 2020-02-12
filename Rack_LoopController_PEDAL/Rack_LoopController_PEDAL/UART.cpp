@@ -1,3 +1,9 @@
+/*
+ * UART.cpp
+ *
+ * Created: 26-01-2020 22:13:14
+ *  Author: Esben
+ */ 
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -43,8 +49,6 @@ void UART_Init(unsigned int baudrate, unsigned char stopbit, unsigned char parit
 	UART_RxHead = 0;
 	UART_RxTail = 0;
 	
-	UART_RX_Flag = 0;
-	
 	baudrate = UART_BAUD_SELECT(baudrate, F_CPU);
 	
 	/*Set baud rate */
@@ -63,6 +67,7 @@ void UART_Init(unsigned int baudrate, unsigned char stopbit, unsigned char parit
 	/* Set Parity */
 	if (parity == UART_EVEN_PARITY)
 	{
+		UCSR0C &= ~(1 << UPM00);
 		UCSR0C |= (1 << UPM01);							// Even parity
 	}
 	else if (parity == UART_ODD_PARITY)
@@ -184,14 +189,50 @@ Purpose:  Flush bytes waiting the receive buffer. Acutally ignores them.
 Input:    None
 Returns:  None
 **************************************************************************/
-void UART_Flush(void)
+void UART0_Flush(void)
 {
 	UART_RxHead = UART_RxTail;
 }
 
 
+int	UART_QueueChar(unsigned char data)
+{
+	unsigned char tmphead;
+	
+	/* calculate buffer index */
+	tmphead = (UART_TxHead + 1) & UART_TX_BUFFER_MASK;
+	
+	/* check for free space in buffer */
+	if ( tmphead == UART_TxTail )
+		return 0;
+	
+	UART_TxBuf[tmphead] = data;
+	UART_TxHead = tmphead;
+	
+	return 1;
+}
+
+
+void UART_QueueArray(const char *array, unsigned char length)
+{
+	unsigned char i = 0;
+	
+	for (i = 0; i < length; i++)
+	{
+		UART_QueueChar(array[i]);
+	}
+}
+
+
+void UART_PutQueue(void)
+{
+	/* enable UDRE interrupt */
+	UCSR0B |= (1 << UDRIE0);
+}
+
+
 /*************************************************************************
-Function: UART Receive Complete interrupt
+Function: UART0 Receive Complete interrupt
 Purpose:  called when the UART has received a character
 **************************************************************************/
 ISR(USART_RX_vect)
@@ -226,8 +267,6 @@ ISR(USART_RX_vect)
 	}
 
 	UART_LastRxError = lastRxError;
-	
-	UART_RX_Flag = 1;
 }
 
 

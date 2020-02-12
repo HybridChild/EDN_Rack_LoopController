@@ -1,3 +1,10 @@
+/*
+ * UART.h
+ *
+ * Created: 26-01-2020 22:14:34
+ *  Author: Esben
+ */ 
+
 
 #ifndef UART_H_
 #define UART_H_
@@ -28,6 +35,8 @@ void			UART_PutString(const char *s );
 void			UART_PutString_p(const char *progmem_s );
 int				UART_Available(void);
 void			UART_Flush(void);
+int				UART_QueueChar(unsigned char data);
+void			UART_QueueArray(const char *array, unsigned char length);
+void			UART_PutQueue(void);
 
-volatile unsigned char UART_RX_Flag;
 #endif /* UART_H_ */

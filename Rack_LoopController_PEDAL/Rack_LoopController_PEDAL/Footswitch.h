@@ -1,34 +1,39 @@
+/*
+ * Footswitch.h
+ *
+ * Created: 12-02-2020 18:40:06
+ *  Author: Esben
+ */ 
+
 
 #ifndef FOOTSWITCH_H_
 #define FOOTSWITCH_H_
 
-#define FOOTSWITCH_SHORT_PRESS_OVF		 75	// 244Hz / 36 = 6,77Hz (147,5ms) 
-#define FOOTSWITCH_LONG_PRESS_OVF		244	// 244Hz / 244 = 1Hz (1000ms)
-#define FOOTSWITCH_LONG_LONG_PRESS_OVF	488	// 244 / 488 = 0,5Hz (2000ms)
+#define FOOTSWITCH_SHORT_PRESS_TIMEOUT		 140	// 140*2ms = 280ms
+#define FOOTSWITCH_LONG_PRESS_TIMEOUT		 600	// 600*2ms = 1200ms
+#define FOOTSWITCH_LONG_LONG_PRESS_TIMEOUT	1200	// 1200*2ms = 2400ms
 
 enum Footswitch_State
 {
-	IDLE			= 0,
-	PRESS_SENSED	= 3,
-	WAITING			= 5,
-	SHORT_PRESS		= 1,
-	PRESSED			= 6,
-	ABORTED			= 7,
-	STILL_PRESSED	= 8,
-	LONG_PRESS		= 2,
-	LONG_LONG_PRESS = 4
+	IDLE,
+	PRESS_SENSED,
+	WAITING,
+	SHORT_PRESS,
+	PRESSED,
+	STILL_PRESSED,
+	LONG_PRESS,
+	LONG_LONG_PRESS
 };
 
-volatile unsigned char Footswitch_PressFlag;
-volatile unsigned char Footswitch_TimerFlag;
-volatile unsigned short Footswitch_OvfCnt;
-volatile enum Footswitch_State Footswitch_PressState;
-volatile unsigned char Footswitch_MCP_PortState;
-volatile unsigned char Footswitch_MCP_IntMask;
-
 void Footswitch_Init();
-void Footswitch_EnableInterrupt();
-void Footswitch_HandlePress();
+void Footswitch_PressDetected();
 void Footswitch_HandleTimer();
+void Footswitch_HandlePress();
+void Footswitch_EnableInterrupt();
+
+volatile extern Footswitch_State Footswitch_PressState;
+volatile extern bool Footswitch_PressFlag;
+volatile extern uint16_t Footswitch_TimerOvfCnt;
+volatile extern bool Footswitch_TimerFlag;
 
 #endif /* FOOTSWITCH_H_ */
