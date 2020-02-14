@@ -12,6 +12,7 @@
 #include "Segment7.h"
 #include "System.h"
 
+/* Variable initialization */
 volatile Footswitch_State Footswitch_PressState = IDLE;
 volatile bool Footswitch_PressFlag = false;
 volatile uint8_t Footswitch_PortState = 0;
@@ -19,10 +20,9 @@ volatile uint8_t Footswitch_InterruptMask = 0;
 volatile uint16_t Footswitch_TimerOvfCnt = 0;
 volatile bool Footswitch_TimerFlag = false;
 
+/* Function implementations */
 void Footswitch_Init()
-{
-	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTCAPB);	// Read state of Port when interrupt occurred (Clear interrupt B)
-	
+{	
 	DDRC &= ~(1 << PORTC1);		// Set PortC 1 as input
 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
 	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
@@ -74,7 +74,23 @@ void Footswitch_HandleTimer()
 		else
 		{
 			/* Write appropriate message in 7-segment display based on system state */
-			Segment7_WriteAll('m', 'o', 'd', 'E', 0, 0, 0, 0);
+			if (SystemState == EDITING)
+			{
+			}
+			else if (SystemState == RUN_PRESET_CTRL)
+			{
+				Segment7_WriteAll('L', 'o', 'o', 'P');
+			}
+			else if (SystemState == RUN_LOOP_CTRL)
+			{
+				if (Footswitch_InterruptMask & 0xF0)
+				{
+					Segment7_WriteAll('P', 'r', 'e', ' ');
+				}
+			}
+			else if (SystemState == TUNER)
+			{
+			}
 		}
 	}
 	else if (Footswitch_PressState == STILL_PRESSED)
@@ -94,9 +110,8 @@ void Footswitch_HandleTimer()
 }
 
 void Footswitch_HandlePress()
-{
-	/* Transmit Press State and responsible Footswitch index to Master */
-
+{	
+	System_HandleFootswitchInput(Footswitch_PressState, Footswitch_InterruptMask);
 }
 
 void Footswitch_EnableInterrupt()

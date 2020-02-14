@@ -14,9 +14,9 @@
 /* Defines */
 #define SELECT_RX_TX_DDR				DDRD
 #define SELECT_RX_TX_PORT				PORTD
-#define SELECT_RX_PORT					PORTD6
+#define SELECT_RX_PORT					PORTD5
 #define SELECT_RX_MASK					(1 << SELECT_RX_PORT)
-#define SELECT_TX_PORT					PORTD7
+#define SELECT_TX_PORT					PORTD6
 #define SELECT_TX_MASK					(1 << SELECT_TX_PORT)
 
 /* Size of the circular receive/transmit queues, must be power of 2 */
@@ -141,7 +141,11 @@ void MasterCom_Receive()
 		if (RX_Buffer[RX_CommandQueue[RxHead].length - 1] == EOF_BYTE)
 		{
 			RX_CommandQueue[RxHead].command = (CMD)RX_Buffer[CMD_BYTE_IDX];
-			RX_CommandQueue[RxHead].data[0] = RX_Buffer[DATA_BYTE_IDX];
+			
+			for (uint8_t i = 0; i < (RX_CommandQueue[RxHead].length - 4); i++)
+			{
+				RX_CommandQueue[RxHead].data[i] = RX_Buffer[DATA_BYTE_IDX + i];
+			}
 			
 			/* calculate new RX head index */
 			uint8_t tmpHead = (RxHead + 1) & RX_QUEUE_MASK;
@@ -171,7 +175,7 @@ void MasterCom_Receive()
 void MasterCom_HandleReceived()
 {
 	unsigned char response;
-	response = System_HandleMasterCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].length, (uint8_t *)RX_CommandQueue[RxTail].data);
+	response = System_HandleMasterCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].length - 4, (uint8_t *)RX_CommandQueue[RxTail].data);
 	
 	/* Calculate and store new queue index */
 	RxTail = (RxTail + 1) & RX_QUEUE_MASK;

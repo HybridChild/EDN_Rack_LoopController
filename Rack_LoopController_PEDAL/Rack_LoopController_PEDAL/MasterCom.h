@@ -18,31 +18,6 @@
 #define NACK_BYTE			0x2A
 
 /* Enumerations */
-enum Tuner_Note
-{
-	Unknown = 0,
-	C	,
-	Db	,
-	D	,
-	Eb	,
-	E	,
-	F	,
-	Gb	,
-	G	,
-	Ab	,
-	A	,
-	Bb	,
-	B
-};
-
-enum Tuner_SideBar
-{
-	Sidebar_Off	= 0	,
-	Sidebar_Sharp	,
-	Sidebar_Flat	,
-	Sidebar_Spot_on
-};
-
 typedef enum CMD
 {
 	Empty					= 0x00,
@@ -52,8 +27,7 @@ typedef enum CMD
 	UpdatePresetLoopLEDs	= 0xD0,
 	UpdateTunerLEDs			= 0xD3,
 	UpdateSystemState		= 0xD5,
-	Update7segments			= 0xD7,
-	UpdateTuner				= 0xDE
+	Update7segments			= 0xD7
 } CMD;
 
 struct CommandStruct

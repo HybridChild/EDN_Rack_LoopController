@@ -21,24 +21,25 @@
 #include "System.h"
 
 /* Function prototypes */
-void Init_IO_Expanders();
+void Init_ioExpanders();
 
 /* Main application */
 int main(void)
 {
 	/* Initialization */
-	DDRB |= (1 << PORTB0);	// Setup output pin for Tuner display green LED (PortB 0)
+	TUNER_GREEN_LED_DDR |= TUNER_GREEN_LED_MASK;	// Setup output pin for Tuner display green LED (PortB 0)
 	Timer0_Init();
 	i2c_init();
 	UART_Init(MASTER_UART_BAUDRATE, UART_2_STOP_BITS, UART_NO_PARITY);
 	MasterCom_Init();
-	Init_IO_Expanders();
-	Footswitch_Init();
+	
+	Init_ioExpanders();
+	Footswitch_Init();	// Should come after initialization of io-expanders
 	
 	/* Global Enable Interrupt */
 	sei();
 	
-	Segment7_WriteAll('r', 'i', 'f', 'f', 0, 0, 0, 0);
+	Segment7_WriteAll('r', 'i', 'f', 'f');
 	
     /* Main loop */
     while (1) 
@@ -86,7 +87,7 @@ int main(void)
 		if (Footswitch_PressState == SHORT_PRESS ||
 			Footswitch_PressState == LONG_PRESS ||
 			Footswitch_PressState == LONG_LONG_PRESS)
-		{
+		{			
 			Footswitch_HandlePress();
 			
 			/* Clear and reload for new user input */
@@ -96,7 +97,7 @@ int main(void)
     }
 }
 
-void Init_IO_Expanders()
+void Init_ioExpanders()
 {
 	/* Footswitch and Indicator		- Addr: 000
 		- Port A: Indicator lights	- Outputs

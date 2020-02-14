@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "Timer.h"
+#include "MasterCom.h"
 #include "Footswitch.h"
 
 
@@ -26,6 +27,24 @@ uint32_t Timer0_ms2cnt(uint32_t ms)
 /* Timer0 Compare A Match Interrupt Service Routine */
 ISR(TIMER0_COMPA_vect)
 {
+	/* Overflow counter for delaying transmit to Master */
+	if (MasterCom_DelayTXOvfCnt)
+	{
+		if (++MasterCom_DelayTXOvfCnt > MASTERCOM_DELAY_TX_TIMEOUT)
+		{
+			MasterCom_DelayTXOvfCnt = 0;	// Stop overflow counter
+			MasterCom_DelayTxFlag = true;
+		}
+	}
+
+	/* Overflow counter for Master response timeout and heartbeat */
+	if (++MasterCom_ResponseTimeoutOvfCnt > MASTERCOM_RESPONSE_TIMEOUT)
+	{
+		MasterCom_ResponseTimeoutOvfCnt = 1;	// Reset overflow counter
+		MasterCom_ResponseTimeoutFlag = true;
+	}
+	
+	/* Overflow counter for handling Footswitch press timing */
 	if (Footswitch_TimerOvfCnt)
 	{
 		Footswitch_TimerOvfCnt++;

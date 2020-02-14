@@ -10,8 +10,8 @@
 
 #include <stdint-gcc.h>
 
-void Segment7_WriteDigit(uint8_t dig, char data, uint8_t dot);
-void Segment7_WriteAll(char d3, char d2, char d1, char d0, uint8_t dot3, uint8_t dot2, uint8_t dot1, uint8_t dot0);
+void Segment7_WriteDigit(uint8_t dig, char chr);
+void Segment7_WriteAll(char c3, char c2, char c1, char c0);
 
 
 #endif /* SEGMENT7_H_ */
