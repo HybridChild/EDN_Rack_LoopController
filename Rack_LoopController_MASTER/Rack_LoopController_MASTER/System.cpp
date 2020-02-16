@@ -17,6 +17,7 @@
 void System_UpdateUI_LEDs();
 void System_UpdateUI_Relays();
 void System_ChangePreset();
+void System_UpdateLoopCtrl();
 
 volatile uint16_t System_TempSelectOvfCnt = 0;
 volatile bool System_TempSelectFlag = false;
@@ -73,7 +74,7 @@ void System_Run()
 				
 				if (System_MidiChannel == MIDI_CH_OMNI)
 				{
-					SP10281_WriteChar('o', 'm', 'n', 0, 0, 0);
+					SP10281_WriteAll('o', 'm', 'n', 0, 0, 0);
 				} 
 				else
 				{
@@ -96,7 +97,7 @@ void System_Run()
 				/* Write selected MIDI channel to 7-segment display */
 				if (TempSelectMidiChannel == MIDI_CH_OMNI)
 				{
-					SP10281_WriteChar('o', 'm', 'n', 0, 0, 0);
+					SP10281_WriteAll('o', 'm', 'n', 0, 0, 0);
 				}
 				else
 				{
@@ -131,21 +132,17 @@ void System_Run()
 			}
 			
 			break;
-		
+			
 		case ENTER_RUN_PRESET_CTRL:
 			/* Update state variables */
 			SystemRunMode = RUN_PRESET_MODE;
 			SystemState = RUN_PRESET_CTRL;
-		
-			/* Change LastActivePreset to force update system */
-			if (ActivePreset > PRESET_1)
-			{
-				LastActivePreset = System_Preset(LastActivePreset - 1);
-			}
-			else if (ActivePreset < PRESET_8)
-			{
-				LastActivePreset = System_Preset(LastActivePreset + 1);
-			}
+			
+			/* Stop timer */
+			System_TempSelectOvfCnt = 0;
+			
+			/* Change LastActivePreset to force update */
+			LastActivePreset = System_Preset(ActivePreset ^ (1 << 0));
 			
 		case RUN_PRESET_CTRL:
 			/* If active preset has changed since last cycle then update system */
@@ -163,38 +160,29 @@ void System_Run()
 				/* Update UI LEDs */
 				LoopModePreset = PresetTable[TempSelectPreset];
 				System_UpdateUI_LEDs();
-				
-				/* Start timer */
-				System_TempSelectOvfCnt = 1;
 			}
 			
 			break;
 		
 		case ENTER_RUN_LOOP_CTRL:
-			/* Update Pedal display */
-			PedalCom_QueueCommand(UpdateTunerLEDs, 1, 0);
-			PedalCom_QueueCommand(Update7segments, 4, (uint8_t*)"Loop");
-			PedalCom_QueueCommand(UpdatePresetLoopLEDs, 1, (uint8_t*)&LoopModePreset.Active_Loops);
-			
-			/* Update UI LEDs */
-			System_UpdateUI_LEDs();
-			
 			/* Update 7-segment display */
-			SP10281_WriteChar('M', 'L', 'C', 0, 0, 0);
+			SP10281_WriteAll('M', 'L', 'C', 0, 0, 0);
 			
 			/* Update state variables */
 			SystemRunMode = RUN_LOOP_MODE;
 			SystemState = RUN_LOOP_CTRL;
 			
+			/* Stop timer */
+			System_TempSelectOvfCnt = 0;
+			
+			/* Change LastLoopModePreset to force update */
+			LastLoopModePreset.Active_Loops = LoopModePreset.Active_Loops ^ (1 << 0);
+			
 		case RUN_LOOP_CTRL:
 			/* If active loops or ctrl switches has changed since last cycle */
 			if (LoopModePreset != LastLoopModePreset)
 			{
-				/* Update relays */
-				//System_UpdateUI_Relays();
-				
-				/* Update UI LEDs */
-				System_UpdateUI_LEDs();
+				System_UpdateLoopCtrl();
 			}
 			
 			/* If user is browsing presets */
@@ -206,9 +194,6 @@ void System_Run()
 				/* Update UI LEDs */
 				LoopModePreset = PresetTable[TempSelectPreset];
 				System_UpdateUI_LEDs();
-				
-				/* Start timer */
-				System_TempSelectOvfCnt = 1;
 			}
 			
 			break;
@@ -219,15 +204,8 @@ void System_Run()
 			break;
 		
 		case ENTER_EDIT_UI_MODE:
-			/* Change LastSystemUIMode to force update mode LEDs */
-			if (SystemUIMode < MODE_EDIT_MIDI)
-			{
-				LastSystemUIMode = System_UI_Mode(SystemUIMode + 1);
-			}
-			else if (SystemUIMode > MODE_RUN)
-			{
-				LastSystemUIMode = System_UI_Mode(SystemUIMode - 1);
-			}
+			/* Change LastSystemUIMode to force update */
+			LastSystemUIMode = System_UI_Mode(SystemUIMode ^ (1 << 0));
 			
 			System_ChangePreset();
 			
@@ -306,11 +284,11 @@ void System_Run()
 			/* Update 7-segment display */
 			if (SetMidiEdit == MIDI_IN)
 			{
-				SP10281_WriteChar('i', 'n', ' ', 0, 0, 0);
+				SP10281_WriteAll('i', 'n', ' ', 0, 0, 0);
 			}
 			else
 			{
-				SP10281_WriteChar('o', 'u', 't', 0, 0, 0);
+				SP10281_WriteAll('o', 'u', 't', 0, 0, 0);
 			}
 			
 			SystemState = EDIT_MIDI_IN_OUT;
@@ -334,7 +312,7 @@ void System_Run()
 			/* Update 7-segment display */
 			if (TempSelectMidiPC == MIDI_PC_OFF)
 			{
-				SP10281_WriteChar('o', 'f', 'f', 0, 0, 0);
+				SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
 			}
 			else
 			{
@@ -397,11 +375,7 @@ void System_HandleRotaryEncoderInput()
 			if (RotEnc_State == SHORT_PRESS)
 			{
 				ActivePreset = TempSelectPreset;
-				
-				if (SystemRunMode == RUN_LOOP_MODE)
-				{
-					SystemState = ENTER_RUN_PRESET_CTRL;
-				}
+				SystemState = ENTER_RUN_PRESET_CTRL;
 			}
 			else if (RotEnc_State == LONG_PRESS)
 			{
@@ -416,6 +390,9 @@ void System_HandleRotaryEncoderInput()
 				{
 					TempSelectPreset = System_Preset(TempSelectPreset + 1);
 				}
+				
+				/* Start timer */
+				System_TempSelectOvfCnt = 1;
 			}
 			else if (RotEnc_State == ROT_LEFT)
 			{
@@ -424,6 +401,9 @@ void System_HandleRotaryEncoderInput()
 				{
 					TempSelectPreset = System_Preset(TempSelectPreset - 1);
 				}
+				
+				/* Start timer */
+				System_TempSelectOvfCnt = 1;
 			}
 
 			break;
@@ -527,12 +507,12 @@ void System_HandleRotaryEncoderInput()
 			else if (RotEnc_State == ROT_RIGHT)
 			{
 				SetMidiEdit = MIDI_OUT;
-				SP10281_WriteChar('o', 'u', 't', 0, 0, 0);
+				SP10281_WriteAll('o', 'u', 't', 0, 0, 0);
 			}
 			else if (RotEnc_State == ROT_LEFT)
 			{
 				SetMidiEdit = MIDI_IN;
-				SP10281_WriteChar('i', 'n', ' ', 0, 0, 0);
+				SP10281_WriteAll('i', 'n', ' ', 0, 0, 0);
 			}
 			
 			break;
@@ -570,7 +550,7 @@ void System_HandleRotaryEncoderInput()
 				/* Update 7-segment display */
 				if (TempSelectMidiPC == MIDI_PC_OFF)
 				{
-					SP10281_WriteChar('o', 'f', 'f', 0, 0, 0);
+					SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
 				}
 				else
 				{
@@ -594,7 +574,7 @@ void System_HandleRotaryEncoderInput()
 				/* Update 7-segment display */
 				if (TempSelectMidiPC == MIDI_PC_OFF)
 				{
-					SP10281_WriteChar('o', 'f', 'f', 0, 0, 0);
+					SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
 				}
 				else
 				{
@@ -655,7 +635,7 @@ void System_HandleTempSelectTimeout()
 			/* Update 7-segment display */
 			if (TempSelectMidiPC == MIDI_PC_OFF)
 			{
-				SP10281_WriteChar('o', 'f', 'f', 0, 0, 0);
+				SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
 			}
 			else
 			{
@@ -686,7 +666,17 @@ unsigned char System_HandlePedalCommand(CMD cmd, uint8_t length, uint8_t *dat)
 	{
 		if (SystemState == RUN_PRESET_CTRL)
 		{
-			ActivePreset = (System_Preset)(Util_Bit2Int(dat[0]) - 1);
+			System_Preset tmpPreset = (System_Preset)(Util_Bit2Int(dat[0]) - 1);
+			
+			/* Force update even if received preset is same as active preset */
+			if (tmpPreset == ActivePreset)
+			{
+				LastActivePreset = System_Preset(ActivePreset ^ (1 << 0));
+			}
+			else
+			{
+				ActivePreset = tmpPreset;
+			}
 		} 
 		else if (SystemState == RUN_LOOP_CTRL)
 		{
@@ -706,7 +696,7 @@ unsigned char System_HandlePedalCommand(CMD cmd, uint8_t length, uint8_t *dat)
 		}
 		else if (SystemState == RUN_LOOP_CTRL)
 		{
-			/* Determine if top or bottom row of pedals was pressed */
+			/* Determine if top or bottom row of footswitches was pressed */
 			if (dat[0] & 0x0F)	// If bottom row then (de)activate Ctrl switches
 			{
 				LoopModePreset.Active_CtrlSwitches ^= dat[0];
@@ -844,13 +834,44 @@ void System_ChangePreset()
 	}
 				
 	/* Update Pedal display */
-	PedalCom_QueueCommand(UpdateTunerLEDs, 1, 0);
+	uint8_t tmp[2] = {0};
+	PedalCom_QueueCommand(UpdateTunerLEDs, 2, (uint8_t*)tmp);
 	PedalCom_QueueCommand(Update7segments, 4, (uint8_t*)"Pre ");
-	PedalCom_QueueCommand(UpdatePresetLoopLEDs, 1, (uint8_t*)&ActivePreset);
+	
+	tmp[0] = (1 << ActivePreset);
+	PedalCom_QueueCommand(UpdatePresetLoopLEDs, 1, (uint8_t*)tmp);
 				
 	/* Update 7-segment display */
 	SP10281_WriteNumber(ActivePreset + 1);
 				
+	/* Update UI LEDs */
+	System_UpdateUI_LEDs();
+}
+
+void System_UpdateLoopCtrl()
+{
+	/* Update relays */
+	//System_UpdateUI_Relays();
+	
+	/* Update Pedal display */
+	uint8_t tmp[NUMBER_OF_CTRL_SWITCHES] = {0};
+	PedalCom_QueueCommand(UpdateTunerLEDs, 2, (uint8_t*)&tmp);
+	PedalCom_QueueCommand(UpdatePresetLoopLEDs, 1, (uint8_t*)&LoopModePreset.Active_Loops);
+	
+	for (uint8_t i = 0; i < NUMBER_OF_CTRL_SWITCHES; i++)
+	{
+		if (LoopModePreset.Active_CtrlSwitches & (1 << i))
+		{
+			tmp[i] = '/';
+		}
+		else
+		{
+			tmp[i] = '_';
+		}
+	}
+	
+	PedalCom_QueueCommand(Update7segments, 4, (uint8_t*)tmp);
+	
 	/* Update UI LEDs */
 	System_UpdateUI_LEDs();
 }

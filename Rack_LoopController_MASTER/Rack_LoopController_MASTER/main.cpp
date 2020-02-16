@@ -92,7 +92,7 @@ int main(void)
 			}
 			else
 			{
-				PedalCom_QueueCommand(UpdateSystemState, 1, (uint8_t *)SystemState);
+				PedalCom_QueueCommand(UpdateSystemState, 1, (uint8_t *)&SystemState);
 			}
 		}
 		

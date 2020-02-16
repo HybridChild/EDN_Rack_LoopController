@@ -12,7 +12,6 @@
 #include "UART.h"
 #include "System.h"
 
-
 /* Defines */
 #define SELECT_RX_TX_DDR				DDRB
 #define SELECT_RX_TX_PORT				PORTB
@@ -101,7 +100,10 @@ void PedalCom_Receive()
 	
 	/* Start/reset Delay TX timer. Both in case a NACK needs to be sent, and also to
 	   prevent response to previous command being sent while still receiving new data. */
-	PedalCom_DelayTXOvfCnt = 1;
+	if (PedalCom_DelayTXOvfCnt != 0)
+	{
+		PedalCom_DelayTXOvfCnt = 1;
+	}
 	
 	/* Fetch new byte from UART buffer */
 	RX_Buffer[RX_ByteCnt] = UART0_GetChar();
@@ -125,7 +127,7 @@ void PedalCom_Receive()
 				{
 					PedalCom_ConnectionOpen = true;
 					
-					/* Set system state to initialize pedal */
+					/* Set system state to initialize Pedal */
 					SystemState = INITIALIZE_SYSTEM;
 				}
 			}
@@ -151,7 +153,11 @@ void PedalCom_Receive()
 		if (RX_Buffer[RX_CommandQueue[RxHead].length - 1] == EOF_BYTE)
 		{
 			RX_CommandQueue[RxHead].command = (CMD)RX_Buffer[CMD_BYTE_IDX];
-			RX_CommandQueue[RxHead].data[0] = RX_Buffer[DATA_BYTE_IDX];
+			
+			for (uint8_t i = 0; i < (RX_CommandQueue[RxHead].length - 4); i++)
+			{
+				RX_CommandQueue[RxHead].data[i] = RX_Buffer[DATA_BYTE_IDX + i];
+			}
 			
 			/* calculate new RX head index */
 			uint8_t tmpHead = (RxHead + 1) & RX_QUEUE_MASK;

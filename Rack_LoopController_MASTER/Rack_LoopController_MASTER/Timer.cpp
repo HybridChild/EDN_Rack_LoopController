@@ -49,7 +49,7 @@ ISR(TIMER0_COMPA_vect)
 		}
 	}
 	
-	/* Overflow counter for delaying transmit to pedal */
+	/* Overflow counter for delaying transmit to Pedal */
 	if (PedalCom_DelayTXOvfCnt)
 	{
 		if (++PedalCom_DelayTXOvfCnt > PEDALCOM_DELAY_TX_TIMEOUT)
