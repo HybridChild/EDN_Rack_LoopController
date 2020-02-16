@@ -39,7 +39,7 @@ int main(void)
 	/* Global Enable Interrupt */
 	sei();
 	
-	Segment7_WriteAll('r', 'i', 'f', 'f');
+	Segment7_WriteAll('r', 'i', 'f', 'f', 0, 0, 0, 0);
 	
     /* Main loop */
     while (1) 

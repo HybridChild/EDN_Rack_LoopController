@@ -14,9 +14,9 @@
 /* Defines */
 #define SELECT_RX_TX_DDR				DDRD
 #define SELECT_RX_TX_PORT				PORTD
-#define SELECT_RX_PORT					PORTD5
+#define SELECT_RX_PORT					PORTD6
 #define SELECT_RX_MASK					(1 << SELECT_RX_PORT)
-#define SELECT_TX_PORT					PORTD6
+#define SELECT_TX_PORT					PORTD5
 #define SELECT_TX_MASK					(1 << SELECT_TX_PORT)
 
 /* Size of the circular receive/transmit queues, must be power of 2 */
@@ -99,7 +99,10 @@ void MasterCom_Receive()
 	
 	/* Start/reset Delay TX timer. Both in case a NACK needs to be sent, and also to
 	   prevent response to previous command being sent while still receiving new data. */
-	MasterCom_DelayTXOvfCnt = 1;
+	if (MasterCom_DelayTXOvfCnt != 0)
+	{
+		MasterCom_DelayTXOvfCnt = 1;
+	}
 	
 	/* Fetch new byte from UART buffer */
 	RX_Buffer[RX_ByteCnt] = UART_GetChar();

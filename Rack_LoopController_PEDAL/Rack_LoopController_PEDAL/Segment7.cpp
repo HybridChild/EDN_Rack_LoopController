@@ -44,7 +44,7 @@ volatile const unsigned char Segment7_DigitTable[128] = {
 	(unsigned char)~(0b00000000),	/* [31]		Character: US */
 	(unsigned char)~(0b00000000),	/* [32]		Character: Space */
 	(unsigned char)~(0b00000000),	/* [33]		Character: ! */
-	(unsigned char)~(0b00000000),	/* [34]		Character: " */
+	(unsigned char)~(0b00100010),	/* [34]		Character: " */
 	(unsigned char)~(0b00000000),	/* [35]		Character: # */
 	(unsigned char)~(0b00000000),	/* [36]		Character: $ */
 	(unsigned char)~(0b00000000),	/* [37]		Character: % */
@@ -54,10 +54,10 @@ volatile const unsigned char Segment7_DigitTable[128] = {
 	(unsigned char)~(0b00001111),	/* [41]		Character: ) */
 	(unsigned char)~(0b00000000),	/* [42]		Character: * */
 	(unsigned char)~(0b00000000),	/* [43]		Character: + */
-	(unsigned char)~(0b00000000),	/* [44]		Character: ´ */
+	(unsigned char)~(0b00000000),	/* [44]		Character: Â´ */
 	(unsigned char)~(0b01000000),	/* [45]		Character: - */
 	(unsigned char)~(0b00000000),	/* [46]		Character: . */
-	(unsigned char)~(0b01100100),	/* [47]		Character: / */
+	(unsigned char)~(0b01010010),	/* [47]		Character: / */
 	(unsigned char)~(0b00111111),	/* [48]		Character: 0 */
 	(unsigned char)~(0b00000110),	/* [49]		Character: 1 */
 	(unsigned char)~(0b01011011),	/* [50]		Character: 2 */
@@ -102,9 +102,9 @@ volatile const unsigned char Segment7_DigitTable[128] = {
 	(unsigned char)~(0b01101110),	/* [89]		Character: Y */
 	(unsigned char)~(0b00011011),	/* [90]		Character: Z */
 	(unsigned char)~(0b00111001),	/* [91]		Character: [ */
-	(unsigned char)~(0b00000000),	/* [92]		Character: \ */
+	(unsigned char)~(0b01100100),	/* [92]		Character: \ */
 	(unsigned char)~(0b00001111),	/* [93]		Character: ] */
-	(unsigned char)~(0b00000000),	/* [94]		Character: ^ */
+	(unsigned char)~(0b00000001),	/* [94]		Character: ^ */
 	(unsigned char)~(0b00001000),	/* [95]		Character: _ */
 	(unsigned char)~(0b00000000),	/* [96]		Character: ` */
 	(unsigned char)~(0b01110111),	/* [97]		Character: a */
@@ -141,30 +141,37 @@ volatile const unsigned char Segment7_DigitTable[128] = {
 };
 
 
-void Segment7_WriteSingle(uint8_t dig, char chr)
-{			
+void Segment7_WriteSingle(uint8_t dig, char chr, uint8_t dot)
+{
+	unsigned char tmp = Segment7_DigitTable[(uint8_t)chr];
+	
+	if (dot)
+	{
+		tmp |= (1 << 7);
+	}
+	
 	if (dig == 0)
 	{
-		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_0_1, OLATB, Segment7_DigitTable[(uint8_t)chr]);
+		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_0_1, OLATB, tmp);
 	}
 	else if (dig == 1)
 	{
-		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_0_1, OLATA, Segment7_DigitTable[(uint8_t)chr]);
+		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_0_1, OLATA, tmp);
 	}
 	else if (dig == 2)
 	{
-		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_2_3, OLATB, Segment7_DigitTable[(uint8_t)chr]);
+		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_2_3, OLATB, tmp);
 	}
 	else if (dig == 3)
 	{
-		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_2_3, OLATA, Segment7_DigitTable[(uint8_t)chr]);
+		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_2_3, OLATA, tmp);
 	}
 }
 
-void Segment7_WriteAll(char c3, char c2, char c1, char c0)
+void Segment7_WriteAll(char c3, char c2, char c1, char c0, uint8_t dot3, uint8_t dot2, uint8_t dot1, uint8_t dot0)
 {
-	Segment7_WriteSingle(0, c0);
-	Segment7_WriteSingle(1, c1);
-	Segment7_WriteSingle(2, c2);
-	Segment7_WriteSingle(3, c3);
+	Segment7_WriteSingle(0, c0, dot0);
+	Segment7_WriteSingle(1, c1, dot1);
+	Segment7_WriteSingle(2, c2, dot2);
+	Segment7_WriteSingle(3, c3, dot3);
 }

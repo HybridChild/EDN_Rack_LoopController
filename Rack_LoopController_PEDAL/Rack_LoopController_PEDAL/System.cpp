@@ -29,7 +29,7 @@ void System_HandleFootswitchInput(Footswitch_State state, uint8_t sw)
 		/* Only write Tuner in 7-segment display if Not in tuner mode AND if not Loop Ctrl bottom row footswitch was pressed */
 		if ((SystemState != TUNER) && !(SystemState == RUN_LOOP_CTRL && (sw & 0x0F)))
 		{
-			Segment7_WriteAll('T', 'u', 'n', 'r');
+			Segment7_WriteAll('T', 'u', 'n', 'r', 0, 0, 0, 0);
 		}
 	}
 }
@@ -40,11 +40,26 @@ unsigned char System_HandleMasterCommand(CMD cmd, uint8_t length, uint8_t *dat)
 	
 	if (cmd == UpdateSystemState && length == 1)
 	{
-		SystemState = (System_State)dat[0];
+		if (dat[0] == 4)
+		{
+			SystemState = RUN_PRESET_CTRL;
+		}
+		else if (dat[0] == 6)
+		{
+			SystemState = RUN_LOOP_CTRL;
+		}
+		else if (dat[0] == 8)
+		{
+			SystemState = TUNER;
+		}
+		else
+		{
+			SystemState = EDITING;
+		}
 	}
 	else if (cmd == Update7segments && length == 4)
 	{
-		Segment7_WriteAll((char)dat[0], (char)dat[1], (char)dat[2], (char)dat[3]);
+		Segment7_WriteAll((char)dat[0], (char)dat[1], (char)dat[2], (char)dat[3], 0, 0, 0, 0);
 	}
 	else if (cmd == UpdatePresetLoopLEDs && length == 1)
 	{

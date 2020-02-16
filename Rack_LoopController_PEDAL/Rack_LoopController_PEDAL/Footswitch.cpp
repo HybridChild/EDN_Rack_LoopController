@@ -38,14 +38,19 @@ void Footswitch_PressDetected()
 	
 	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTCAPB);	// Read state of Port when interrupt occurred (Clear interrupt B)
 	
-	if (Footswitch_PortState != 0x00)		// Only react on rising-edge
+	if (Footswitch_PortState != 0x00)		// Footswitch pressed
 	{
 		Footswitch_InterruptMask = tmp;
 		Footswitch_PressState = PRESS_SENSED;
 		Footswitch_TimerOvfCnt = 1;		// Start Timer
 	}
-	else
+	else	// Footswitch released
 	{
+		if (Footswitch_PressState == PRESSED)
+		{
+			Footswitch_PressState = LONG_PRESS;
+		}
+		
 		Footswitch_EnableInterrupt();
 	}	
 }
@@ -73,19 +78,26 @@ void Footswitch_HandleTimer()
 		}
 		else
 		{
+			/* Enable interrupt so Long Press will be trigged as soon as the user lifts his/her foot from the switch */
+			Footswitch_EnableInterrupt();
+			
 			/* Write appropriate message in 7-segment display based on system state */
 			if (SystemState == EDITING)
 			{
 			}
 			else if (SystemState == RUN_PRESET_CTRL)
 			{
-				Segment7_WriteAll('L', 'o', 'o', 'P');
+				Segment7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
 			}
 			else if (SystemState == RUN_LOOP_CTRL)
 			{
 				if (Footswitch_InterruptMask & 0xF0)
 				{
-					Segment7_WriteAll('P', 'r', 'e', ' ');
+					Segment7_WriteAll('P', 'r', 'e', ' ', 0, 0, 0, 0);
+				}
+				else
+				{
+					Segment7_WriteAll('^', '^', '^', '^', 0, 0, 0, 0);
 				}
 			}
 			else if (SystemState == TUNER)
