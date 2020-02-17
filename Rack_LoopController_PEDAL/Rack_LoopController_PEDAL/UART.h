@@ -38,5 +38,6 @@ void			UART_Flush(void);
 int				UART_QueueChar(unsigned char data);
 void			UART_QueueArray(const char *array, unsigned char length);
 void			UART_PutQueue(void);
+bool			UART_QueueIsEmpty();
 
 #endif /* UART_H_ */

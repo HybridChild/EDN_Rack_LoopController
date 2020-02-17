@@ -27,6 +27,7 @@
 #define RX_QUEUE_MASK	( RX_QUEUE_SIZE - 1)
 #define TX_QUEUE_MASK	( TX_QUEUE_SIZE - 1)
 
+#define CMD_HEADER_SIZE		4
 #define SOF_BYTE			0x5F
 #define EOF_BYTE			0xEF
 
@@ -40,26 +41,30 @@
 #define DIR_TRANSMIT		0
 #define DIR_RECEIVE			1
 
+#define MAX_RETRANSMITS		5
+
 /* Function prototypes */
 void Select_RX_TX(uint8_t dir);
 
 /* Global variables */
 volatile bool MasterCom_DelayTxFlag = false;
 volatile uint8_t MasterCom_DelayTXOvfCnt = 0;
-volatile uint16_t MasterCom_ResponseTimeoutOvfCnt = 1;
+volatile uint16_t MasterCom_ResponseTimeoutOvfCnt = 0;
 volatile bool MasterCom_ResponseTimeoutFlag = false;
+volatile uint16_t MasterCom_FullFrameTimeoutOvfCnt = 0;
+volatile bool MasterCom_FullFrameTimeoutFlag = false;
 
 /* Local variables */
 volatile unsigned char RX_Buffer[RX_BUFFER_SIZE] = {0};
 
 volatile CommandStruct RX_CommandQueue[RX_QUEUE_SIZE] = {Empty, 0, {0,0,0,0}, false, false};
-volatile CommandStruct TX_CommandQueue[TX_QUEUE_SIZE] = {Empty, 0, {0,0,0,0}, false, false};
+volatile CommandStruct TX_CommandQueue[TX_QUEUE_SIZE] = {Empty, 0, {0,0,0,0}, false, true};
 volatile uint8_t RxHead = 0;
 volatile uint8_t RxTail = 0;
 volatile uint8_t TxHead = 0;
 volatile uint8_t TxTail = 0;
 
-volatile uint8_t NackCnt = 0;
+volatile uint8_t RetransmitCnt = 0;
 
 /* Function implementations */
 void MasterCom_Init()
@@ -111,26 +116,25 @@ void MasterCom_Receive()
 	/* Handle new byte */
 	if ((RX_ByteCnt - 1) == SOF_BYTE_IDX)
 	{
-		if (RX_Buffer[SOF_BYTE_IDX] != SOF_BYTE)
+		MasterCom_ResponseTimeoutOvfCnt = 0;		// Stop counter
+		
+		if (RX_Buffer[SOF_BYTE_IDX] == SOF_BYTE)
+		{
+			MasterCom_FullFrameTimeoutOvfCnt = 1;
+		}
+		else
 		{
 			RX_ByteCnt = 0;
+			MasterCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX counter in case a new message is in queue to be sent
 				
 			if (RX_Buffer[SOF_BYTE_IDX] == ACK_BYTE)
 			{
-				MasterCom_ResponseTimeoutOvfCnt = 1;		// Reset timeout timer
-				NackCnt = 0;
-				
+				RetransmitCnt = 0;	// Reset retransmit counter
 				TX_CommandQueue[TxTail].acked = true;
 			}
 			else if (RX_Buffer[SOF_BYTE_IDX] == NACK_BYTE)
 			{
-				/* Stop retransmitting command if Pedal keeps responding with NACK. */
-				if (++NackCnt <= 3)
-				{
-					/* Prepare retransmit latest command */
-					TX_CommandQueue[TxTail].sent = false;
-					MasterCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX timer
-				}
+				MasterCom_PrepareRetransmit();
 			}
 		}
 	}
@@ -140,12 +144,14 @@ void MasterCom_Receive()
 	}
 	else if (RX_ByteCnt == RX_CommandQueue[RxHead].length)
 	{
+		MasterCom_FullFrameTimeoutOvfCnt = 0;
+		
 		/* If full frame received */
 		if (RX_Buffer[RX_CommandQueue[RxHead].length - 1] == EOF_BYTE)
 		{
 			RX_CommandQueue[RxHead].command = (CMD)RX_Buffer[CMD_BYTE_IDX];
 			
-			for (uint8_t i = 0; i < (RX_CommandQueue[RxHead].length - 4); i++)
+			for (uint8_t i = 0; i < (RX_CommandQueue[RxHead].length - CMD_HEADER_SIZE); i++)
 			{
 				RX_CommandQueue[RxHead].data[i] = RX_Buffer[DATA_BYTE_IDX + i];
 			}
@@ -178,7 +184,7 @@ void MasterCom_Receive()
 void MasterCom_HandleReceived()
 {
 	unsigned char response;
-	response = System_HandleMasterCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].length - 4, (uint8_t *)RX_CommandQueue[RxTail].data);
+	response = System_HandleMasterCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].length - CMD_HEADER_SIZE, (uint8_t *)RX_CommandQueue[RxTail].data);
 	
 	/* Calculate and store new queue index */
 	RxTail = (RxTail + 1) & RX_QUEUE_MASK;
@@ -202,7 +208,7 @@ bool MasterCom_QueueCommand(CMD cmd, uint8_t datLen, uint8_t *dat)
 	
 	/* Copy command to queue */
 	TX_CommandQueue[TxHead].command = cmd;
-	TX_CommandQueue[TxHead].length = datLen + 4;
+	TX_CommandQueue[TxHead].length = datLen + CMD_HEADER_SIZE;
 	TX_CommandQueue[TxHead].sent = false;
 	TX_CommandQueue[TxHead].acked = false;
 	
@@ -232,7 +238,7 @@ void MasterCom_PutCommand()
 		UART_QueueChar((unsigned char)TX_CommandQueue[TxTail].length);
 		UART_QueueChar((unsigned char)TX_CommandQueue[TxTail].command);
 		
-		for (uint8_t i = 0; i < (TX_CommandQueue[TxTail].length - 4); i++)
+		for (uint8_t i = 0; i < (TX_CommandQueue[TxTail].length - CMD_HEADER_SIZE); i++)
 		{
 			UART_QueueChar((unsigned char)TX_CommandQueue[TxTail].data[i]);
 		}
@@ -253,6 +259,16 @@ void MasterCom_PutCommand()
 	}
 }
 
+void MasterCom_PrepareRetransmit()
+{
+	if (RetransmitCnt < MAX_RETRANSMITS)
+	{
+		RetransmitCnt++;
+		
+		/* Prepare retransmit latest command */
+		TX_CommandQueue[TxTail].sent = false;
+	}
+}
 
 void MasterCom_Transmit()
 {

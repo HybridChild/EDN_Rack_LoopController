@@ -66,7 +66,26 @@ int main(void)
 		if (MasterCom_DelayTxFlag)
 		{
 			MasterCom_DelayTxFlag = false;
-			MasterCom_Transmit();
+			
+			if (!UART_QueueIsEmpty())
+			{
+				MasterCom_Transmit();
+			}
+		}
+		
+		/* Retransmit command if no response was received */
+		if (MasterCom_ResponseTimeoutFlag)
+		{
+			MasterCom_ResponseTimeoutFlag = false;
+			MasterCom_PrepareRetransmit();
+		}
+		
+		/* Send NACK if full command frame was not received before timeout */
+		if (MasterCom_FullFrameTimeoutFlag)
+		{
+			MasterCom_FullFrameTimeoutFlag = false;
+			UART_QueueChar(NACK_BYTE);
+			MasterCom_DelayTxFlag = true;
 		}
 		
 		/* Footswitch press detected */

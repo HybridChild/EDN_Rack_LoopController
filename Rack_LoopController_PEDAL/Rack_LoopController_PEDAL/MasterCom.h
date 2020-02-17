@@ -9,10 +9,12 @@
 #ifndef MASTERCOM_H_
 #define MASTERCOM_H_
 
+/* Defines */
 #define MASTER_UART_BAUDRATE	19200
 
-#define MASTERCOM_DELAY_TX_TIMEOUT	3		// 3*2ms = 6ms
-#define MASTERCOM_RESPONSE_TIMEOUT	1000	// 1000*2ms = 2 seconds
+#define MASTERCOM_DELAY_TX_TIMEOUT		2		// 2*2ms = 4ms
+#define MASTERCOM_RESPONSE_TIMEOUT		16		// 16*2ms = 32ms
+#define MASTERCOM_FULL_FRAME_TIMEOUT	5		// 5*2ms = 10ms
 
 #define ACK_BYTE			0xAC
 #define NACK_BYTE			0x2A
@@ -48,11 +50,14 @@ void MasterCom_HandleReceived();
 bool MasterCom_QueueCommand(CMD cmd, uint8_t datLen, uint8_t *dat);
 void MasterCom_PutCommand();
 void MasterCom_Transmit();
+void MasterCom_PrepareRetransmit();
 
 volatile extern bool MasterCom_DelayTxFlag;
 volatile extern uint8_t MasterCom_DelayTXOvfCnt;
 volatile extern uint16_t MasterCom_ResponseTimeoutOvfCnt;
 volatile extern bool MasterCom_ResponseTimeoutFlag;
+volatile extern uint16_t MasterCom_FullFrameTimeoutOvfCnt;
+volatile extern bool MasterCom_FullFrameTimeoutFlag;
 
 
 #endif /* MASTERCOM_H_ */

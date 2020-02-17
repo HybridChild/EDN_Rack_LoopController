@@ -37,11 +37,24 @@ ISR(TIMER0_COMPA_vect)
 		}
 	}
 
-	/* Overflow counter for Master response timeout and heartbeat */
-	if (++MasterCom_ResponseTimeoutOvfCnt > MASTERCOM_RESPONSE_TIMEOUT)
+	/* Overflow counter for Master response timeout */
+	if (MasterCom_ResponseTimeoutOvfCnt)
 	{
-		MasterCom_ResponseTimeoutOvfCnt = 1;	// Reset overflow counter
-		MasterCom_ResponseTimeoutFlag = true;
+		if (++MasterCom_ResponseTimeoutOvfCnt > MASTERCOM_RESPONSE_TIMEOUT)
+		{
+			MasterCom_ResponseTimeoutOvfCnt = 1;	// Reset overflow counter
+			MasterCom_ResponseTimeoutFlag = true;
+		}
+	}
+	
+	/* Overflow counter for receiving full command frame */
+	if (MasterCom_FullFrameTimeoutOvfCnt)
+	{
+		if (++MasterCom_FullFrameTimeoutOvfCnt > MASTERCOM_FULL_FRAME_TIMEOUT)
+		{
+			MasterCom_FullFrameTimeoutOvfCnt = 0;	// Stop counter
+			MasterCom_FullFrameTimeoutFlag = true;
+		}
 	}
 	
 	/* Overflow counter for handling Footswitch press timing */

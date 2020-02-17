@@ -16,8 +16,8 @@
 #endif
 
 /* Size of the circular receive/transmit buffers, must be power of 2 */
-#define UART_RX_BUFFER_SIZE 32
-#define UART_TX_BUFFER_SIZE 32
+#define UART_RX_BUFFER_SIZE 64
+#define UART_TX_BUFFER_SIZE 64
 
 /* size of RX/TX buffers */
 #define UART_RX_BUFFER_MASK	( UART_RX_BUFFER_SIZE - 1)
@@ -179,7 +179,8 @@ Returns:  Integer number of bytes in the receive buffer
 **************************************************************************/
 int UART_Available(void)
 {
-	return (UART_RX_BUFFER_MASK + UART_RxHead - UART_RxTail) % UART_RX_BUFFER_MASK;
+	//return (UART_RX_BUFFER_MASK + UART_RxHead - UART_RxTail) % UART_RX_BUFFER_MASK;
+	return (UART_RxHead != UART_RxTail);
 }
 
 
@@ -228,6 +229,11 @@ void UART_PutQueue(void)
 {
 	/* enable UDRE interrupt */
 	UCSR0B |= (1 << UDRIE0);
+}
+
+bool UART_QueueIsEmpty(void)
+{
+	return (UART_TxHead == UART_TxTail);
 }
 
 
