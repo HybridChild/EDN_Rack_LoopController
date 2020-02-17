@@ -677,6 +677,8 @@ unsigned char System_HandlePedalCommand(CMD cmd, uint8_t length, uint8_t *dat)
 			{
 				ActivePreset = tmpPreset;
 			}
+			
+			TempSelectPreset = ActivePreset;
 		} 
 		else if (SystemState == RUN_LOOP_CTRL)
 		{

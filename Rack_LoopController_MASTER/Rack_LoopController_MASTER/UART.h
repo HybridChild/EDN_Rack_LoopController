@@ -38,6 +38,7 @@ void			UART0_Flush(void);
 int				UART0_QueueChar(unsigned char data);
 void			UART0_QueueArray(const char *array, unsigned char length);
 void			UART0_PutQueue(void);
+bool			UART0_QueueIsEmpty(void);
 
 void			UART1_Init(unsigned int baudrate, unsigned char stopbit, unsigned char parity);
 unsigned int	UART1_GetChar(void);

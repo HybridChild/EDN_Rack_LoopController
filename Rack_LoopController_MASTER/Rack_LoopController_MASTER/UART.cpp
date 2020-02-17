@@ -11,15 +11,16 @@
 #include <stddef.h>
 #include "UART.h"
 
+
 #ifndef F_CPU
 #define F_CPU 20000000UL
 #endif
 
 /* Size of the circular receive/transmit buffers, must be power of 2 */
-#define UART0_RX_BUFFER_SIZE 32
-#define UART0_TX_BUFFER_SIZE 32
-#define UART1_RX_BUFFER_SIZE 32
-#define UART1_TX_BUFFER_SIZE 32
+#define UART0_RX_BUFFER_SIZE 64
+#define UART0_TX_BUFFER_SIZE 64
+#define UART1_RX_BUFFER_SIZE 64
+#define UART1_TX_BUFFER_SIZE 64
 
 /* size of RX/TX buffers */
 #define UART0_RX_BUFFER_MASK	( UART0_RX_BUFFER_SIZE - 1)
@@ -191,7 +192,8 @@ Returns:  Integer number of bytes in the receive buffer
 **************************************************************************/
 int UART0_Available(void)
 {
-	return (UART0_RX_BUFFER_MASK + UART0_RxHead - UART0_RxTail) % UART0_RX_BUFFER_MASK;
+	//return (UART0_RX_BUFFER_MASK + UART0_RxHead - UART0_RxTail) % UART0_RX_BUFFER_MASK;
+	return (UART0_RxHead != UART0_RxTail);
 }
 
 
@@ -240,6 +242,12 @@ void UART0_PutQueue(void)
 {
 	/* enable UDRE interrupt */
 	UCSR0B |= (1 << UDRIE0);
+}
+
+
+bool UART0_QueueIsEmpty(void)
+{
+	return (UART0_TxHead == UART0_TxTail);
 }
 
 
@@ -452,7 +460,8 @@ Returns:  Integer number of bytes in the receive buffer
 **************************************************************************/
 int UART1_Available(void)
 {
-	return (UART1_RX_BUFFER_MASK + UART1_RxHead - UART1_RxTail) % UART1_RX_BUFFER_MASK;
+	//return (UART1_RX_BUFFER_MASK + UART1_RxHead - UART1_RxTail) % UART1_RX_BUFFER_MASK;
+	return (UART1_RxHead != UART1_RxTail);
 }
 
 

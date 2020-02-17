@@ -13,8 +13,10 @@
 
 #define PEDAL_UART_BAUDRATE		19200
 
-#define PEDALCOM_DELAY_TX_TIMEOUT	3		// 3*2ms = 6ms
-#define PEDALCOM_RESPONSE_TIMEOUT	1000	// 1000*2ms = 2 seconds
+#define PEDALCOM_DELAY_TX_TIMEOUT	2		// 2*2ms = 4ms
+#define PEDALCOM_RESPONSE_TIMEOUT	16		// 16*2ms = 32ms
+#define PEDALCOM_FULL_FRAME_TIMEOUT	5		// 5*2ms = 10ms
+#define PEDALCOM_HEARTBEAT_TIMEOUT	1500	// 1500*2ms = 3 seconds
 
 #define ACK_BYTE			0xAC
 #define NACK_BYTE			0x2A
@@ -50,11 +52,16 @@ void PedalCom_HandleReceived();
 bool PedalCom_QueueCommand(CMD cmd, uint8_t datLen, uint8_t *dat);
 void PedalCom_PutCommand();
 void PedalCom_Transmit();
+void PedalCom_PrepareRetransmit();
 
 volatile extern bool PedalCom_DelayTxFlag;
 volatile extern uint8_t PedalCom_DelayTXOvfCnt;
 volatile extern uint16_t PedalCom_ResponseTimeoutOvfCnt;
 volatile extern bool PedalCom_ResponseTimeoutFlag;
+volatile extern uint16_t PedalCom_FullFrameTimeoutOvfCnt;
+volatile extern bool PedalCom_FullFrameTimeoutFlag;
+volatile extern uint16_t PedalCom_HeartbeatOvfCnt;
+volatile extern bool PedalCom_HeartbeatFlag;
 volatile extern bool PedalCom_ConnectionOpen;
 
 #endif /* PEDALCOM_H_ */

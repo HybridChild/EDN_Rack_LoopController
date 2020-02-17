@@ -400,7 +400,7 @@ END GROUP
 .rela.plt
  *(.rela.plt)
 
-.text           0x00000000     0x2268
+.text           0x00000000     0x231e
  *(.vectors)
  .vectors       0x00000000       0x7c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5/crtatmega324pa.o
                 0x00000000                __vector_default
@@ -506,232 +506,238 @@ END GROUP
  .text._Z11i2c_readNakv
                 0x000001a2       0x16 i2cmaster.o
                 0x000001a2                _Z11i2c_readNakv
- .text.main     0x000001b8      0x110 main.o
+ .text.main     0x000001b8      0x140 main.o
                 0x000001b8                main
  .text._Z17MCP23017_WriteReghhh
-                0x000002c8       0x26 MCP23017.o
-                0x000002c8                _Z17MCP23017_WriteReghhh
+                0x000002f8       0x26 MCP23017.o
+                0x000002f8                _Z17MCP23017_WriteReghhh
  .text._Z16MCP23017_ReadReghh
-                0x000002ee       0x2e MCP23017.o
-                0x000002ee                _Z16MCP23017_ReadReghh
+                0x0000031e       0x2e MCP23017.o
+                0x0000031e                _Z16MCP23017_ReadReghh
  .text._ZN10MCP_OutputC2Ev
-                0x0000031c        0x2 MCP23017.o
-                0x0000031c                _ZN10MCP_OutputC2Ev
-                0x0000031c                _ZN10MCP_OutputC1Ev
+                0x0000034c        0x2 MCP23017.o
+                0x0000034c                _ZN10MCP_OutputC2Ev
+                0x0000034c                _ZN10MCP_OutputC1Ev
  .text._ZN10MCP_Output8getStateEv
-                0x0000031e        0x6 MCP23017.o
-                0x0000031e                _ZN10MCP_Output8getStateEv
+                0x0000034e        0x6 MCP23017.o
+                0x0000034e                _ZN10MCP_Output8getStateEv
  .text._ZN10MCP_Output3SetEv
-                0x00000324       0x7a MCP23017.o
-                0x00000324                _ZN10MCP_Output3SetEv
+                0x00000354       0x7a MCP23017.o
+                0x00000354                _ZN10MCP_Output3SetEv
  .text._ZN10MCP_Output5ClearEv
-                0x0000039e       0x7a MCP23017.o
-                0x0000039e                _ZN10MCP_Output5ClearEv
+                0x000003ce       0x7a MCP23017.o
+                0x000003ce                _ZN10MCP_Output5ClearEv
  .text._ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017_Pin
-                0x00000418       0x48 MCP23017.o
-                0x00000418                _ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017_Pin
-                0x00000418                _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+                0x00000448       0x48 MCP23017.o
+                0x00000448                _ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017_Pin
+                0x00000448                _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
  .text._ZN10MCP_Output10AutoToggleEv
-                0x00000460       0x44 MCP23017.o
-                0x00000460                _ZN10MCP_Output10AutoToggleEv
+                0x00000490       0x44 MCP23017.o
+                0x00000490                _ZN10MCP_Output10AutoToggleEv
  .text._ZN10MCP_Output18SetAutoToggleSpeedEj
-                0x000004a4       0x14 MCP23017.o
-                0x000004a4                _ZN10MCP_Output18SetAutoToggleSpeedEj
+                0x000004d4       0x14 MCP23017.o
+                0x000004d4                _ZN10MCP_Output18SetAutoToggleSpeedEj
  .text._ZN10MCP_Output17PerformAutoToggleEh
-                0x000004b8       0x3e MCP23017.o
-                0x000004b8                _ZN10MCP_Output17PerformAutoToggleEh
+                0x000004e8       0x3e MCP23017.o
+                0x000004e8                _ZN10MCP_Output17PerformAutoToggleEh
  .text._Z20MIDI_ReceiveIncomingv
-                0x000004f6       0x76 MIDI.o
-                0x000004f6                _Z20MIDI_ReceiveIncomingv
+                0x00000526       0x76 MIDI.o
+                0x00000526                _Z20MIDI_ReceiveIncomingv
  .text._Z26MIDI_TransmitProgramChangeh
-                0x0000056c       0x2e MIDI.o
-                0x0000056c                _Z26MIDI_TransmitProgramChangeh
+                0x0000059c       0x2e MIDI.o
+                0x0000059c                _Z26MIDI_TransmitProgramChangeh
  .text._Z20PedalCom_RxAvailablev
-                0x0000059a       0x12 PedalCom.o
-                0x0000059a                _Z20PedalCom_RxAvailablev
+                0x000005ca       0x12 PedalCom.o
+                0x000005ca                _Z20PedalCom_RxAvailablev
  .text._Z20PedalCom_TxAvailablev
-                0x000005ac       0x12 PedalCom.o
-                0x000005ac                _Z20PedalCom_TxAvailablev
+                0x000005dc       0x12 PedalCom.o
+                0x000005dc                _Z20PedalCom_TxAvailablev
  .text._Z21PedalCom_FlushTxQueuev
-                0x000005be       0x24 PedalCom.o
-                0x000005be                _Z21PedalCom_FlushTxQueuev
- .text._Z16PedalCom_Receivev
-                0x000005e2      0x1e4 PedalCom.o
-                0x000005e2                _Z16PedalCom_Receivev
+                0x000005ee       0x24 PedalCom.o
+                0x000005ee                _Z21PedalCom_FlushTxQueuev
  .text._Z23PedalCom_HandleReceivedv
-                0x000007c6       0x62 PedalCom.o
-                0x000007c6                _Z23PedalCom_HandleReceivedv
+                0x00000612       0x62 PedalCom.o
+                0x00000612                _Z23PedalCom_HandleReceivedv
  .text._Z21PedalCom_QueueCommand3CMDhPh
-                0x00000828       0xb2 PedalCom.o
-                0x00000828                _Z21PedalCom_QueueCommand3CMDhPh
+                0x00000674       0xb2 PedalCom.o
+                0x00000674                _Z21PedalCom_QueueCommand3CMDhPh
  .text._Z19PedalCom_PutCommandv
-                0x000008da      0x138 PedalCom.o
-                0x000008da                _Z19PedalCom_PutCommandv
+                0x00000726      0x138 PedalCom.o
+                0x00000726                _Z19PedalCom_PutCommandv
+ .text._Z26PedalCom_PrepareRetransmitv
+                0x0000085e       0x2c PedalCom.o
+                0x0000085e                _Z26PedalCom_PrepareRetransmitv
+ .text._Z16PedalCom_Receivev
+                0x0000088a      0x1d0 PedalCom.o
+                0x0000088a                _Z16PedalCom_Receivev
  .text._Z12Select_RX_TXh
-                0x00000a12       0x10 PedalCom.o
-                0x00000a12                _Z12Select_RX_TXh
+                0x00000a5a       0x10 PedalCom.o
+                0x00000a5a                _Z12Select_RX_TXh
  .text._Z13PedalCom_Initv
-                0x00000a22       0x18 PedalCom.o
-                0x00000a22                _Z13PedalCom_Initv
+                0x00000a6a       0x18 PedalCom.o
+                0x00000a6a                _Z13PedalCom_Initv
  .text._Z17PedalCom_Transmitv
-                0x00000a3a        0xc PedalCom.o
-                0x00000a3a                _Z17PedalCom_Transmitv
+                0x00000a82        0xc PedalCom.o
+                0x00000a82                _Z17PedalCom_Transmitv
  .text.__vector_22
-                0x00000a46       0x4a PedalCom.o
-                0x00000a46                __vector_22
+                0x00000a8e       0x4a PedalCom.o
+                0x00000a8e                __vector_22
  .text._Z18RotaryEncoder_Initv
-                0x00000a90       0x28 RotaryEncoder.o
-                0x00000a90                _Z18RotaryEncoder_Initv
+                0x00000ad8       0x28 RotaryEncoder.o
+                0x00000ad8                _Z18RotaryEncoder_Initv
  .text._Z23RotaryEncoder_IsPressedv
-                0x00000ab8        0xa RotaryEncoder.o
-                0x00000ab8                _Z23RotaryEncoder_IsPressedv
+                0x00000b00        0xa RotaryEncoder.o
+                0x00000b00                _Z23RotaryEncoder_IsPressedv
  .text._Z29RotaryEncoder_EnableInterruptv
-                0x00000ac2       0x12 RotaryEncoder.o
-                0x00000ac2                _Z29RotaryEncoder_EnableInterruptv
+                0x00000b0a       0x12 RotaryEncoder.o
+                0x00000b0a                _Z29RotaryEncoder_EnableInterruptv
  .text.__vector_5
-                0x00000ad4       0x42 RotaryEncoder.o
-                0x00000ad4                __vector_5
+                0x00000b1c       0x42 RotaryEncoder.o
+                0x00000b1c                __vector_5
  .text.__vector_3
-                0x00000b16       0x3c RotaryEncoder.o
-                0x00000b16                __vector_3
+                0x00000b5e       0x3c RotaryEncoder.o
+                0x00000b5e                __vector_3
  .text._Z14SP10281_Updatev
-                0x00000b52       0x48 SP10281_3x7segment.o
-                0x00000b52                _Z14SP10281_Updatev
+                0x00000b9a       0x48 SP10281_3x7segment.o
+                0x00000b9a                _Z14SP10281_Updatev
  .text._Z19SP10281_WriteSinglehch
-                0x00000b9a       0x34 SP10281_3x7segment.o
-                0x00000b9a                _Z19SP10281_WriteSinglehch
+                0x00000be2       0x34 SP10281_3x7segment.o
+                0x00000be2                _Z19SP10281_WriteSinglehch
  .text._Z16SP10281_WriteAllccchhh
-                0x00000bce       0x3a SP10281_3x7segment.o
-                0x00000bce                _Z16SP10281_WriteAllccchhh
+                0x00000c16       0x3a SP10281_3x7segment.o
+                0x00000c16                _Z16SP10281_WriteAllccchhh
  .text._Z19SP10281_WriteNumbers
-                0x00000c08       0x70 SP10281_3x7segment.o
-                0x00000c08                _Z19SP10281_WriteNumbers
+                0x00000c50       0x70 SP10281_3x7segment.o
+                0x00000c50                _Z19SP10281_WriteNumbers
  .text._Z12SP10281_Initv
-                0x00000c78       0x14 SP10281_3x7segment.o
-                0x00000c78                _Z12SP10281_Initv
+                0x00000cc0       0x14 SP10281_3x7segment.o
+                0x00000cc0                _Z12SP10281_Initv
  .text._Z30System_HandleTempSelectTimeoutv
-                0x00000c8c       0xb4 System.o
-                0x00000c8c                _Z30System_HandleTempSelectTimeoutv
+                0x00000cd4       0xb4 System.o
+                0x00000cd4                _Z30System_HandleTempSelectTimeoutv
  .text._Z26System_HandleMarkSelectionv
-                0x00000d40       0x2e System.o
-                0x00000d40                _Z26System_HandleMarkSelectionv
+                0x00000d88       0x2e System.o
+                0x00000d88                _Z26System_HandleMarkSelectionv
  .text._Z25System_HandlePedalCommand3CMDhPh
-                0x00000d6e      0x100 System.o
-                0x00000d6e                _Z25System_HandlePedalCommand3CMDhPh
+                0x00000db6      0x106 System.o
+                0x00000db6                _Z25System_HandlePedalCommand3CMDhPh
  .text._Z30System_HandleMIDIProgramChangev
-                0x00000e6e       0x1e System.o
-                0x00000e6e                _Z30System_HandleMIDIProgramChangev
+                0x00000ebc       0x1e System.o
+                0x00000ebc                _Z30System_HandleMIDIProgramChangev
  .text._Z20System_UpdateUI_LEDsv
-                0x00000e8c       0xca System.o
-                0x00000e8c                _Z20System_UpdateUI_LEDsv
+                0x00000eda       0xca System.o
+                0x00000eda                _Z20System_UpdateUI_LEDsv
  .text._Z31System_HandleRotaryEncoderInputv
-                0x00000f56      0x432 System.o
-                0x00000f56                _Z31System_HandleRotaryEncoderInputv
+                0x00000fa4      0x432 System.o
+                0x00000fa4                _Z31System_HandleRotaryEncoderInputv
  .text._Z19System_ChangePresetv
-                0x00001388       0xba System.o
-                0x00001388                _Z19System_ChangePresetv
+                0x000013d6       0xba System.o
+                0x000013d6                _Z19System_ChangePresetv
  .text._Z21System_UpdateLoopCtrlv
-                0x00001442       0x82 System.o
-                0x00001442                _Z21System_UpdateLoopCtrlv
+                0x00001490       0x82 System.o
+                0x00001490                _Z21System_UpdateLoopCtrlv
  .text._Z10System_Runv
-                0x000014c4      0x4c8 System.o
-                0x000014c4                _Z10System_Runv
+                0x00001512      0x4c8 System.o
+                0x00001512                _Z10System_Runv
  .text._Z11Timer0_Initv
-                0x0000198c       0x1e Timer.o
-                0x0000198c                _Z11Timer0_Initv
+                0x000019da       0x1e Timer.o
+                0x000019da                _Z11Timer0_Initv
  .text._Z13Timer0_ms2cntm
-                0x000019aa       0x1e Timer.o
-                0x000019aa                _Z13Timer0_ms2cntm
+                0x000019f8       0x1e Timer.o
+                0x000019f8                _Z13Timer0_ms2cntm
  .text.__vector_16
-                0x000019c8      0x1a0 Timer.o
-                0x000019c8                __vector_16
+                0x00001a16      0x200 Timer.o
+                0x00001a16                __vector_16
  .text._Z10UART0_Initjhh
-                0x00001b68       0xcc UART.o
-                0x00001b68                _Z10UART0_Initjhh
+                0x00001c16       0xcc UART.o
+                0x00001c16                _Z10UART0_Initjhh
  .text._Z13UART0_GetCharv
-                0x00001c34       0x36 UART.o
-                0x00001c34                _Z13UART0_GetCharv
+                0x00001ce2       0x36 UART.o
+                0x00001ce2                _Z13UART0_GetCharv
  .text._Z15UART0_Availablev
-                0x00001c6a       0x1a UART.o
-                0x00001c6a                _Z15UART0_Availablev
+                0x00001d18       0x16 UART.o
+                0x00001d18                _Z15UART0_Availablev
  .text._Z15UART0_QueueCharh
-                0x00001c84       0x2a UART.o
-                0x00001c84                _Z15UART0_QueueCharh
+                0x00001d2e       0x2a UART.o
+                0x00001d2e                _Z15UART0_QueueCharh
  .text._Z14UART0_PutQueuev
-                0x00001cae        0xc UART.o
-                0x00001cae                _Z14UART0_PutQueuev
+                0x00001d58        0xc UART.o
+                0x00001d58                _Z14UART0_PutQueuev
+ .text._Z18UART0_QueueIsEmptyv
+                0x00001d64       0x10 UART.o
+                0x00001d64                _Z18UART0_QueueIsEmptyv
  .text.__vector_20
-                0x00001cba       0x56 UART.o
-                0x00001cba                __vector_20
+                0x00001d74       0x56 UART.o
+                0x00001d74                __vector_20
  .text.__vector_21
-                0x00001d10       0x54 UART.o
-                0x00001d10                __vector_21
+                0x00001dca       0x54 UART.o
+                0x00001dca                __vector_21
  .text._Z10UART1_Initjhh
-                0x00001d64       0xc6 UART.o
-                0x00001d64                _Z10UART1_Initjhh
+                0x00001e1e       0xc6 UART.o
+                0x00001e1e                _Z10UART1_Initjhh
  .text._Z13UART1_GetCharv
-                0x00001e2a       0x36 UART.o
-                0x00001e2a                _Z13UART1_GetCharv
+                0x00001ee4       0x36 UART.o
+                0x00001ee4                _Z13UART1_GetCharv
  .text._Z13UART1_PutCharh
-                0x00001e60       0x2a UART.o
-                0x00001e60                _Z13UART1_PutCharh
+                0x00001f1a       0x2a UART.o
+                0x00001f1a                _Z13UART1_PutCharh
  .text._Z15UART1_PutStringPKc
-                0x00001e8a       0x1e UART.o
-                0x00001e8a                _Z15UART1_PutStringPKc
+                0x00001f44       0x1e UART.o
+                0x00001f44                _Z15UART1_PutStringPKc
  .text._Z15UART1_Availablev
-                0x00001ea8       0x1a UART.o
-                0x00001ea8                _Z15UART1_Availablev
+                0x00001f62       0x16 UART.o
+                0x00001f62                _Z15UART1_Availablev
  .text.__vector_28
-                0x00001ec2       0x56 UART.o
-                0x00001ec2                __vector_28
+                0x00001f78       0x56 UART.o
+                0x00001f78                __vector_28
  .text.__vector_29
-                0x00001f18       0x54 UART.o
-                0x00001f18                __vector_29
+                0x00001fce       0x54 UART.o
+                0x00001fce                __vector_29
  .text._Z7UI_Initv
-                0x00001f6c      0x118 UI.o
-                0x00001f6c                _Z7UI_Initv
+                0x00002022      0x118 UI.o
+                0x00002022                _Z7UI_Initv
  .text._GLOBAL__sub_I_ModeRunLED
-                0x00002084       0x96 UI.o
+                0x0000213a       0x96 UI.o
  .text._Z12Util_Bit2Inth
-                0x0000211a       0x16 util.o
-                0x0000211a                _Z12Util_Bit2Inth
+                0x000021d0       0x16 util.o
+                0x000021d0                _Z12Util_Bit2Inth
  .text.libgcc.div
-                0x00002130       0x28 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_divmodhi4.o)
-                0x00002130                _div
-                0x00002130                __divmodhi4
+                0x000021e6       0x28 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_divmodhi4.o)
+                0x000021e6                _div
+                0x000021e6                __divmodhi4
  .text.libgcc.div
-                0x00002158       0x44 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_udivmodsi4.o)
-                0x00002158                __udivmodsi4
- .text.libgcc   0x0000219c        0xc c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_tablejump2.o)
-                0x0000219c                __tablejump2__
+                0x0000220e       0x44 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_udivmodsi4.o)
+                0x0000220e                __udivmodsi4
+ .text.libgcc   0x00002252        0xc c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_tablejump2.o)
+                0x00002252                __tablejump2__
  .text.libgcc.mul
-                0x000021a8       0x16 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_muluhisi3.o)
-                0x000021a8                __muluhisi3
+                0x0000225e       0x16 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_muluhisi3.o)
+                0x0000225e                __muluhisi3
  .text.libgcc.div
-                0x000021be       0x28 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_udivmodhi4.o)
-                0x000021be                __udivmodhi4
+                0x00002274       0x28 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_udivmodhi4.o)
+                0x00002274                __udivmodhi4
  .text.libgcc.mul
-                0x000021e6       0x1e c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_umulhisi3.o)
-                0x000021e6                __umulhisi3
+                0x0000229c       0x1e c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_umulhisi3.o)
+                0x0000229c                __umulhisi3
  .text.avr-libc
-                0x00002204       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
-                0x00002204                eeprom_read_block
-                0x00002208                eeprom_read_blraw
+                0x000022ba       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
+                0x000022ba                eeprom_read_block
+                0x000022be                eeprom_read_blraw
  .text.avr-libc
-                0x00002224       0x10 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
-                0x00002224                eeprom_read_byte
+                0x000022da       0x10 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
+                0x000022da                eeprom_read_byte
  .text.avr-libc
-                0x00002234       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
-                0x00002234                eeprom_write_block
+                0x000022ea       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
+                0x000022ea                eeprom_write_block
  .text.avr-libc
-                0x00002248       0x1c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
-                0x00002248                eeprom_write_byte
-                0x0000224a                eeprom_write_r18
-                0x00002264                . = ALIGN (0x2)
+                0x000022fe       0x1c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
+                0x000022fe                eeprom_write_byte
+                0x00002300                eeprom_write_r18
+                0x0000231a                . = ALIGN (0x2)
  *(.fini9)
- .fini9         0x00002264        0x0 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_exit.o)
-                0x00002264                _exit
-                0x00002264                exit
+ .fini9         0x0000231a        0x0 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_exit.o)
+                0x0000231a                _exit
+                0x0000231a                exit
  *(.fini9)
  *(.fini8)
  *(.fini8)
@@ -750,245 +756,258 @@ END GROUP
  *(.fini1)
  *(.fini1)
  *(.fini0)
- .fini0         0x00002264        0x4 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_exit.o)
+ .fini0         0x0000231a        0x4 c:/program files (x86)/atmel/studio/7.0/toolchain/avr8/avr8-gnu-toolchain/bin/../lib/gcc/avr/5.4.0/avr5\libgcc.a(_exit.o)
  *(.fini0)
-                0x00002268                _etext = .
+                0x0000231e                _etext = .
 
-.data           0x00800100       0x92 load address 0x00002268
+.data           0x00800100       0xd2 load address 0x0000231e
                 0x00800100                PROVIDE (__data_start, .)
  *(.data)
  *(.data*)
  .data._ZN10MCP_Output18AutoToggle_TimeoutE
                 0x00800100        0x2 MCP23017.o
                 0x00800100                _ZN10MCP_Output18AutoToggle_TimeoutE
+ .data.TX_CommandQueue
+                0x00800102       0x40 PedalCom.o
+                0x00800102                TX_CommandQueue
  .data.PedalCom_ConnectionOpen
-                0x00800102        0x1 PedalCom.o
-                0x00800102                PedalCom_ConnectionOpen
- .data.PedalCom_ResponseTimeoutOvfCnt
-                0x00800103        0x2 PedalCom.o
-                0x00800103                PedalCom_ResponseTimeoutOvfCnt
+                0x00800142        0x1 PedalCom.o
+                0x00800142                PedalCom_ConnectionOpen
+ .data.PedalCom_HeartbeatOvfCnt
+                0x00800143        0x2 PedalCom.o
+                0x00800143                PedalCom_HeartbeatOvfCnt
  .data._ZL18SP10281_DigitTable
-                0x00800105       0x80 SP10281_3x7segment.o
+                0x00800145       0x80 SP10281_3x7segment.o
  .data.LastLoopModePreset
-                0x00800185        0x4 System.o
-                0x00800185                LastLoopModePreset
+                0x008001c5        0x4 System.o
+                0x008001c5                LastLoopModePreset
  .data.LoopModePreset
-                0x00800189        0x4 System.o
-                0x00800189                LoopModePreset
+                0x008001c9        0x4 System.o
+                0x008001c9                LoopModePreset
  *(.gnu.linkonce.d*)
  *(.rodata)
  *(.rodata*)
  .rodata.str1.1
-                0x0080018d        0x5 System.o
+                0x008001cd        0x5 System.o
  *(.gnu.linkonce.r*)
-                0x00800192                . = ALIGN (0x2)
-                0x00800192                _edata = .
-                0x00800192                PROVIDE (__data_end, .)
+                0x008001d2                . = ALIGN (0x2)
+                0x008001d2                _edata = .
+                0x008001d2                PROVIDE (__data_end, .)
 
-.bss            0x00800192      0x1be
-                0x00800192                PROVIDE (__bss_start, .)
+.bss            0x008001d2      0x204
+                0x008001d2                PROVIDE (__bss_start, .)
  *(.bss)
  *(.bss*)
  .bss._ZN10MCP_Output16AutoToggle_PortBE
-                0x00800192        0x1 MCP23017.o
-                0x00800192                _ZN10MCP_Output16AutoToggle_PortBE
+                0x008001d2        0x1 MCP23017.o
+                0x008001d2                _ZN10MCP_Output16AutoToggle_PortBE
  .bss._ZN10MCP_Output16AutoToggle_PortAE
-                0x00800193        0x1 MCP23017.o
-                0x00800193                _ZN10MCP_Output16AutoToggle_PortAE
+                0x008001d3        0x1 MCP23017.o
+                0x008001d3                _ZN10MCP_Output16AutoToggle_PortAE
  .bss._ZN10MCP_Output15AutoToggle_FlagE
-                0x00800194        0x1 MCP23017.o
-                0x00800194                _ZN10MCP_Output15AutoToggle_FlagE
+                0x008001d4        0x1 MCP23017.o
+                0x008001d4                _ZN10MCP_Output15AutoToggle_FlagE
  .bss._ZN10MCP_Output17AutoToggle_OvfCntE
-                0x00800195        0x2 MCP23017.o
-                0x00800195                _ZN10MCP_Output17AutoToggle_OvfCntE
+                0x008001d5        0x2 MCP23017.o
+                0x008001d5                _ZN10MCP_Output17AutoToggle_OvfCntE
  .bss._ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt
-                0x00800197        0x1 MIDI.o
+                0x008001d7        0x1 MIDI.o
  .bss.MIDI_ProgramChangeFlag
-                0x00800198        0x1 MIDI.o
-                0x00800198                MIDI_ProgramChangeFlag
+                0x008001d8        0x1 MIDI.o
+                0x008001d8                MIDI_ProgramChangeFlag
  .bss.MIDI_ReceivedProgram
-                0x00800199        0x1 MIDI.o
-                0x00800199                MIDI_ReceivedProgram
+                0x008001d9        0x1 MIDI.o
+                0x008001d9                MIDI_ReceivedProgram
  .bss.MIDI_TxBuffer
-                0x0080019a        0x3 MIDI.o
-                0x0080019a                MIDI_TxBuffer
+                0x008001da        0x3 MIDI.o
+                0x008001da                MIDI_TxBuffer
  .bss.MIDI_RxBuffer
-                0x0080019d        0x3 MIDI.o
-                0x0080019d                MIDI_RxBuffer
+                0x008001dd        0x3 MIDI.o
+                0x008001dd                MIDI_RxBuffer
  .bss._ZZ16PedalCom_ReceivevE10RX_ByteCnt
-                0x008001a0        0x1 PedalCom.o
- .bss.NackCnt   0x008001a1        0x1 PedalCom.o
-                0x008001a1                NackCnt
- .bss.TxTail    0x008001a2        0x1 PedalCom.o
-                0x008001a2                TxTail
- .bss.TxHead    0x008001a3        0x1 PedalCom.o
-                0x008001a3                TxHead
- .bss.RxTail    0x008001a4        0x1 PedalCom.o
-                0x008001a4                RxTail
- .bss.RxHead    0x008001a5        0x1 PedalCom.o
-                0x008001a5                RxHead
- .bss.TX_CommandQueue
-                0x008001a6       0x40 PedalCom.o
-                0x008001a6                TX_CommandQueue
+                0x008001e0        0x1 PedalCom.o
+ .bss.RetransmitCnt
+                0x008001e1        0x1 PedalCom.o
+                0x008001e1                RetransmitCnt
+ .bss.TxTail    0x008001e2        0x1 PedalCom.o
+                0x008001e2                TxTail
+ .bss.TxHead    0x008001e3        0x1 PedalCom.o
+                0x008001e3                TxHead
+ .bss.RxTail    0x008001e4        0x1 PedalCom.o
+                0x008001e4                RxTail
+ .bss.RxHead    0x008001e5        0x1 PedalCom.o
+                0x008001e5                RxHead
  .bss.RX_CommandQueue
                 0x008001e6       0x20 PedalCom.o
                 0x008001e6                RX_CommandQueue
  .bss.RX_Buffer
                 0x00800206       0x10 PedalCom.o
                 0x00800206                RX_Buffer
- .bss.PedalCom_ResponseTimeoutFlag
+ .bss.PedalCom_HeartbeatFlag
                 0x00800216        0x1 PedalCom.o
-                0x00800216                PedalCom_ResponseTimeoutFlag
- .bss.PedalCom_DelayTXOvfCnt
+                0x00800216                PedalCom_HeartbeatFlag
+ .bss.PedalCom_FullFrameTimeoutFlag
                 0x00800217        0x1 PedalCom.o
-                0x00800217                PedalCom_DelayTXOvfCnt
+                0x00800217                PedalCom_FullFrameTimeoutFlag
+ .bss.PedalCom_FullFrameTimeoutOvfCnt
+                0x00800218        0x2 PedalCom.o
+                0x00800218                PedalCom_FullFrameTimeoutOvfCnt
+ .bss.PedalCom_ResponseTimeoutFlag
+                0x0080021a        0x1 PedalCom.o
+                0x0080021a                PedalCom_ResponseTimeoutFlag
+ .bss.PedalCom_ResponseTimeoutOvfCnt
+                0x0080021b        0x2 PedalCom.o
+                0x0080021b                PedalCom_ResponseTimeoutOvfCnt
+ .bss.PedalCom_DelayTXOvfCnt
+                0x0080021d        0x1 PedalCom.o
+                0x0080021d                PedalCom_DelayTXOvfCnt
  .bss.PedalCom_DelayTxFlag
-                0x00800218        0x1 PedalCom.o
-                0x00800218                PedalCom_DelayTxFlag
+                0x0080021e        0x1 PedalCom.o
+                0x0080021e                PedalCom_DelayTxFlag
  .bss.RotEnc_State
-                0x00800219        0x1 RotaryEncoder.o
-                0x00800219                RotEnc_State
+                0x0080021f        0x1 RotaryEncoder.o
+                0x0080021f                RotEnc_State
  .bss.RotaryEncoder_OvfCnt
-                0x0080021a        0x2 RotaryEncoder.o
-                0x0080021a                RotaryEncoder_OvfCnt
+                0x00800220        0x2 RotaryEncoder.o
+                0x00800220                RotaryEncoder_OvfCnt
  .bss._ZZ14SP10281_UpdatevE3tmp
-                0x0080021c        0x1 SP10281_3x7segment.o
+                0x00800222        0x1 SP10281_3x7segment.o
  .bss.SP10281_OvfFlag
-                0x0080021d        0x1 SP10281_3x7segment.o
-                0x0080021d                SP10281_OvfFlag
+                0x00800223        0x1 SP10281_3x7segment.o
+                0x00800223                SP10281_OvfFlag
  .bss.SP10281_OvfCnt
-                0x0080021e        0x1 SP10281_3x7segment.o
-                0x0080021e                SP10281_OvfCnt
+                0x00800224        0x1 SP10281_3x7segment.o
+                0x00800224                SP10281_OvfCnt
  .bss.SP10281_DigitCnt
-                0x0080021f        0x1 SP10281_3x7segment.o
-                0x0080021f                SP10281_DigitCnt
+                0x00800225        0x1 SP10281_3x7segment.o
+                0x00800225                SP10281_DigitCnt
  .bss.SP10281_DigitData
-                0x00800220        0x3 SP10281_3x7segment.o
-                0x00800220                SP10281_DigitData
+                0x00800226        0x3 SP10281_3x7segment.o
+                0x00800226                SP10281_DigitData
  .bss.LastUserEditSelection
-                0x00800223        0x1 System.o
-                0x00800223                LastUserEditSelection
+                0x00800229        0x1 System.o
+                0x00800229                LastUserEditSelection
  .bss.UserEditSelection
-                0x00800224        0x1 System.o
-                0x00800224                UserEditSelection
+                0x0080022a        0x1 System.o
+                0x0080022a                UserEditSelection
  .bss.PresetTable
-                0x00800225       0x20 System.o
-                0x00800225                PresetTable
+                0x0080022b       0x20 System.o
+                0x0080022b                PresetTable
  .bss.LastTempSelectMidiPC
-                0x00800245        0x1 System.o
-                0x00800245                LastTempSelectMidiPC
- .bss.TempSelectMidiPC
-                0x00800246        0x1 System.o
-                0x00800246                TempSelectMidiPC
- .bss.SetMidiEdit
-                0x00800247        0x1 System.o
-                0x00800247                SetMidiEdit
- .bss.LastSystemUIMode
-                0x00800248        0x1 System.o
-                0x00800248                LastSystemUIMode
- .bss.SystemUIMode
-                0x00800249        0x1 System.o
-                0x00800249                SystemUIMode
- .bss.System_MidiChannel
-                0x0080024a        0x1 System.o
-                0x0080024a                System_MidiChannel
- .bss.LastTempSelectMidiChannel
                 0x0080024b        0x1 System.o
-                0x0080024b                LastTempSelectMidiChannel
- .bss.TempSelectMidiChannel
+                0x0080024b                LastTempSelectMidiPC
+ .bss.TempSelectMidiPC
                 0x0080024c        0x1 System.o
-                0x0080024c                TempSelectMidiChannel
- .bss.SystemRunMode
+                0x0080024c                TempSelectMidiPC
+ .bss.SetMidiEdit
                 0x0080024d        0x1 System.o
-                0x0080024d                SystemRunMode
- .bss.LastTempSelectPreset
+                0x0080024d                SetMidiEdit
+ .bss.LastSystemUIMode
                 0x0080024e        0x1 System.o
-                0x0080024e                LastTempSelectPreset
- .bss.TempSelectPreset
+                0x0080024e                LastSystemUIMode
+ .bss.SystemUIMode
                 0x0080024f        0x1 System.o
-                0x0080024f                TempSelectPreset
- .bss.LastActivePreset
+                0x0080024f                SystemUIMode
+ .bss.System_MidiChannel
                 0x00800250        0x1 System.o
-                0x00800250                LastActivePreset
- .bss.ActivePreset
+                0x00800250                System_MidiChannel
+ .bss.LastTempSelectMidiChannel
                 0x00800251        0x1 System.o
-                0x00800251                ActivePreset
- .bss.LastSystemState
+                0x00800251                LastTempSelectMidiChannel
+ .bss.TempSelectMidiChannel
                 0x00800252        0x1 System.o
-                0x00800252                LastSystemState
- .bss.SystemState
+                0x00800252                TempSelectMidiChannel
+ .bss.SystemRunMode
                 0x00800253        0x1 System.o
-                0x00800253                SystemState
- .bss.System_MarkSelectionFlag
+                0x00800253                SystemRunMode
+ .bss.LastTempSelectPreset
                 0x00800254        0x1 System.o
-                0x00800254                System_MarkSelectionFlag
- .bss.System_MarkSelectionOvfCnt
-                0x00800255        0x2 System.o
-                0x00800255                System_MarkSelectionOvfCnt
- .bss.System_TempSelectFlag
+                0x00800254                LastTempSelectPreset
+ .bss.TempSelectPreset
+                0x00800255        0x1 System.o
+                0x00800255                TempSelectPreset
+ .bss.LastActivePreset
+                0x00800256        0x1 System.o
+                0x00800256                LastActivePreset
+ .bss.ActivePreset
                 0x00800257        0x1 System.o
-                0x00800257                System_TempSelectFlag
+                0x00800257                ActivePreset
+ .bss.LastSystemState
+                0x00800258        0x1 System.o
+                0x00800258                LastSystemState
+ .bss.SystemState
+                0x00800259        0x1 System.o
+                0x00800259                SystemState
+ .bss.System_MarkSelectionFlag
+                0x0080025a        0x1 System.o
+                0x0080025a                System_MarkSelectionFlag
+ .bss.System_MarkSelectionOvfCnt
+                0x0080025b        0x2 System.o
+                0x0080025b                System_MarkSelectionOvfCnt
+ .bss.System_TempSelectFlag
+                0x0080025d        0x1 System.o
+                0x0080025d                System_TempSelectFlag
  .bss.System_TempSelectOvfCnt
-                0x00800258        0x2 System.o
-                0x00800258                System_TempSelectOvfCnt
+                0x0080025e        0x2 System.o
+                0x0080025e                System_TempSelectOvfCnt
  .bss._ZL17UART1_LastRxError
-                0x0080025a        0x1 UART.o
+                0x00800260        0x1 UART.o
  .bss._ZL12UART1_RxTail
-                0x0080025b        0x1 UART.o
+                0x00800261        0x1 UART.o
  .bss._ZL12UART1_RxHead
-                0x0080025c        0x1 UART.o
+                0x00800262        0x1 UART.o
  .bss._ZL12UART1_TxTail
-                0x0080025d        0x1 UART.o
+                0x00800263        0x1 UART.o
  .bss._ZL12UART1_TxHead
-                0x0080025e        0x1 UART.o
+                0x00800264        0x1 UART.o
  .bss._ZL11UART1_RxBuf
-                0x0080025f       0x20 UART.o
+                0x00800265       0x40 UART.o
  .bss._ZL11UART1_TxBuf
-                0x0080027f       0x20 UART.o
+                0x008002a5       0x40 UART.o
  .bss._ZL17UART0_LastRxError
-                0x0080029f        0x1 UART.o
+                0x008002e5        0x1 UART.o
  .bss._ZL12UART0_RxTail
-                0x008002a0        0x1 UART.o
+                0x008002e6        0x1 UART.o
  .bss._ZL12UART0_RxHead
-                0x008002a1        0x1 UART.o
+                0x008002e7        0x1 UART.o
  .bss._ZL12UART0_TxTail
-                0x008002a2        0x1 UART.o
+                0x008002e8        0x1 UART.o
  .bss._ZL12UART0_TxHead
-                0x008002a3        0x1 UART.o
+                0x008002e9        0x1 UART.o
  .bss._ZL11UART0_RxBuf
-                0x008002a4       0x20 UART.o
+                0x008002ea       0x40 UART.o
  .bss._ZL11UART0_TxBuf
-                0x008002c4       0x20 UART.o
+                0x0080032a       0x40 UART.o
  .bss.CtrlSwitchRelays
-                0x008002e4       0x10 UI.o
-                0x008002e4                CtrlSwitchRelays
+                0x0080036a       0x10 UI.o
+                0x0080036a                CtrlSwitchRelays
  .bss.LoopRelays
-                0x008002f4       0x20 UI.o
-                0x008002f4                LoopRelays
+                0x0080037a       0x20 UI.o
+                0x0080037a                LoopRelays
  .bss.CtrlSwitchLEDs
-                0x00800314       0x10 UI.o
-                0x00800314                CtrlSwitchLEDs
- .bss.LoopLEDs  0x00800324       0x20 UI.o
-                0x00800324                LoopLEDs
+                0x0080039a       0x10 UI.o
+                0x0080039a                CtrlSwitchLEDs
+ .bss.LoopLEDs  0x008003aa       0x20 UI.o
+                0x008003aa                LoopLEDs
  .bss.ModeEditMidiLED
-                0x00800344        0x4 UI.o
-                0x00800344                ModeEditMidiLED
+                0x008003ca        0x4 UI.o
+                0x008003ca                ModeEditMidiLED
  .bss.ModeEditPresetLED
-                0x00800348        0x4 UI.o
-                0x00800348                ModeEditPresetLED
+                0x008003ce        0x4 UI.o
+                0x008003ce                ModeEditPresetLED
  .bss.ModeRunLED
-                0x0080034c        0x4 UI.o
-                0x0080034c                ModeRunLED
+                0x008003d2        0x4 UI.o
+                0x008003d2                ModeRunLED
  *(COMMON)
-                0x00800350                PROVIDE (__bss_end, .)
-                0x00002268                __data_load_start = LOADADDR (.data)
-                0x000022fa                __data_load_end = (__data_load_start + SIZEOF (.data))
+                0x008003d6                PROVIDE (__bss_end, .)
+                0x0000231e                __data_load_start = LOADADDR (.data)
+                0x000023f0                __data_load_end = (__data_load_start + SIZEOF (.data))
 
-.noinit         0x00800350        0x0
+.noinit         0x008003d6        0x0
                 [!provide]                PROVIDE (__noinit_start, .)
  *(.noinit*)
                 [!provide]                PROVIDE (__noinit_end, .)
-                0x00800350                _end = .
+                0x008003d6                _end = .
                 [!provide]                PROVIDE (__heap_start, .)
 
 .eeprom         0x00810000        0x0
@@ -1064,7 +1083,7 @@ END GROUP
 .debug_sfnames
  *(.debug_sfnames)
 
-.debug_aranges  0x00000000      0x440
+.debug_aranges  0x00000000      0x450
  *(.debug_aranges)
  .debug_aranges
                 0x00000000       0x58 i2cmaster.o
@@ -1075,137 +1094,137 @@ END GROUP
  .debug_aranges
                 0x00000100       0x28 MIDI.o
  .debug_aranges
-                0x00000128       0x70 PedalCom.o
+                0x00000128       0x78 PedalCom.o
  .debug_aranges
-                0x00000198       0x40 RotaryEncoder.o
+                0x000001a0       0x40 RotaryEncoder.o
  .debug_aranges
-                0x000001d8       0x40 SP10281_3x7segment.o
+                0x000001e0       0x40 SP10281_3x7segment.o
  .debug_aranges
-                0x00000218       0x68 System.o
+                0x00000220       0x68 System.o
  .debug_aranges
-                0x00000280       0x30 Timer.o
+                0x00000288       0x30 Timer.o
  .debug_aranges
-                0x000002b0       0xc0 UART.o
+                0x000002b8       0xc8 UART.o
  .debug_aranges
-                0x00000370       0x28 UI.o
+                0x00000380       0x28 UI.o
  .debug_aranges
-                0x00000398       0x28 util.o
+                0x000003a8       0x28 util.o
  .debug_aranges
-                0x000003c0       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
+                0x000003d0       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
  .debug_aranges
-                0x000003e0       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
+                0x000003f0       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
  .debug_aranges
-                0x00000400       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
+                0x00000410       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
  .debug_aranges
-                0x00000420       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
+                0x00000430       0x20 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
 
 .debug_pubnames
  *(.debug_pubnames)
 
-.debug_info     0x00000000     0x4b8b
+.debug_info     0x00000000     0x4ccb
  *(.debug_info .gnu.linkonce.wi.*)
  .debug_info    0x00000000      0x6cc C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5/crtatmega324pa.o
  .debug_info    0x000006cc      0x1d5 i2cmaster.o
- .debug_info    0x000008a1      0x764 main.o
- .debug_info    0x00001005      0xa63 MCP23017.o
- .debug_info    0x00001a68      0x226 MIDI.o
- .debug_info    0x00001c8e      0x60e PedalCom.o
- .debug_info    0x0000229c      0x14c RotaryEncoder.o
- .debug_info    0x000023e8      0x32b SP10281_3x7segment.o
- .debug_info    0x00002713     0x12b1 System.o
- .debug_info    0x000039c4      0x1e5 Timer.o
- .debug_info    0x00003ba9      0x69b UART.o
- .debug_info    0x00004244      0x603 UI.o
- .debug_info    0x00004847       0xd6 util.o
- .debug_info    0x0000491d       0x9c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
- .debug_info    0x000049b9       0x9b C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
- .debug_info    0x00004a54       0x9c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
- .debug_info    0x00004af0       0x9b C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
+ .debug_info    0x000008a1      0x7d8 main.o
+ .debug_info    0x00001079      0xa63 MCP23017.o
+ .debug_info    0x00001adc      0x226 MIDI.o
+ .debug_info    0x00001d02      0x679 PedalCom.o
+ .debug_info    0x0000237b      0x14c RotaryEncoder.o
+ .debug_info    0x000024c7      0x32b SP10281_3x7segment.o
+ .debug_info    0x000027f2     0x12b5 System.o
+ .debug_info    0x00003aa7      0x219 Timer.o
+ .debug_info    0x00003cc0      0x6c4 UART.o
+ .debug_info    0x00004384      0x603 UI.o
+ .debug_info    0x00004987       0xd6 util.o
+ .debug_info    0x00004a5d       0x9c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
+ .debug_info    0x00004af9       0x9b C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
+ .debug_info    0x00004b94       0x9c C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
+ .debug_info    0x00004c30       0x9b C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
 
-.debug_abbrev   0x00000000     0x1a41
+.debug_abbrev   0x00000000     0x1a3b
  *(.debug_abbrev)
  .debug_abbrev  0x00000000      0x66e C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5/crtatmega324pa.o
  .debug_abbrev  0x0000066e       0xe9 i2cmaster.o
  .debug_abbrev  0x00000757      0x1a0 main.o
  .debug_abbrev  0x000008f7      0x310 MCP23017.o
  .debug_abbrev  0x00000c07      0x119 MIDI.o
- .debug_abbrev  0x00000d20      0x24e PedalCom.o
- .debug_abbrev  0x00000f6e       0xa8 RotaryEncoder.o
- .debug_abbrev  0x00001016      0x120 SP10281_3x7segment.o
- .debug_abbrev  0x00001136      0x30d System.o
- .debug_abbrev  0x00001443       0xc6 Timer.o
- .debug_abbrev  0x00001509      0x268 UART.o
- .debug_abbrev  0x00001771      0x1f1 UI.o
- .debug_abbrev  0x00001962       0x8f util.o
- .debug_abbrev  0x000019f1       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
- .debug_abbrev  0x00001a05       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
- .debug_abbrev  0x00001a19       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
- .debug_abbrev  0x00001a2d       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
+ .debug_abbrev  0x00000d20      0x267 PedalCom.o
+ .debug_abbrev  0x00000f87       0xa8 RotaryEncoder.o
+ .debug_abbrev  0x0000102f      0x120 SP10281_3x7segment.o
+ .debug_abbrev  0x0000114f      0x306 System.o
+ .debug_abbrev  0x00001455       0xc6 Timer.o
+ .debug_abbrev  0x0000151b      0x250 UART.o
+ .debug_abbrev  0x0000176b      0x1f1 UI.o
+ .debug_abbrev  0x0000195c       0x8f util.o
+ .debug_abbrev  0x000019eb       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
+ .debug_abbrev  0x000019ff       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
+ .debug_abbrev  0x00001a13       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
+ .debug_abbrev  0x00001a27       0x14 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
 
-.debug_line     0x00000000     0x2626
+.debug_line     0x00000000     0x26d2
  *(.debug_line .debug_line.* .debug_line_end)
  .debug_line    0x00000000      0x151 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5/crtatmega324pa.o
  .debug_line    0x00000151      0x26e i2cmaster.o
- .debug_line    0x000003bf      0x254 main.o
- .debug_line    0x00000613      0x36b MCP23017.o
- .debug_line    0x0000097e      0x139 MIDI.o
- .debug_line    0x00000ab7      0x37a PedalCom.o
- .debug_line    0x00000e31      0x11c RotaryEncoder.o
- .debug_line    0x00000f4d      0x136 SP10281_3x7segment.o
- .debug_line    0x00001083      0x9e8 System.o
- .debug_line    0x00001a6b      0x21d Timer.o
- .debug_line    0x00001c88      0x523 UART.o
- .debug_line    0x000021ab      0x13d UI.o
- .debug_line    0x000022e8       0xfb util.o
- .debug_line    0x000023e3       0xab C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
- .debug_line    0x0000248e       0x7a C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
- .debug_line    0x00002508       0x80 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
- .debug_line    0x00002588       0x9e C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
+ .debug_line    0x000003bf      0x28a main.o
+ .debug_line    0x00000649      0x36b MCP23017.o
+ .debug_line    0x000009b4      0x139 MIDI.o
+ .debug_line    0x00000aed      0x3a3 PedalCom.o
+ .debug_line    0x00000e90      0x11c RotaryEncoder.o
+ .debug_line    0x00000fac      0x136 SP10281_3x7segment.o
+ .debug_line    0x000010e2      0x9e8 System.o
+ .debug_line    0x00001aca      0x24d Timer.o
+ .debug_line    0x00001d17      0x540 UART.o
+ .debug_line    0x00002257      0x13d UI.o
+ .debug_line    0x00002394       0xfb util.o
+ .debug_line    0x0000248f       0xab C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_block.o)
+ .debug_line    0x0000253a       0x7a C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eerd_byte.o)
+ .debug_line    0x000025b4       0x80 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_block.o)
+ .debug_line    0x00002634       0x9e C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5\libatmega324pa.a(eewr_byte.o)
 
-.debug_frame    0x00000000      0x944
+.debug_frame    0x00000000      0x964
  *(.debug_frame)
  .debug_frame   0x00000000       0xa0 i2cmaster.o
  .debug_frame   0x000000a0       0x24 main.o
  .debug_frame   0x000000c4      0x168 MCP23017.o
  .debug_frame   0x0000022c       0x40 MIDI.o
- .debug_frame   0x0000026c      0x120 PedalCom.o
- .debug_frame   0x0000038c       0xa0 RotaryEncoder.o
- .debug_frame   0x0000042c       0x8c SP10281_3x7segment.o
- .debug_frame   0x000004b8      0x144 System.o
- .debug_frame   0x000005fc       0x64 Timer.o
- .debug_frame   0x00000660      0x248 UART.o
- .debug_frame   0x000008a8       0x68 UI.o
- .debug_frame   0x00000910       0x34 util.o
+ .debug_frame   0x0000026c      0x130 PedalCom.o
+ .debug_frame   0x0000039c       0xa0 RotaryEncoder.o
+ .debug_frame   0x0000043c       0x8c SP10281_3x7segment.o
+ .debug_frame   0x000004c8      0x144 System.o
+ .debug_frame   0x0000060c       0x64 Timer.o
+ .debug_frame   0x00000670      0x258 UART.o
+ .debug_frame   0x000008c8       0x68 UI.o
+ .debug_frame   0x00000930       0x34 util.o
 
-.debug_str      0x00000000     0x1bd9
+.debug_str      0x00000000     0x1cad
  *(.debug_str)
  .debug_str     0x00000000      0x255 C:/Program Files (x86)/Atmel/Studio/7.0/Packs/Atmel/ATmega_DFP/1.3.300/gcc/dev/atmega324pa/avr5/crtatmega324pa.o
  .debug_str     0x00000255      0x286 i2cmaster.o
                                 0x2ba (size before relaxing)
- .debug_str     0x000004db      0x8bc main.o
-                                0xb2a (size before relaxing)
- .debug_str     0x00000d97      0x250 MCP23017.o
+ .debug_str     0x000004db      0x976 main.o
+                                0xbea (size before relaxing)
+ .debug_str     0x00000e51      0x250 MCP23017.o
                                 0x6b9 (size before relaxing)
- .debug_str     0x00000fe7      0x1a1 MIDI.o
+ .debug_str     0x000010a1      0x1a1 MIDI.o
                                 0x3b5 (size before relaxing)
- .debug_str     0x00001188      0x18d PedalCom.o
-                                0x721 (size before relaxing)
- .debug_str     0x00001315       0xdf RotaryEncoder.o
+ .debug_str     0x00001242      0x1a7 PedalCom.o
+                                0x7d0 (size before relaxing)
+ .debug_str     0x000013e9       0xdf RotaryEncoder.o
                                 0x2eb (size before relaxing)
- .debug_str     0x000013f4      0x102 SP10281_3x7segment.o
+ .debug_str     0x000014c8      0x102 SP10281_3x7segment.o
                                 0x31f (size before relaxing)
- .debug_str     0x000014f6      0x3ad System.o
+ .debug_str     0x000015ca      0x3ad System.o
                                 0xe0f (size before relaxing)
- .debug_str     0x000018a3       0x24 Timer.o
-                                0x39d (size before relaxing)
- .debug_str     0x000018c7      0x273 UART.o
-                                0x56b (size before relaxing)
- .debug_str     0x00001b3a       0x6a UI.o
+ .debug_str     0x00001977       0x24 Timer.o
+                                0x40b (size before relaxing)
+ .debug_str     0x0000199b      0x273 UART.o
+                                0x5b6 (size before relaxing)
+ .debug_str     0x00001c0e       0x6a UI.o
                                 0x4e9 (size before relaxing)
- .debug_str     0x00001ba4       0x35 util.o
+ .debug_str     0x00001c78       0x35 util.o
                                 0x1f4 (size before relaxing)
 
-.debug_loc      0x00000000     0x1d3e
+.debug_loc      0x00000000     0x1d2f
  *(.debug_loc)
  .debug_loc     0x00000000      0x12d i2cmaster.o
  .debug_loc     0x0000012d      0x77a MCP23017.o
@@ -1213,11 +1232,11 @@ END GROUP
  .debug_loc     0x000008f7      0x1f1 PedalCom.o
  .debug_loc     0x00000ae8       0xb9 RotaryEncoder.o
  .debug_loc     0x00000ba1      0x276 SP10281_3x7segment.o
- .debug_loc     0x00000e17      0x447 System.o
- .debug_loc     0x0000125e       0xb5 Timer.o
- .debug_loc     0x00001313      0x859 UART.o
- .debug_loc     0x00001b6c      0x112 UI.o
- .debug_loc     0x00001c7e       0xc0 util.o
+ .debug_loc     0x00000e17      0x438 System.o
+ .debug_loc     0x0000124f       0xb5 Timer.o
+ .debug_loc     0x00001304      0x859 UART.o
+ .debug_loc     0x00001b5d      0x112 UI.o
+ .debug_loc     0x00001c6f       0xc0 util.o
 
 .debug_macinfo
  *(.debug_macinfo)
@@ -1237,20 +1256,20 @@ END GROUP
 .debug_pubtypes
  *(.debug_pubtypes)
 
-.debug_ranges   0x00000000      0x348
+.debug_ranges   0x00000000      0x340
  *(.debug_ranges)
  .debug_ranges  0x00000000       0x48 i2cmaster.o
  .debug_ranges  0x00000048       0x10 main.o
  .debug_ranges  0x00000058       0x78 MCP23017.o
  .debug_ranges  0x000000d0       0x18 MIDI.o
- .debug_ranges  0x000000e8       0x60 PedalCom.o
- .debug_ranges  0x00000148       0x30 RotaryEncoder.o
- .debug_ranges  0x00000178       0x30 SP10281_3x7segment.o
- .debug_ranges  0x000001a8       0x70 System.o
- .debug_ranges  0x00000218       0x20 Timer.o
- .debug_ranges  0x00000238       0xe0 UART.o
- .debug_ranges  0x00000318       0x18 UI.o
- .debug_ranges  0x00000330       0x18 util.o
+ .debug_ranges  0x000000e8       0x68 PedalCom.o
+ .debug_ranges  0x00000150       0x30 RotaryEncoder.o
+ .debug_ranges  0x00000180       0x30 SP10281_3x7segment.o
+ .debug_ranges  0x000001b0       0x58 System.o
+ .debug_ranges  0x00000208       0x20 Timer.o
+ .debug_ranges  0x00000228       0xe8 UART.o
+ .debug_ranges  0x00000310       0x18 UI.o
+ .debug_ranges  0x00000328       0x18 util.o
 
 .debug_macro
  *(.debug_macro)

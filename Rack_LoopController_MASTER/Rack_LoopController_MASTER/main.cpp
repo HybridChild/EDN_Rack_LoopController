@@ -76,13 +76,32 @@ int main(void)
 		if (PedalCom_DelayTxFlag)
 		{
 			PedalCom_DelayTxFlag = false;
-			PedalCom_Transmit();
+			
+			if (!UART0_QueueIsEmpty())
+			{
+				PedalCom_Transmit();
+			}
 		}
 		
-		/* Send current System State to Pedal (Heartbeat) */
+		/* Retransmit command if no response was received */
 		if (PedalCom_ResponseTimeoutFlag)
 		{
 			PedalCom_ResponseTimeoutFlag = false;
+			PedalCom_PrepareRetransmit();
+		}
+		
+		/* Send NACK if full command frame was not received before timeout */
+		if (PedalCom_FullFrameTimeoutFlag)
+		{
+			PedalCom_FullFrameTimeoutFlag = false;
+			UART0_QueueChar(NACK_BYTE);
+			PedalCom_DelayTxFlag = true;
+		}
+		
+		/* Send current System State to Pedal (Heartbeat) */
+		if (PedalCom_HeartbeatFlag)
+		{
+			PedalCom_HeartbeatFlag = false;
 			
 			/* If last command did not get an ACK */
 			if (PedalCom_TxAvailable())

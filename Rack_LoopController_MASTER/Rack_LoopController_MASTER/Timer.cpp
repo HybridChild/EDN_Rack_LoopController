@@ -44,7 +44,7 @@ ISR(TIMER0_COMPA_vect)
 	{
 		if (++System_MarkSelectionOvfCnt > SYSTEM_MARK_SELECTION_TIMEOUT)
 		{
-			System_MarkSelectionOvfCnt = 0;
+			System_MarkSelectionOvfCnt = 0;		// Stop counter
 			System_MarkSelectionFlag = true;
 		}
 	}
@@ -54,29 +54,49 @@ ISR(TIMER0_COMPA_vect)
 	{
 		if (++PedalCom_DelayTXOvfCnt > PEDALCOM_DELAY_TX_TIMEOUT)
 		{
-			PedalCom_DelayTXOvfCnt = 0;	// Stop overflow counter
+			PedalCom_DelayTXOvfCnt = 0;	// Stop counter
 			PedalCom_DelayTxFlag = true;
 		}
 	}
 
-	/* Overflow counter for Pedal response timeout and heartbeat */
-	if (++PedalCom_ResponseTimeoutOvfCnt > PEDALCOM_RESPONSE_TIMEOUT)
+	/* Overflow counter for Pedal heartbeat */
+	if (++PedalCom_HeartbeatOvfCnt > PEDALCOM_HEARTBEAT_TIMEOUT)
 	{
-		PedalCom_ResponseTimeoutOvfCnt = 1;	// Reset overflow counter
-		PedalCom_ResponseTimeoutFlag = true;
+		PedalCom_HeartbeatOvfCnt = 1;	// Reset counter
+		PedalCom_HeartbeatFlag = true;
+	}
+	
+	/* Overflow counter for Pedal response timeout */
+	if (PedalCom_ResponseTimeoutOvfCnt)
+	{
+		if (++PedalCom_ResponseTimeoutOvfCnt > PEDALCOM_RESPONSE_TIMEOUT)
+		{
+			PedalCom_ResponseTimeoutOvfCnt = 0;	// Stop counter
+			PedalCom_ResponseTimeoutFlag = true;
+		}
+	}
+	
+	/* Overflow counter for receiving full command frame */
+	if (PedalCom_FullFrameTimeoutOvfCnt)
+	{
+		if (++PedalCom_FullFrameTimeoutOvfCnt > PEDALCOM_FULL_FRAME_TIMEOUT)
+		{
+			PedalCom_FullFrameTimeoutOvfCnt = 0;	// Stop counter
+			PedalCom_FullFrameTimeoutFlag = true;
+		}
 	}
 	
 	/* Overflow counter for multiplexing 3x7-segment display */
 	if (++SP10281_OvfCnt >= SP10281_OVF_RESET)
 	{
-		SP10281_OvfCnt = 0;		// Stop overflow counter
+		SP10281_OvfCnt = 0;		// Stop counter
 		SP10281_OvfFlag = 1;
 	}
 	
 	/* Overflow counter for blinking UI LEDs */
 	if (++(MCP_Output::AutoToggle_OvfCnt) > MCP_Output::AutoToggle_Timeout)
 	{
-		MCP_Output::AutoToggle_OvfCnt = 0;		// Reset overflow counter
+		MCP_Output::AutoToggle_OvfCnt = 0;		// Reset counter
 		
 		if (MCP_Output::AutoToggle_PortA || MCP_Output::AutoToggle_PortB)
 		{
