@@ -1,0 +1,453 @@
+   1               		.file	"UI.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z7UI_Initv
+  12               	_Z7UI_Initv:
+  13               	.LFB2:
+  14               		.file 1 "UI.cpp"
+   1:UI.cpp        **** /*
+   2:UI.cpp        ****  * UI.cpp
+   3:UI.cpp        ****  *
+   4:UI.cpp        ****  * Created: 19-01-2020 17:23:25
+   5:UI.cpp        ****  *  Author: Esben
+   6:UI.cpp        ****  */ 
+   7:UI.cpp        **** 
+   8:UI.cpp        **** #include <avr/io.h>
+   9:UI.cpp        **** #include <stdint-gcc.h>
+  10:UI.cpp        **** #include "MCP23017.h"
+  11:UI.cpp        **** #include "UI.h"
+  12:UI.cpp        **** 
+  13:UI.cpp        **** MCP_Output ModeRunLED;
+  14:UI.cpp        **** MCP_Output ModeEditPresetLED;
+  15:UI.cpp        **** MCP_Output ModeEditMidiLED;
+  16:UI.cpp        **** MCP_Output LoopLEDs[NUMBER_OF_LOOPS];
+  17:UI.cpp        **** MCP_Output CtrlSwitchLEDs[NUMBER_OF_CTRL_SWITCHES];
+  18:UI.cpp        **** 
+  19:UI.cpp        **** MCP_Output LoopRelays[NUMBER_OF_LOOPS];
+  20:UI.cpp        **** MCP_Output CtrlSwitchRelays[NUMBER_OF_CTRL_SWITCHES];
+  21:UI.cpp        **** 
+  22:UI.cpp        **** void UI_Init()
+  23:UI.cpp        **** {
+  15               		.loc 1 23 1 view -0
+  16               		.cfi_startproc
+  17 0000 EF92      		push r14
+  18               	.LCFI0:
+  19               		.cfi_def_cfa_offset 3
+  20               		.cfi_offset 14, -2
+  21 0002 FF92      		push r15
+  22               	.LCFI1:
+  23               		.cfi_def_cfa_offset 4
+  24               		.cfi_offset 15, -3
+  25 0004 1F93      		push r17
+  26               	.LCFI2:
+  27               		.cfi_def_cfa_offset 5
+  28               		.cfi_offset 17, -4
+  29 0006 CF93      		push r28
+  30               	.LCFI3:
+  31               		.cfi_def_cfa_offset 6
+  32               		.cfi_offset 28, -5
+  33 0008 DF93      		push r29
+  34               	.LCFI4:
+  35               		.cfi_def_cfa_offset 7
+  36               		.cfi_offset 29, -6
+  37 000a 00D0      		rcall .
+  38 000c 00D0      		rcall .
+  39               	.LCFI5:
+  40               		.cfi_def_cfa_offset 11
+  41 000e CDB7      		in r28,__SP_L__
+  42 0010 DEB7      		in r29,__SP_H__
+  43               	.LCFI6:
+  44               		.cfi_def_cfa_register 28
+  45               	/* prologue: function */
+  46               	/* frame size = 4 */
+  47               	/* stack size = 9 */
+  48               	.L__stack_usage = 9
+  24:UI.cpp        **** 	/* Initialize outputs UI LEDs */
+  25:UI.cpp        **** 	ModeRunLED = MCP_Output(MCP23017_UI_LEDS_ADDR, PortB, (MCP23017_Pin)UI_MODE_RUN_LED_PIN);
+  49               		.loc 1 25 2 view .LVU1
+  50               		.loc 1 25 15 is_stmt 0 view .LVU2
+  51 0012 25E0      		ldi r18,lo8(5)
+  52 0014 41E0      		ldi r20,lo8(1)
+  53 0016 60E0      		ldi r22,0
+  54 0018 CE01      		movw r24,r28
+  55 001a 0196      		adiw r24,1
+  56 001c 0E94 0000 		call _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+  57               	.LVL0:
+  58               		.loc 1 25 13 view .LVU3
+  59 0020 8981      		ldd r24,Y+1
+  60 0022 9A81      		ldd r25,Y+2
+  61 0024 AB81      		ldd r26,Y+3
+  62 0026 BC81      		ldd r27,Y+4
+  63 0028 8093 0000 		sts ModeRunLED,r24
+  64 002c 9093 0000 		sts ModeRunLED+1,r25
+  65 0030 A093 0000 		sts ModeRunLED+2,r26
+  66 0034 B093 0000 		sts ModeRunLED+3,r27
+  26:UI.cpp        **** 	ModeEditPresetLED = MCP_Output(MCP23017_UI_LEDS_ADDR, PortB, (MCP23017_Pin)UI_MODE_PRESET_LED_PIN)
+  67               		.loc 1 26 2 is_stmt 1 view .LVU4
+  68               		.loc 1 26 22 is_stmt 0 view .LVU5
+  69 0038 26E0      		ldi r18,lo8(6)
+  70 003a 41E0      		ldi r20,lo8(1)
+  71 003c 60E0      		ldi r22,0
+  72 003e CE01      		movw r24,r28
+  73 0040 0196      		adiw r24,1
+  74 0042 0E94 0000 		call _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+  75               	.LVL1:
+  76               		.loc 1 26 20 view .LVU6
+  77 0046 8981      		ldd r24,Y+1
+  78 0048 9A81      		ldd r25,Y+2
+  79 004a AB81      		ldd r26,Y+3
+  80 004c BC81      		ldd r27,Y+4
+  81 004e 8093 0000 		sts ModeEditPresetLED,r24
+  82 0052 9093 0000 		sts ModeEditPresetLED+1,r25
+  83 0056 A093 0000 		sts ModeEditPresetLED+2,r26
+  84 005a B093 0000 		sts ModeEditPresetLED+3,r27
+  27:UI.cpp        **** 	ModeEditMidiLED = MCP_Output(MCP23017_UI_LEDS_ADDR, PortB, (MCP23017_Pin)UI_MODE_MIDI_LED_PIN);
+  85               		.loc 1 27 2 is_stmt 1 view .LVU7
+  86               		.loc 1 27 20 is_stmt 0 view .LVU8
+  87 005e 27E0      		ldi r18,lo8(7)
+  88 0060 41E0      		ldi r20,lo8(1)
+  89 0062 60E0      		ldi r22,0
+  90 0064 CE01      		movw r24,r28
+  91 0066 0196      		adiw r24,1
+  92 0068 0E94 0000 		call _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+  93               	.LVL2:
+  94               		.loc 1 27 18 view .LVU9
+  95 006c 8981      		ldd r24,Y+1
+  96 006e 9A81      		ldd r25,Y+2
+  97 0070 AB81      		ldd r26,Y+3
+  98 0072 BC81      		ldd r27,Y+4
+  99 0074 8093 0000 		sts ModeEditMidiLED,r24
+ 100 0078 9093 0000 		sts ModeEditMidiLED+1,r25
+ 101 007c A093 0000 		sts ModeEditMidiLED+2,r26
+ 102 0080 B093 0000 		sts ModeEditMidiLED+3,r27
+  28:UI.cpp        **** 	
+  29:UI.cpp        **** 	for (uint8_t i = 0; i < NUMBER_OF_LOOPS; i++)
+ 103               		.loc 1 29 2 is_stmt 1 view .LVU10
+ 104               	.LVL3:
+ 105               	.LBB2:
+ 106               		.loc 1 29 24 view .LVU11
+ 107 0084 90E0      		ldi r25,lo8(LoopLEDs)
+ 108 0086 E92E      		mov r14,r25
+ 109 0088 90E0      		ldi r25,hi8(LoopLEDs)
+ 110 008a F92E      		mov r15,r25
+ 111               		.loc 1 29 15 is_stmt 0 view .LVU12
+ 112 008c 10E0      		ldi r17,0
+ 113               	.LVL4:
+ 114               	.L2:
+  30:UI.cpp        **** 	{
+  31:UI.cpp        **** 		LoopLEDs[i] = MCP_Output(MCP23017_UI_LEDS_ADDR, PortA, (MCP23017_Pin)i);
+ 115               		.loc 1 31 3 is_stmt 1 discriminator 2 view .LVU13
+ 116               		.loc 1 31 17 is_stmt 0 discriminator 2 view .LVU14
+ 117 008e 212F      		mov r18,r17
+ 118 0090 40E0      		ldi r20,0
+ 119 0092 60E0      		ldi r22,0
+ 120 0094 CE01      		movw r24,r28
+ 121 0096 0196      		adiw r24,1
+ 122 0098 0E94 0000 		call _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+ 123               	.LVL5:
+ 124               		.loc 1 31 15 discriminator 2 view .LVU15
+ 125 009c 8981      		ldd r24,Y+1
+ 126 009e 9A81      		ldd r25,Y+2
+ 127 00a0 AB81      		ldd r26,Y+3
+ 128 00a2 BC81      		ldd r27,Y+4
+ 129 00a4 F701      		movw r30,r14
+ 130 00a6 8193      		st Z+,r24
+ 131 00a8 9193      		st Z+,r25
+ 132 00aa A193      		st Z+,r26
+ 133 00ac B193      		st Z+,r27
+ 134 00ae 7F01      		movw r14,r30
+  29:UI.cpp        **** 	{
+ 135               		.loc 1 29 2 is_stmt 1 discriminator 2 view .LVU16
+ 136 00b0 1F5F      		subi r17,lo8(-(1))
+ 137               	.LVL6:
+  29:UI.cpp        **** 	{
+ 138               		.loc 1 29 24 discriminator 2 view .LVU17
+ 139 00b2 1830      		cpi r17,lo8(8)
+ 140 00b4 01F4      		brne .L2
+ 141 00b6 80E0      		ldi r24,lo8(CtrlSwitchLEDs)
+ 142 00b8 E82E      		mov r14,r24
+ 143 00ba 80E0      		ldi r24,hi8(CtrlSwitchLEDs)
+ 144 00bc F82E      		mov r15,r24
+ 145               	.LBE2:
+ 146               	.LBB3:
+  32:UI.cpp        **** 	}
+  33:UI.cpp        **** 		
+  34:UI.cpp        **** 	for (uint8_t i = 0; i < NUMBER_OF_CTRL_SWITCHES; i++)
+ 147               		.loc 1 34 15 is_stmt 0 view .LVU18
+ 148 00be 10E0      		ldi r17,0
+ 149               	.LVL7:
+ 150               	.L3:
+  35:UI.cpp        **** 	{
+  36:UI.cpp        **** 		CtrlSwitchLEDs[i] = MCP_Output(MCP23017_UI_LEDS_ADDR, PortB, (MCP23017_Pin)(i));
+ 151               		.loc 1 36 3 is_stmt 1 discriminator 2 view .LVU19
+ 152               		.loc 1 36 23 is_stmt 0 discriminator 2 view .LVU20
+ 153 00c0 212F      		mov r18,r17
+ 154 00c2 41E0      		ldi r20,lo8(1)
+ 155 00c4 60E0      		ldi r22,0
+ 156 00c6 CE01      		movw r24,r28
+ 157 00c8 0196      		adiw r24,1
+ 158 00ca 0E94 0000 		call _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+ 159               	.LVL8:
+ 160               		.loc 1 36 21 discriminator 2 view .LVU21
+ 161 00ce 8981      		ldd r24,Y+1
+ 162 00d0 9A81      		ldd r25,Y+2
+ 163 00d2 AB81      		ldd r26,Y+3
+ 164 00d4 BC81      		ldd r27,Y+4
+ 165 00d6 F701      		movw r30,r14
+ 166 00d8 8193      		st Z+,r24
+ 167 00da 9193      		st Z+,r25
+ 168 00dc A193      		st Z+,r26
+ 169 00de B193      		st Z+,r27
+ 170 00e0 7F01      		movw r14,r30
+  34:UI.cpp        **** 	{
+ 171               		.loc 1 34 2 is_stmt 1 discriminator 2 view .LVU22
+ 172 00e2 1F5F      		subi r17,lo8(-(1))
+ 173               	.LVL9:
+  34:UI.cpp        **** 	{
+ 174               		.loc 1 34 24 discriminator 2 view .LVU23
+ 175 00e4 1430      		cpi r17,lo8(4)
+ 176 00e6 01F4      		brne .L3
+ 177               	.LBE3:
+  37:UI.cpp        **** 	}
+  38:UI.cpp        **** 		
+  39:UI.cpp        **** 	///* Initialize output relays */
+  40:UI.cpp        **** 	//for (uint8_t i = 0; i < NUMBER_OF_LOOPS; i++)
+  41:UI.cpp        **** 	//{
+  42:UI.cpp        **** 		//LoopRelays[i] = MCP_Output(MCP23017_RELAYS_ADDR, PortA, (MCP23017_Pin)i);
+  43:UI.cpp        **** 	//}
+  44:UI.cpp        **** 	//
+  45:UI.cpp        **** 	//for (uint8_t i = 0; i < NUMBER_OF_CTRL_SWITCHES; i++)
+  46:UI.cpp        **** 	//{
+  47:UI.cpp        **** 		//CtrlSwitchRelays[i] = MCP_Output(MCP23017_RELAYS_ADDR, PortB, (MCP23017_Pin)i);
+  48:UI.cpp        **** 	//}
+  49:UI.cpp        **** 	
+  50:UI.cpp        **** 	/* Set auto toggle speed */
+  51:UI.cpp        **** 	MCP_Output::SetAutoToggleSpeed(360/*ms*/);
+ 178               		.loc 1 51 2 view .LVU24
+ 179               		.loc 1 51 32 is_stmt 0 view .LVU25
+ 180 00e8 88E6      		ldi r24,lo8(104)
+ 181 00ea 91E0      		ldi r25,lo8(1)
+ 182 00ec 0E94 0000 		call _ZN10MCP_Output18SetAutoToggleSpeedEj
+ 183               	.LVL10:
+ 184               	/* epilogue start */
+  52:UI.cpp        **** }
+ 185               		.loc 1 52 1 view .LVU26
+ 186 00f0 0F90      		pop __tmp_reg__
+ 187 00f2 0F90      		pop __tmp_reg__
+ 188 00f4 0F90      		pop __tmp_reg__
+ 189 00f6 0F90      		pop __tmp_reg__
+ 190 00f8 DF91      		pop r29
+ 191 00fa CF91      		pop r28
+ 192 00fc 1F91      		pop r17
+ 193               	.LVL11:
+ 194               		.loc 1 52 1 view .LVU27
+ 195 00fe FF90      		pop r15
+ 196 0100 EF90      		pop r14
+ 197 0102 0895      		ret
+ 198               		.cfi_endproc
+ 199               	.LFE2:
+ 201               		.section	.text.startup,"ax",@progbits
+ 203               	_GLOBAL__sub_I_ModeRunLED:
+ 204               	.LFB4:
+ 205               		.loc 1 52 1 is_stmt 1 view -0
+ 206               		.cfi_startproc
+ 207 0000 0F93      		push r16
+ 208               	.LCFI7:
+ 209               		.cfi_def_cfa_offset 3
+ 210               		.cfi_offset 16, -2
+ 211 0002 1F93      		push r17
+ 212               	.LCFI8:
+ 213               		.cfi_def_cfa_offset 4
+ 214               		.cfi_offset 17, -3
+ 215 0004 CF93      		push r28
+ 216               	.LCFI9:
+ 217               		.cfi_def_cfa_offset 5
+ 218               		.cfi_offset 28, -4
+ 219 0006 DF93      		push r29
+ 220               	.LCFI10:
+ 221               		.cfi_def_cfa_offset 6
+ 222               		.cfi_offset 29, -5
+ 223               	/* prologue: function */
+ 224               	/* frame size = 0 */
+ 225               	/* stack size = 4 */
+ 226               	.L__stack_usage = 4
+ 227               	.LBB6:
+ 228               	.LBI6:
+ 229               		.loc 1 52 1 view .LVU29
+ 230               	.LVL12:
+ 231               	.LBB7:
+  13:UI.cpp        **** MCP_Output ModeEditPresetLED;
+ 232               		.loc 1 13 12 is_stmt 0 view .LVU30
+ 233 0008 80E0      		ldi r24,lo8(ModeRunLED)
+ 234 000a 90E0      		ldi r25,hi8(ModeRunLED)
+ 235 000c 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 236               	.LVL13:
+  14:UI.cpp        **** MCP_Output ModeEditMidiLED;
+ 237               		.loc 1 14 12 view .LVU31
+ 238 0010 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 239 0012 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 240 0014 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 241               	.LVL14:
+  15:UI.cpp        **** MCP_Output LoopLEDs[NUMBER_OF_LOOPS];
+ 242               		.loc 1 15 12 view .LVU32
+ 243 0018 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 244 001a 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 245 001c 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 246               	.LVL15:
+  16:UI.cpp        **** MCP_Output CtrlSwitchLEDs[NUMBER_OF_CTRL_SWITCHES];
+ 247               		.loc 1 16 36 is_stmt 1 view .LVU33
+ 248 0020 C0E0      		ldi r28,lo8(LoopLEDs)
+ 249 0022 D0E0      		ldi r29,hi8(LoopLEDs)
+ 250 0024 00E0      		ldi r16,lo8(LoopLEDs+32)
+ 251 0026 10E0      		ldi r17,hi8(LoopLEDs+32)
+ 252               	.L7:
+ 253 0028 CE01      		movw r24,r28
+ 254 002a 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 255               	.LVL16:
+  16:UI.cpp        **** MCP_Output CtrlSwitchLEDs[NUMBER_OF_CTRL_SWITCHES];
+ 256               		.loc 1 16 36 view .LVU34
+  16:UI.cpp        **** MCP_Output CtrlSwitchLEDs[NUMBER_OF_CTRL_SWITCHES];
+ 257               		.loc 1 16 36 view .LVU35
+ 258 002e 2496      		adiw r28,4
+ 259 0030 0C17      		cp r16,r28
+ 260 0032 1D07      		cpc r17,r29
+ 261 0034 01F4      		brne .L7
+ 262 0036 C0E0      		ldi r28,lo8(CtrlSwitchLEDs)
+ 263 0038 D0E0      		ldi r29,hi8(CtrlSwitchLEDs)
+ 264               	.L8:
+  17:UI.cpp        **** 
+ 265               		.loc 1 17 50 is_stmt 0 view .LVU36
+ 266 003a CE01      		movw r24,r28
+ 267 003c 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 268               	.LVL17:
+  17:UI.cpp        **** 
+ 269               		.loc 1 17 50 is_stmt 1 view .LVU37
+  17:UI.cpp        **** 
+ 270               		.loc 1 17 50 view .LVU38
+ 271 0040 2496      		adiw r28,4
+ 272 0042 80E0      		ldi r24,hi8(CtrlSwitchLEDs+16)
+ 273 0044 C030      		cpi r28,lo8(CtrlSwitchLEDs+16)
+ 274 0046 D807      		cpc r29,r24
+ 275 0048 01F4      		brne .L8
+ 276 004a C0E0      		ldi r28,lo8(LoopRelays)
+ 277 004c D0E0      		ldi r29,hi8(LoopRelays)
+ 278               	.L9:
+  19:UI.cpp        **** MCP_Output CtrlSwitchRelays[NUMBER_OF_CTRL_SWITCHES];
+ 279               		.loc 1 19 38 is_stmt 0 view .LVU39
+ 280 004e CE01      		movw r24,r28
+ 281 0050 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 282               	.LVL18:
+  19:UI.cpp        **** MCP_Output CtrlSwitchRelays[NUMBER_OF_CTRL_SWITCHES];
+ 283               		.loc 1 19 38 is_stmt 1 view .LVU40
+  19:UI.cpp        **** MCP_Output CtrlSwitchRelays[NUMBER_OF_CTRL_SWITCHES];
+ 284               		.loc 1 19 38 view .LVU41
+ 285 0054 2496      		adiw r28,4
+ 286 0056 80E0      		ldi r24,hi8(LoopRelays+32)
+ 287 0058 C030      		cpi r28,lo8(LoopRelays+32)
+ 288 005a D807      		cpc r29,r24
+ 289 005c 01F4      		brne .L9
+ 290 005e C0E0      		ldi r28,lo8(CtrlSwitchRelays)
+ 291 0060 D0E0      		ldi r29,hi8(CtrlSwitchRelays)
+ 292               	.L10:
+  20:UI.cpp        **** 
+ 293               		.loc 1 20 52 is_stmt 0 view .LVU42
+ 294 0062 CE01      		movw r24,r28
+ 295 0064 0E94 0000 		call _ZN10MCP_OutputC1Ev
+ 296               	.LVL19:
+  20:UI.cpp        **** 
+ 297               		.loc 1 20 52 is_stmt 1 view .LVU43
+  20:UI.cpp        **** 
+ 298               		.loc 1 20 52 view .LVU44
+ 299 0068 2496      		adiw r28,4
+ 300 006a 80E0      		ldi r24,hi8(CtrlSwitchRelays+16)
+ 301 006c C030      		cpi r28,lo8(CtrlSwitchRelays+16)
+ 302 006e D807      		cpc r29,r24
+ 303 0070 01F4      		brne .L10
+ 304               	/* epilogue start */
+ 305               	.LBE7:
+ 306               	.LBE6:
+ 307               		.loc 1 52 1 is_stmt 0 view .LVU45
+ 308 0072 DF91      		pop r29
+ 309 0074 CF91      		pop r28
+ 310 0076 1F91      		pop r17
+ 311 0078 0F91      		pop r16
+ 312 007a 0895      		ret
+ 313               		.cfi_endproc
+ 314               	.LFE4:
+ 316               		.global __do_global_ctors
+ 317               		.section .ctors,"a",@progbits
+ 318               		.p2align	1
+ 319 0000 0000      		.word	gs(_GLOBAL__sub_I_ModeRunLED)
+ 320               	.global	CtrlSwitchRelays
+ 321               		.section .bss
+ 324               	CtrlSwitchRelays:
+ 325 0000 0000 0000 		.zero	16
+ 325      0000 0000 
+ 325      0000 0000 
+ 325      0000 0000 
+ 326               	.global	LoopRelays
+ 329               	LoopRelays:
+ 330 0010 0000 0000 		.zero	32
+ 330      0000 0000 
+ 330      0000 0000 
+ 330      0000 0000 
+ 330      0000 0000 
+ 331               	.global	CtrlSwitchLEDs
+ 334               	CtrlSwitchLEDs:
+ 335 0030 0000 0000 		.zero	16
+ 335      0000 0000 
+ 335      0000 0000 
+ 335      0000 0000 
+ 336               	.global	LoopLEDs
+ 339               	LoopLEDs:
+ 340 0040 0000 0000 		.zero	32
+ 340      0000 0000 
+ 340      0000 0000 
+ 340      0000 0000 
+ 340      0000 0000 
+ 341               	.global	ModeEditMidiLED
+ 344               	ModeEditMidiLED:
+ 345 0060 0000 0000 		.zero	4
+ 346               	.global	ModeEditPresetLED
+ 349               	ModeEditPresetLED:
+ 350 0064 0000 0000 		.zero	4
+ 351               	.global	ModeRunLED
+ 354               	ModeRunLED:
+ 355 0068 0000 0000 		.zero	4
+ 356               		.text
+ 357               	.Letext0:
+ 358               		.file 2 "/usr/avr/include/stdint.h"
+ 359               		.file 3 "MCP23017.h"
+ 360               		.file 4 "PedalCom.h"
+ 361               		.file 5 "MIDI.h"
+ 362               		.file 6 "System.h"
+ 363               		.file 7 "UI.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 UI.cpp
+     /tmp/ccQpaRv1.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccQpaRv1.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccQpaRv1.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccQpaRv1.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccQpaRv1.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccQpaRv1.s:12     .text:0000000000000000 _Z7UI_Initv
+     /tmp/ccQpaRv1.s:354    .bss:0000000000000068 ModeRunLED
+     /tmp/ccQpaRv1.s:349    .bss:0000000000000064 ModeEditPresetLED
+     /tmp/ccQpaRv1.s:344    .bss:0000000000000060 ModeEditMidiLED
+     /tmp/ccQpaRv1.s:339    .bss:0000000000000040 LoopLEDs
+     /tmp/ccQpaRv1.s:334    .bss:0000000000000030 CtrlSwitchLEDs
+     /tmp/ccQpaRv1.s:203    .text.startup:0000000000000000 _GLOBAL__sub_I_ModeRunLED
+     /tmp/ccQpaRv1.s:329    .bss:0000000000000010 LoopRelays
+     /tmp/ccQpaRv1.s:324    .bss:0000000000000000 CtrlSwitchRelays
+
+UNDEFINED SYMBOLS
+_ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+_ZN10MCP_Output18SetAutoToggleSpeedEj
+_ZN10MCP_OutputC1Ev
+__do_global_ctors
+__do_clear_bss

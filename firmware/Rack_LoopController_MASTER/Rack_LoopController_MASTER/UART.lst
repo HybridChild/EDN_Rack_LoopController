@@ -1,0 +1,2010 @@
+   1               		.file	"UART.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z10UART0_Initjhh
+  12               	_Z10UART0_Initjhh:
+  13               	.LVL0:
+  14               	.LFB1:
+  15               		.file 1 "UART.cpp"
+   1:UART.cpp      **** /*
+   2:UART.cpp      ****  * UART.cpp
+   3:UART.cpp      ****  *
+   4:UART.cpp      ****  * Created: 26-01-2020 22:13:14
+   5:UART.cpp      ****  *  Author: Esben
+   6:UART.cpp      ****  */ 
+   7:UART.cpp      **** 
+   8:UART.cpp      **** #include <avr/io.h>
+   9:UART.cpp      **** #include <avr/interrupt.h>
+  10:UART.cpp      **** #include <avr/pgmspace.h>
+  11:UART.cpp      **** #include <stddef.h>
+  12:UART.cpp      **** #include "UART.h"
+  13:UART.cpp      **** 
+  14:UART.cpp      **** 
+  15:UART.cpp      **** #ifndef F_CPU
+  16:UART.cpp      **** #define F_CPU 20000000UL
+  17:UART.cpp      **** #endif
+  18:UART.cpp      **** 
+  19:UART.cpp      **** /* Size of the circular receive/transmit buffers, must be power of 2 */
+  20:UART.cpp      **** #define UART0_RX_BUFFER_SIZE 64
+  21:UART.cpp      **** #define UART0_TX_BUFFER_SIZE 64
+  22:UART.cpp      **** #define UART1_RX_BUFFER_SIZE 64
+  23:UART.cpp      **** #define UART1_TX_BUFFER_SIZE 64
+  24:UART.cpp      **** 
+  25:UART.cpp      **** /* size of RX/TX buffers */
+  26:UART.cpp      **** #define UART0_RX_BUFFER_MASK	( UART0_RX_BUFFER_SIZE - 1)
+  27:UART.cpp      **** #define UART0_TX_BUFFER_MASK	( UART0_TX_BUFFER_SIZE - 1)
+  28:UART.cpp      **** #define UART1_RX_BUFFER_MASK	( UART1_RX_BUFFER_SIZE - 1)
+  29:UART.cpp      **** #define UART1_TX_BUFFER_MASK	( UART1_TX_BUFFER_SIZE - 1)
+  30:UART.cpp      **** 
+  31:UART.cpp      **** /* module global variables */
+  32:UART.cpp      **** static volatile unsigned char UART0_TxBuf[UART0_TX_BUFFER_SIZE];
+  33:UART.cpp      **** static volatile unsigned char UART0_RxBuf[UART0_RX_BUFFER_SIZE];
+  34:UART.cpp      **** static volatile unsigned char UART0_TxHead;
+  35:UART.cpp      **** static volatile unsigned char UART0_TxTail;
+  36:UART.cpp      **** static volatile unsigned char UART0_RxHead;
+  37:UART.cpp      **** static volatile unsigned char UART0_RxTail;
+  38:UART.cpp      **** static volatile unsigned char UART0_LastRxError;
+  39:UART.cpp      **** 
+  40:UART.cpp      **** static volatile unsigned char UART1_TxBuf[UART1_TX_BUFFER_SIZE];
+  41:UART.cpp      **** static volatile unsigned char UART1_RxBuf[UART1_RX_BUFFER_SIZE];
+  42:UART.cpp      **** static volatile unsigned char UART1_TxHead;
+  43:UART.cpp      **** static volatile unsigned char UART1_TxTail;
+  44:UART.cpp      **** static volatile unsigned char UART1_RxHead;
+  45:UART.cpp      **** static volatile unsigned char UART1_RxTail;
+  46:UART.cpp      **** static volatile unsigned char UART1_LastRxError;
+  47:UART.cpp      **** 
+  48:UART.cpp      **** 
+  49:UART.cpp      **** /*************************************************************************
+  50:UART.cpp      **** Function: UART0_Init()
+  51:UART.cpp      **** Purpose:  initialize UART0 and set baudrate
+  52:UART.cpp      **** Input:    baudrate, stop bits, parity
+  53:UART.cpp      **** Returns:  none
+  54:UART.cpp      **** **************************************************************************/
+  55:UART.cpp      **** void UART0_Init(unsigned int baudrate, unsigned char stopbit, unsigned char parity)
+  56:UART.cpp      **** {
+  16               		.loc 1 56 1 view -0
+  17               		.cfi_startproc
+  18               		.loc 1 56 1 is_stmt 0 view .LVU1
+  19 0000 CF93      		push r28
+  20               	.LCFI0:
+  21               		.cfi_def_cfa_offset 3
+  22               		.cfi_offset 28, -2
+  23 0002 DF93      		push r29
+  24               	.LCFI1:
+  25               		.cfi_def_cfa_offset 4
+  26               		.cfi_offset 29, -3
+  27               	/* prologue: function */
+  28               	/* frame size = 0 */
+  29               	/* stack size = 2 */
+  30               	.L__stack_usage = 2
+  31 0004 D62F      		mov r29,r22
+  32 0006 C42F      		mov r28,r20
+  57:UART.cpp      **** 	DDRD |= (1 << PORTD1);
+  33               		.loc 1 57 2 is_stmt 1 view .LVU2
+  34               		.loc 1 57 7 is_stmt 0 view .LVU3
+  35 0008 519A      		sbi 0xa,1
+  58:UART.cpp      **** 	PORTD |= (1 << PORTD1);
+  36               		.loc 1 58 2 is_stmt 1 view .LVU4
+  37               		.loc 1 58 8 is_stmt 0 view .LVU5
+  38 000a 599A      		sbi 0xb,1
+  59:UART.cpp      **** 	
+  60:UART.cpp      **** 	UART0_TxHead = 0;
+  39               		.loc 1 60 2 is_stmt 1 view .LVU6
+  40               		.loc 1 60 15 is_stmt 0 view .LVU7
+  41 000c 1092 0000 		sts _ZL12UART0_TxHead,__zero_reg__
+  61:UART.cpp      **** 	UART0_TxTail = 0;
+  42               		.loc 1 61 2 is_stmt 1 view .LVU8
+  43               		.loc 1 61 15 is_stmt 0 view .LVU9
+  44 0010 1092 0000 		sts _ZL12UART0_TxTail,__zero_reg__
+  62:UART.cpp      **** 	UART0_RxHead = 0;
+  45               		.loc 1 62 2 is_stmt 1 view .LVU10
+  46               		.loc 1 62 15 is_stmt 0 view .LVU11
+  47 0014 1092 0000 		sts _ZL12UART0_RxHead,__zero_reg__
+  63:UART.cpp      **** 	UART0_RxTail = 0;
+  48               		.loc 1 63 2 is_stmt 1 view .LVU12
+  49               		.loc 1 63 15 is_stmt 0 view .LVU13
+  50 0018 1092 0000 		sts _ZL12UART0_RxTail,__zero_reg__
+  64:UART.cpp      **** 	
+  65:UART.cpp      **** 	baudrate = UART_BAUD_SELECT(baudrate, F_CPU);
+  51               		.loc 1 65 2 is_stmt 1 view .LVU14
+  52               		.loc 1 65 13 is_stmt 0 view .LVU15
+  53 001c B0E0      		ldi r27,0
+  54 001e A0E0      		ldi r26,0
+  55 0020 9C01      		movw r18,r24
+  56 0022 AD01      		movw r20,r26
+  57               	.LVL1:
+  58               		.loc 1 65 13 view .LVU16
+  59 0024 84E0      		ldi r24,4
+  60               		1:
+  61 0026 220F      		lsl r18
+  62 0028 331F      		rol r19
+  63 002a 441F      		rol r20
+  64 002c 551F      		rol r21
+  65 002e 8A95      		dec r24
+  66 0030 01F4      		brne 1b
+  67               	.LVL2:
+  68               		.loc 1 65 13 view .LVU17
+  69 0032 60E0      		ldi r22,0
+  70 0034 7DE2      		ldi r23,lo8(45)
+  71 0036 81E3      		ldi r24,lo8(49)
+  72 0038 91E0      		ldi r25,lo8(1)
+  73               	.LVL3:
+  74               		.loc 1 65 13 view .LVU18
+  75 003a 0E94 0000 		call __udivmodsi4
+  76               		.loc 1 65 11 view .LVU19
+  77 003e 2150      		subi r18,1
+  78 0040 3109      		sbc r19,__zero_reg__
+  79               	.LVL4:
+  66:UART.cpp      **** 	
+  67:UART.cpp      **** 	/*Set baud rate */
+  68:UART.cpp      **** 	UBRR0H = (unsigned char)(baudrate >> 8);
+  80               		.loc 1 68 2 is_stmt 1 view .LVU20
+  81               		.loc 1 68 9 is_stmt 0 view .LVU21
+  82 0042 3093 C500 		sts 197,r19
+  69:UART.cpp      **** 	UBRR0L = (unsigned char)baudrate;
+  83               		.loc 1 69 2 is_stmt 1 view .LVU22
+  84               		.loc 1 69 9 is_stmt 0 view .LVU23
+  85 0046 2093 C400 		sts 196,r18
+  70:UART.cpp      **** 	
+  71:UART.cpp      **** 	/* Set USART Mode */
+  72:UART.cpp      **** 	UCSR0C &= ~((1 << UMSEL01) | (1 << UMSEL00));		// Asynchronous USART
+  86               		.loc 1 72 2 is_stmt 1 view .LVU24
+  87               		.loc 1 72 9 is_stmt 0 view .LVU25
+  88 004a 8091 C200 		lds r24,194
+  89 004e 8F73      		andi r24,lo8(63)
+  90 0050 8093 C200 		sts 194,r24
+  73:UART.cpp      **** 	
+  74:UART.cpp      **** 	/* Set Stop Bit(s) */
+  75:UART.cpp      **** 	if (stopbit == UART_2_STOP_BITS)
+  91               		.loc 1 75 2 is_stmt 1 view .LVU26
+  76:UART.cpp      **** 		UCSR0C |= (1 << USBS0);							// 2 Stop bits
+  92               		.loc 1 76 10 is_stmt 0 view .LVU27
+  93 0054 8091 C200 		lds r24,194
+  75:UART.cpp      **** 		UCSR0C |= (1 << USBS0);							// 2 Stop bits
+  94               		.loc 1 75 2 view .LVU28
+  95 0058 D230      		cpi r29,lo8(2)
+  96 005a 01F4      		brne .L2
+  97               		.loc 1 76 3 is_stmt 1 view .LVU29
+  98               		.loc 1 76 10 is_stmt 0 view .LVU30
+  99 005c 8860      		ori r24,lo8(8)
+ 100               	.L7:
+  77:UART.cpp      **** 	else
+  78:UART.cpp      **** 		UCSR0C &= ~(1 << USBS0);						// 1 Stop bit
+ 101               		.loc 1 78 10 view .LVU31
+ 102 005e 8093 C200 		sts 194,r24
+  79:UART.cpp      **** 
+  80:UART.cpp      **** 	/* Set Parity */
+  81:UART.cpp      **** 	if (parity == UART_EVEN_PARITY)
+ 103               		.loc 1 81 2 is_stmt 1 view .LVU32
+  82:UART.cpp      **** 	{
+  83:UART.cpp      **** 		UCSR0C &= ~(1 << UPM00);
+ 104               		.loc 1 83 10 is_stmt 0 view .LVU33
+ 105 0062 8091 C200 		lds r24,194
+  81:UART.cpp      **** 	{
+ 106               		.loc 1 81 2 view .LVU34
+ 107 0066 C230      		cpi r28,lo8(2)
+ 108 0068 01F4      		brne .L4
+ 109               		.loc 1 83 3 is_stmt 1 view .LVU35
+ 110               		.loc 1 83 10 is_stmt 0 view .LVU36
+ 111 006a 8F7E      		andi r24,lo8(-17)
+ 112 006c 8093 C200 		sts 194,r24
+  84:UART.cpp      **** 		UCSR0C |= (1 << UPM01);							// Even parity
+ 113               		.loc 1 84 3 is_stmt 1 view .LVU37
+ 114               		.loc 1 84 10 is_stmt 0 view .LVU38
+ 115 0070 8091 C200 		lds r24,194
+ 116 0074 8062      		ori r24,lo8(32)
+ 117               	.L8:
+  85:UART.cpp      **** 	}
+  86:UART.cpp      **** 	else if (parity == UART_ODD_PARITY)
+  87:UART.cpp      **** 	{
+  88:UART.cpp      **** 		UCSR0C |= ((1 << UPM01) | (1 << UPM00));		// Odd parity
+  89:UART.cpp      **** 	}
+  90:UART.cpp      **** 	else
+  91:UART.cpp      **** 		UCSR0C &= ~((1 << UPM01) | (1 << UPM00));		// No parity
+ 118               		.loc 1 91 10 view .LVU39
+ 119 0076 8093 C200 		sts 194,r24
+  92:UART.cpp      **** 	
+  93:UART.cpp      **** 	/* Set Data Bits */
+  94:UART.cpp      **** 	UCSR0C |= ((1 << UCSZ01) | (1 << UCSZ00));			// 8 Data bits
+ 120               		.loc 1 94 2 is_stmt 1 view .LVU40
+ 121               		.loc 1 94 9 is_stmt 0 view .LVU41
+ 122 007a 8091 C200 		lds r24,194
+ 123 007e 8660      		ori r24,lo8(6)
+ 124 0080 8093 C200 		sts 194,r24
+  95:UART.cpp      **** 
+  96:UART.cpp      **** 	/* Enable interrupts */
+  97:UART.cpp      **** 	UCSR0B |= ((1 << RXCIE0) | (1 << UDRIE0));
+ 125               		.loc 1 97 2 is_stmt 1 view .LVU42
+ 126               		.loc 1 97 9 is_stmt 0 view .LVU43
+ 127 0084 8091 C100 		lds r24,193
+ 128 0088 806A      		ori r24,lo8(-96)
+ 129 008a 8093 C100 		sts 193,r24
+  98:UART.cpp      **** 	
+  99:UART.cpp      **** 	/*Enable receiver and transmitter */
+ 100:UART.cpp      **** 	UCSR0B |= ((1 << RXEN0) | (1 << TXEN0));
+ 130               		.loc 1 100 2 is_stmt 1 view .LVU44
+ 131               		.loc 1 100 9 is_stmt 0 view .LVU45
+ 132 008e 8091 C100 		lds r24,193
+ 133 0092 8861      		ori r24,lo8(24)
+ 134 0094 8093 C100 		sts 193,r24
+ 135               	/* epilogue start */
+ 101:UART.cpp      **** }
+ 136               		.loc 1 101 1 view .LVU46
+ 137 0098 DF91      		pop r29
+ 138               	.LVL5:
+ 139               		.loc 1 101 1 view .LVU47
+ 140 009a CF91      		pop r28
+ 141               	.LVL6:
+ 142               		.loc 1 101 1 view .LVU48
+ 143 009c 0895      		ret
+ 144               	.LVL7:
+ 145               	.L2:
+  78:UART.cpp      **** 
+ 146               		.loc 1 78 3 is_stmt 1 view .LVU49
+  78:UART.cpp      **** 
+ 147               		.loc 1 78 10 is_stmt 0 view .LVU50
+ 148 009e 877F      		andi r24,lo8(-9)
+ 149 00a0 00C0      		rjmp .L7
+ 150               	.L4:
+  86:UART.cpp      **** 	{
+ 151               		.loc 1 86 7 is_stmt 1 view .LVU51
+ 152 00a2 C330      		cpi r28,lo8(3)
+ 153 00a4 01F4      		brne .L6
+  88:UART.cpp      **** 	}
+ 154               		.loc 1 88 3 view .LVU52
+  88:UART.cpp      **** 	}
+ 155               		.loc 1 88 10 is_stmt 0 view .LVU53
+ 156 00a6 8063      		ori r24,lo8(48)
+ 157 00a8 00C0      		rjmp .L8
+ 158               	.L6:
+  91:UART.cpp      **** 	
+ 159               		.loc 1 91 3 is_stmt 1 view .LVU54
+  91:UART.cpp      **** 	
+ 160               		.loc 1 91 10 is_stmt 0 view .LVU55
+ 161 00aa 8F7C      		andi r24,lo8(-49)
+ 162 00ac 00C0      		rjmp .L8
+ 163               		.cfi_endproc
+ 164               	.LFE1:
+ 166               	.global	_Z13UART0_GetCharv
+ 168               	_Z13UART0_GetCharv:
+ 169               	.LFB2:
+ 102:UART.cpp      **** 
+ 103:UART.cpp      **** 
+ 104:UART.cpp      **** /*************************************************************************
+ 105:UART.cpp      **** Function: UART0_GetChar()
+ 106:UART.cpp      **** Purpose:  return byte from ringbuffer  
+ 107:UART.cpp      **** Returns:  lower byte:  received byte from ringbuffer
+ 108:UART.cpp      ****           higher byte: last receive error
+ 109:UART.cpp      **** **************************************************************************/
+ 110:UART.cpp      **** unsigned int UART0_GetChar(void)
+ 111:UART.cpp      **** {
+ 170               		.loc 1 111 1 is_stmt 1 view -0
+ 171               		.cfi_startproc
+ 172               	/* prologue: function */
+ 173               	/* frame size = 0 */
+ 174               	/* stack size = 0 */
+ 175               	.L__stack_usage = 0
+ 112:UART.cpp      **** 	unsigned char tmptail;
+ 176               		.loc 1 112 2 view .LVU57
+ 113:UART.cpp      **** 	unsigned char data;
+ 177               		.loc 1 113 2 view .LVU58
+ 114:UART.cpp      **** 
+ 115:UART.cpp      **** 	if ( UART0_RxHead == UART0_RxTail )
+ 178               		.loc 1 115 2 view .LVU59
+ 179               		.loc 1 115 20 is_stmt 0 view .LVU60
+ 180 00ae 9091 0000 		lds r25,_ZL12UART0_RxHead
+ 181 00b2 8091 0000 		lds r24,_ZL12UART0_RxTail
+ 182               		.loc 1 115 2 view .LVU61
+ 183 00b6 9817      		cp r25,r24
+ 184 00b8 01F0      		breq .L11
+ 116:UART.cpp      **** 	{
+ 117:UART.cpp      **** 		return UART_NO_DATA;   /* no data available */
+ 118:UART.cpp      **** 	}
+ 119:UART.cpp      ****     
+ 120:UART.cpp      **** 	/* calculate /store buffer index */
+ 121:UART.cpp      **** 	tmptail = (UART0_RxTail + 1) & UART0_RX_BUFFER_MASK;
+ 185               		.loc 1 121 2 is_stmt 1 view .LVU62
+ 186               		.loc 1 121 31 is_stmt 0 view .LVU63
+ 187 00ba E091 0000 		lds r30,_ZL12UART0_RxTail
+ 188               		.loc 1 121 26 view .LVU64
+ 189 00be EF5F      		subi r30,lo8(-(1))
+ 190               		.loc 1 121 10 view .LVU65
+ 191 00c0 EF73      		andi r30,lo8(63)
+ 192               	.LVL8:
+ 122:UART.cpp      **** 	UART0_RxTail = tmptail;
+ 193               		.loc 1 122 2 is_stmt 1 view .LVU66
+ 194               		.loc 1 122 15 is_stmt 0 view .LVU67
+ 195 00c2 E093 0000 		sts _ZL12UART0_RxTail,r30
+ 123:UART.cpp      ****     
+ 124:UART.cpp      **** 	/* get data from receive buffer */
+ 125:UART.cpp      **** 	data = UART0_RxBuf[tmptail];
+ 196               		.loc 1 125 2 is_stmt 1 view .LVU68
+ 197               		.loc 1 125 21 is_stmt 0 view .LVU69
+ 198 00c6 F0E0      		ldi r31,0
+ 199               		.loc 1 125 7 view .LVU70
+ 200 00c8 E050      		subi r30,lo8(-(_ZL11UART0_RxBuf))
+ 201 00ca F040      		sbci r31,hi8(-(_ZL11UART0_RxBuf))
+ 202               	.LVL9:
+ 203               		.loc 1 125 7 view .LVU71
+ 204 00cc 2081      		ld r18,Z
+ 205               	.LVL10:
+ 126:UART.cpp      ****     
+ 127:UART.cpp      **** 	return (UART0_LastRxError << 8) + data;
+ 206               		.loc 1 127 2 is_stmt 1 view .LVU72
+ 207               		.loc 1 127 10 is_stmt 0 view .LVU73
+ 208 00ce 9091 0000 		lds r25,_ZL17UART0_LastRxError
+ 209 00d2 892F      		mov r24,r25
+ 210 00d4 90E0      		ldi r25,0
+ 211               		.loc 1 127 28 view .LVU74
+ 212 00d6 982F      		mov r25,r24
+ 213 00d8 8827      		clr r24
+ 214               		.loc 1 127 34 view .LVU75
+ 215 00da 820F      		add r24,r18
+ 216 00dc 911D      		adc r25,__zero_reg__
+ 217               		.loc 1 127 36 view .LVU76
+ 218 00de 0895      		ret
+ 219               	.LVL11:
+ 220               	.L11:
+ 117:UART.cpp      **** 	}
+ 221               		.loc 1 117 10 view .LVU77
+ 222 00e0 80E0      		ldi r24,0
+ 223 00e2 91E0      		ldi r25,lo8(1)
+ 224               	/* epilogue start */
+ 128:UART.cpp      **** }
+ 225               		.loc 1 128 1 view .LVU78
+ 226 00e4 0895      		ret
+ 227               		.cfi_endproc
+ 228               	.LFE2:
+ 230               	.global	_Z13UART0_PutCharh
+ 232               	_Z13UART0_PutCharh:
+ 233               	.LVL12:
+ 234               	.LFB3:
+ 129:UART.cpp      **** 
+ 130:UART.cpp      **** 
+ 131:UART.cpp      **** /*************************************************************************
+ 132:UART.cpp      **** Function: UART0_PutChar()
+ 133:UART.cpp      **** Purpose:  write byte to ringbuffer for transmitting via UART
+ 134:UART.cpp      **** Input:    byte to be transmitted
+ 135:UART.cpp      **** Returns:  none
+ 136:UART.cpp      **** **************************************************************************/
+ 137:UART.cpp      **** void UART0_PutChar(unsigned char data)
+ 138:UART.cpp      **** {
+ 235               		.loc 1 138 1 is_stmt 1 view -0
+ 236               		.cfi_startproc
+ 237               	/* prologue: function */
+ 238               	/* frame size = 0 */
+ 239               	/* stack size = 0 */
+ 240               	.L__stack_usage = 0
+ 139:UART.cpp      **** 	unsigned char tmphead;
+ 241               		.loc 1 139 2 view .LVU80
+ 140:UART.cpp      ****     
+ 141:UART.cpp      **** 	/* calculate buffer index */
+ 142:UART.cpp      **** 	tmphead  = (UART0_TxHead + 1) & UART0_TX_BUFFER_MASK;
+ 242               		.loc 1 142 2 view .LVU81
+ 243               		.loc 1 142 32 is_stmt 0 view .LVU82
+ 244 00e6 9091 0000 		lds r25,_ZL12UART0_TxHead
+ 245               		.loc 1 142 27 view .LVU83
+ 246 00ea 9F5F      		subi r25,lo8(-(1))
+ 247               		.loc 1 142 11 view .LVU84
+ 248 00ec 9F73      		andi r25,lo8(63)
+ 249               	.LVL13:
+ 250               	.L13:
+ 143:UART.cpp      ****     
+ 144:UART.cpp      **** 	/* wait for free space in buffer */
+ 145:UART.cpp      **** 	while ( tmphead == UART0_TxTail );
+ 251               		.loc 1 145 2 is_stmt 1 view .LVU85
+ 252               		.loc 1 145 18 view .LVU86
+ 253 00ee 2091 0000 		lds r18,_ZL12UART0_TxTail
+ 254 00f2 2917      		cp r18,r25
+ 255 00f4 01F0      		breq .L13
+ 146:UART.cpp      ****     
+ 147:UART.cpp      **** 	UART0_TxBuf[tmphead] = data;
+ 256               		.loc 1 147 2 view .LVU87
+ 257               		.loc 1 147 14 is_stmt 0 view .LVU88
+ 258 00f6 E92F      		mov r30,r25
+ 259 00f8 F0E0      		ldi r31,0
+ 260               		.loc 1 147 23 view .LVU89
+ 261 00fa E050      		subi r30,lo8(-(_ZL11UART0_TxBuf))
+ 262 00fc F040      		sbci r31,hi8(-(_ZL11UART0_TxBuf))
+ 263 00fe 8083      		st Z,r24
+ 148:UART.cpp      **** 	UART0_TxHead = tmphead;
+ 264               		.loc 1 148 2 is_stmt 1 view .LVU90
+ 265               		.loc 1 148 15 is_stmt 0 view .LVU91
+ 266 0100 9093 0000 		sts _ZL12UART0_TxHead,r25
+ 149:UART.cpp      **** 
+ 150:UART.cpp      **** 	/* enable UDRE interrupt */
+ 151:UART.cpp      **** 	UCSR0B |= (1 << UDRIE0);
+ 267               		.loc 1 151 2 is_stmt 1 view .LVU92
+ 268               		.loc 1 151 9 is_stmt 0 view .LVU93
+ 269 0104 8091 C100 		lds r24,193
+ 270               	.LVL14:
+ 271               		.loc 1 151 9 view .LVU94
+ 272 0108 8062      		ori r24,lo8(32)
+ 273 010a 8093 C100 		sts 193,r24
+ 274               	/* epilogue start */
+ 152:UART.cpp      **** }
+ 275               		.loc 1 152 1 view .LVU95
+ 276 010e 0895      		ret
+ 277               		.cfi_endproc
+ 278               	.LFE3:
+ 280               	.global	_Z15UART0_PutStringPKc
+ 282               	_Z15UART0_PutStringPKc:
+ 283               	.LVL15:
+ 284               	.LFB4:
+ 153:UART.cpp      **** 
+ 154:UART.cpp      **** 
+ 155:UART.cpp      **** /*************************************************************************
+ 156:UART.cpp      **** Function: UART0_PutString()
+ 157:UART.cpp      **** Purpose:  transmit string to UART
+ 158:UART.cpp      **** Input:    string to be transmitted
+ 159:UART.cpp      **** Returns:  none
+ 160:UART.cpp      **** **************************************************************************/
+ 161:UART.cpp      **** void UART0_PutString(const char *s )
+ 162:UART.cpp      **** {
+ 285               		.loc 1 162 1 is_stmt 1 view -0
+ 286               		.cfi_startproc
+ 287               		.loc 1 162 1 is_stmt 0 view .LVU97
+ 288 0110 CF93      		push r28
+ 289               	.LCFI2:
+ 290               		.cfi_def_cfa_offset 3
+ 291               		.cfi_offset 28, -2
+ 292 0112 DF93      		push r29
+ 293               	.LCFI3:
+ 294               		.cfi_def_cfa_offset 4
+ 295               		.cfi_offset 29, -3
+ 296               	/* prologue: function */
+ 297               	/* frame size = 0 */
+ 298               	/* stack size = 2 */
+ 299               	.L__stack_usage = 2
+ 300 0114 EC01      		movw r28,r24
+ 301               	.LVL16:
+ 302               	.L17:
+ 163:UART.cpp      ****     while (*s)
+ 303               		.loc 1 163 5 is_stmt 1 view .LVU98
+ 304               		.loc 1 163 13 view .LVU99
+ 305               		.loc 1 163 12 is_stmt 0 view .LVU100
+ 306 0116 8991      		ld r24,Y+
+ 307               	.LVL17:
+ 308               		.loc 1 163 13 view .LVU101
+ 309 0118 8823      		tst r24
+ 310 011a 01F0      		breq .L15
+ 164:UART.cpp      **** 	{
+ 165:UART.cpp      **** 		UART0_PutChar(*s++);
+ 311               		.loc 1 165 3 is_stmt 1 view .LVU102
+ 312               	.LVL18:
+ 313               		.loc 1 165 16 is_stmt 0 view .LVU103
+ 314 011c 0E94 0000 		call _Z13UART0_PutCharh
+ 315               	.LVL19:
+ 163:UART.cpp      ****     while (*s)
+ 316               		.loc 1 163 5 view .LVU104
+ 317 0120 00C0      		rjmp .L17
+ 318               	.LVL20:
+ 319               	.L15:
+ 320               	/* epilogue start */
+ 166:UART.cpp      **** 	}
+ 167:UART.cpp      **** }
+ 321               		.loc 1 167 1 view .LVU105
+ 322 0122 DF91      		pop r29
+ 323 0124 CF91      		pop r28
+ 324               	.LVL21:
+ 325               		.loc 1 167 1 view .LVU106
+ 326 0126 0895      		ret
+ 327               		.cfi_endproc
+ 328               	.LFE4:
+ 330               	.global	_Z17UART0_PutString_pPKc
+ 332               	_Z17UART0_PutString_pPKc:
+ 333               	.LVL22:
+ 334               	.LFB5:
+ 168:UART.cpp      **** 
+ 169:UART.cpp      **** 
+ 170:UART.cpp      **** /*************************************************************************
+ 171:UART.cpp      **** Function: UART0_PutString_p()
+ 172:UART.cpp      **** Purpose:  transmit string from program memory to UART
+ 173:UART.cpp      **** Input:    program memory string to be transmitted
+ 174:UART.cpp      **** Returns:  none
+ 175:UART.cpp      **** **************************************************************************/
+ 176:UART.cpp      **** void UART0_PutString_p(const char *progmem_s )
+ 177:UART.cpp      **** {
+ 335               		.loc 1 177 1 is_stmt 1 view -0
+ 336               		.cfi_startproc
+ 337               		.loc 1 177 1 is_stmt 0 view .LVU108
+ 338 0128 CF93      		push r28
+ 339               	.LCFI4:
+ 340               		.cfi_def_cfa_offset 3
+ 341               		.cfi_offset 28, -2
+ 342 012a DF93      		push r29
+ 343               	.LCFI5:
+ 344               		.cfi_def_cfa_offset 4
+ 345               		.cfi_offset 29, -3
+ 346               	/* prologue: function */
+ 347               	/* frame size = 0 */
+ 348               	/* stack size = 2 */
+ 349               	.L__stack_usage = 2
+ 350 012c EC01      		movw r28,r24
+ 351               	.LVL23:
+ 352               	.L20:
+ 178:UART.cpp      **** 	register char c;
+ 353               		.loc 1 178 2 is_stmt 1 view .LVU109
+ 179:UART.cpp      ****     
+ 180:UART.cpp      **** 	while ( (c = pgm_read_byte(progmem_s++)) )
+ 354               		.loc 1 180 2 view .LVU110
+ 355               		.loc 1 180 41 view .LVU111
+ 356               	.LBB2:
+ 357               		.loc 1 180 15 view .LVU112
+ 358               		.loc 1 180 15 view .LVU113
+ 359               		.loc 1 180 15 view .LVU114
+ 360 012e FE01      		movw r30,r28
+ 361               	/* #APP */
+ 362               	 ;  180 "UART.cpp" 1
+ 363 0130 8491      		lpm r24, Z
+ 364               		
+ 365               	 ;  0 "" 2
+ 366               	.LVL24:
+ 367               		.loc 1 180 15 view .LVU115
+ 368               		.loc 1 180 15 is_stmt 0 view .LVU116
+ 369               	/* #NOAPP */
+ 370 0132 2196      		adiw r28,1
+ 371               	.LVL25:
+ 372               		.loc 1 180 15 view .LVU117
+ 373               	.LBE2:
+ 374               		.loc 1 180 41 view .LVU118
+ 375 0134 8823      		tst r24
+ 376 0136 01F0      		breq .L18
+ 377               	.LBB3:
+ 181:UART.cpp      **** 	{
+ 182:UART.cpp      **** 		UART0_PutChar(c);
+ 378               		.loc 1 182 3 is_stmt 1 view .LVU119
+ 379               		.loc 1 182 16 is_stmt 0 view .LVU120
+ 380 0138 0E94 0000 		call _Z13UART0_PutCharh
+ 381               	.LVL26:
+ 382               		.loc 1 182 16 view .LVU121
+ 383               	.LBE3:
+ 180:UART.cpp      **** 	{
+ 384               		.loc 1 180 2 view .LVU122
+ 385 013c 00C0      		rjmp .L20
+ 386               	.LVL27:
+ 387               	.L18:
+ 388               	/* epilogue start */
+ 183:UART.cpp      **** 	}
+ 184:UART.cpp      **** }
+ 389               		.loc 1 184 1 view .LVU123
+ 390 013e DF91      		pop r29
+ 391 0140 CF91      		pop r28
+ 392               	.LVL28:
+ 393               		.loc 1 184 1 view .LVU124
+ 394 0142 0895      		ret
+ 395               		.cfi_endproc
+ 396               	.LFE5:
+ 398               	.global	_Z15UART0_Availablev
+ 400               	_Z15UART0_Availablev:
+ 401               	.LFB6:
+ 185:UART.cpp      **** 
+ 186:UART.cpp      **** 
+ 187:UART.cpp      **** /*************************************************************************
+ 188:UART.cpp      **** Function: UART0_Available()
+ 189:UART.cpp      **** Purpose:  Determine the number of bytes waiting in the receive buffer
+ 190:UART.cpp      **** Input:    None
+ 191:UART.cpp      **** Returns:  Integer number of bytes in the receive buffer
+ 192:UART.cpp      **** **************************************************************************/
+ 193:UART.cpp      **** int UART0_Available(void)
+ 194:UART.cpp      **** {
+ 402               		.loc 1 194 1 is_stmt 1 view -0
+ 403               		.cfi_startproc
+ 404               	/* prologue: function */
+ 405               	/* frame size = 0 */
+ 406               	/* stack size = 0 */
+ 407               	.L__stack_usage = 0
+ 195:UART.cpp      **** 	//return (UART0_RX_BUFFER_MASK + UART0_RxHead - UART0_RxTail) % UART0_RX_BUFFER_MASK;
+ 196:UART.cpp      **** 	return (UART0_RxHead != UART0_RxTail);
+ 408               		.loc 1 196 2 view .LVU126
+ 409               		.loc 1 196 23 is_stmt 0 view .LVU127
+ 410 0144 3091 0000 		lds r19,_ZL12UART0_RxHead
+ 411 0148 2091 0000 		lds r18,_ZL12UART0_RxTail
+ 412 014c 81E0      		ldi r24,lo8(1)
+ 413 014e 90E0      		ldi r25,0
+ 414 0150 3213      		cpse r19,r18
+ 415 0152 00C0      		rjmp .L22
+ 416 0154 90E0      		ldi r25,0
+ 417 0156 80E0      		ldi r24,0
+ 418               	.L22:
+ 419               	/* epilogue start */
+ 197:UART.cpp      **** }
+ 420               		.loc 1 197 1 view .LVU128
+ 421 0158 0895      		ret
+ 422               		.cfi_endproc
+ 423               	.LFE6:
+ 425               	.global	_Z11UART0_Flushv
+ 427               	_Z11UART0_Flushv:
+ 428               	.LFB7:
+ 198:UART.cpp      **** 
+ 199:UART.cpp      **** 
+ 200:UART.cpp      **** /*************************************************************************
+ 201:UART.cpp      **** Function: UART0_Flush()
+ 202:UART.cpp      **** Purpose:  Flush bytes waiting the receive buffer. Acutally ignores them.
+ 203:UART.cpp      **** Input:    None
+ 204:UART.cpp      **** Returns:  None
+ 205:UART.cpp      **** **************************************************************************/
+ 206:UART.cpp      **** void UART0_Flush(void)
+ 207:UART.cpp      **** {
+ 429               		.loc 1 207 1 is_stmt 1 view -0
+ 430               		.cfi_startproc
+ 431               	/* prologue: function */
+ 432               	/* frame size = 0 */
+ 433               	/* stack size = 0 */
+ 434               	.L__stack_usage = 0
+ 208:UART.cpp      **** 	UART0_RxHead = UART0_RxTail;
+ 435               		.loc 1 208 2 view .LVU130
+ 436               		.loc 1 208 15 is_stmt 0 view .LVU131
+ 437 015a 8091 0000 		lds r24,_ZL12UART0_RxTail
+ 438 015e 8093 0000 		sts _ZL12UART0_RxHead,r24
+ 439               	/* epilogue start */
+ 209:UART.cpp      **** }
+ 440               		.loc 1 209 1 view .LVU132
+ 441 0162 0895      		ret
+ 442               		.cfi_endproc
+ 443               	.LFE7:
+ 445               	.global	_Z15UART0_QueueCharh
+ 447               	_Z15UART0_QueueCharh:
+ 448               	.LVL29:
+ 449               	.LFB8:
+ 210:UART.cpp      **** 
+ 211:UART.cpp      **** 
+ 212:UART.cpp      **** int	UART0_QueueChar(unsigned char data)
+ 213:UART.cpp      **** {
+ 450               		.loc 1 213 1 is_stmt 1 view -0
+ 451               		.cfi_startproc
+ 452               	/* prologue: function */
+ 453               	/* frame size = 0 */
+ 454               	/* stack size = 0 */
+ 455               	.L__stack_usage = 0
+ 214:UART.cpp      **** 	unsigned char tmphead;
+ 456               		.loc 1 214 2 view .LVU134
+ 215:UART.cpp      **** 	
+ 216:UART.cpp      **** 	/* calculate buffer index */
+ 217:UART.cpp      **** 	tmphead = (UART0_TxHead + 1) & UART0_TX_BUFFER_MASK;
+ 457               		.loc 1 217 2 view .LVU135
+ 458               		.loc 1 217 31 is_stmt 0 view .LVU136
+ 459 0164 9091 0000 		lds r25,_ZL12UART0_TxHead
+ 460               		.loc 1 217 26 view .LVU137
+ 461 0168 9F5F      		subi r25,lo8(-(1))
+ 462               		.loc 1 217 10 view .LVU138
+ 463 016a 9F73      		andi r25,lo8(63)
+ 464               	.LVL30:
+ 218:UART.cpp      **** 	
+ 219:UART.cpp      **** 	/* check for free space in buffer */
+ 220:UART.cpp      **** 	if ( tmphead == UART0_TxTail )
+ 465               		.loc 1 220 2 is_stmt 1 view .LVU139
+ 466               		.loc 1 220 15 is_stmt 0 view .LVU140
+ 467 016c 2091 0000 		lds r18,_ZL12UART0_TxTail
+ 468               		.loc 1 220 2 view .LVU141
+ 469 0170 2917      		cp r18,r25
+ 470 0172 01F0      		breq .L26
+ 221:UART.cpp      **** 		return 0;
+ 222:UART.cpp      **** 	
+ 223:UART.cpp      **** 	UART0_TxBuf[tmphead] = data;
+ 471               		.loc 1 223 2 is_stmt 1 view .LVU142
+ 472               		.loc 1 223 14 is_stmt 0 view .LVU143
+ 473 0174 E92F      		mov r30,r25
+ 474 0176 F0E0      		ldi r31,0
+ 475               		.loc 1 223 23 view .LVU144
+ 476 0178 E050      		subi r30,lo8(-(_ZL11UART0_TxBuf))
+ 477 017a F040      		sbci r31,hi8(-(_ZL11UART0_TxBuf))
+ 478 017c 8083      		st Z,r24
+ 224:UART.cpp      **** 	UART0_TxHead = tmphead;
+ 479               		.loc 1 224 2 is_stmt 1 view .LVU145
+ 480               		.loc 1 224 15 is_stmt 0 view .LVU146
+ 481 017e 9093 0000 		sts _ZL12UART0_TxHead,r25
+ 225:UART.cpp      **** 	
+ 226:UART.cpp      **** 	return 1;
+ 482               		.loc 1 226 2 is_stmt 1 view .LVU147
+ 483               		.loc 1 226 9 is_stmt 0 view .LVU148
+ 484 0182 81E0      		ldi r24,lo8(1)
+ 485 0184 90E0      		ldi r25,0
+ 486               	.LVL31:
+ 487               		.loc 1 226 9 view .LVU149
+ 488 0186 0895      		ret
+ 489               	.LVL32:
+ 490               	.L26:
+ 221:UART.cpp      **** 	
+ 491               		.loc 1 221 10 view .LVU150
+ 492 0188 90E0      		ldi r25,0
+ 493               	.LVL33:
+ 221:UART.cpp      **** 	
+ 494               		.loc 1 221 10 view .LVU151
+ 495 018a 80E0      		ldi r24,0
+ 496               	.LVL34:
+ 497               	/* epilogue start */
+ 227:UART.cpp      **** }
+ 498               		.loc 1 227 1 view .LVU152
+ 499 018c 0895      		ret
+ 500               		.cfi_endproc
+ 501               	.LFE8:
+ 503               	.global	_Z16UART0_QueueArrayPKch
+ 505               	_Z16UART0_QueueArrayPKch:
+ 506               	.LVL35:
+ 507               	.LFB9:
+ 228:UART.cpp      **** 
+ 229:UART.cpp      **** 
+ 230:UART.cpp      **** void UART0_QueueArray(const char *array, unsigned char length)
+ 231:UART.cpp      **** {
+ 508               		.loc 1 231 1 is_stmt 1 view -0
+ 509               		.cfi_startproc
+ 510               		.loc 1 231 1 is_stmt 0 view .LVU154
+ 511 018e 0F93      		push r16
+ 512               	.LCFI6:
+ 513               		.cfi_def_cfa_offset 3
+ 514               		.cfi_offset 16, -2
+ 515 0190 1F93      		push r17
+ 516               	.LCFI7:
+ 517               		.cfi_def_cfa_offset 4
+ 518               		.cfi_offset 17, -3
+ 519 0192 CF93      		push r28
+ 520               	.LCFI8:
+ 521               		.cfi_def_cfa_offset 5
+ 522               		.cfi_offset 28, -4
+ 523 0194 DF93      		push r29
+ 524               	.LCFI9:
+ 525               		.cfi_def_cfa_offset 6
+ 526               		.cfi_offset 29, -5
+ 527               	/* prologue: function */
+ 528               	/* frame size = 0 */
+ 529               	/* stack size = 4 */
+ 530               	.L__stack_usage = 4
+ 232:UART.cpp      **** 	unsigned char i = 0;
+ 531               		.loc 1 232 2 is_stmt 1 view .LVU155
+ 532               	.LVL36:
+ 233:UART.cpp      **** 	
+ 234:UART.cpp      **** 	for (i = 0; i < length; i++)
+ 533               		.loc 1 234 2 view .LVU156
+ 534               		.loc 1 234 2 is_stmt 0 view .LVU157
+ 535 0196 EC01      		movw r28,r24
+ 536 0198 8C01      		movw r16,r24
+ 537 019a 060F      		add r16,r22
+ 538 019c 111D      		adc r17,__zero_reg__
+ 539               	.LVL37:
+ 540               	.L29:
+ 541               		.loc 1 234 16 is_stmt 1 discriminator 3 view .LVU158
+ 542 019e C017      		cp r28,r16
+ 543 01a0 D107      		cpc r29,r17
+ 544 01a2 01F0      		breq .L27
+ 235:UART.cpp      **** 	{
+ 236:UART.cpp      **** 		UART0_QueueChar(array[i]);
+ 545               		.loc 1 236 3 discriminator 2 view .LVU159
+ 546               		.loc 1 236 18 is_stmt 0 discriminator 2 view .LVU160
+ 547 01a4 8991      		ld r24,Y+
+ 548               	.LVL38:
+ 549               		.loc 1 236 18 discriminator 2 view .LVU161
+ 550 01a6 0E94 0000 		call _Z15UART0_QueueCharh
+ 551               	.LVL39:
+ 234:UART.cpp      **** 	{
+ 552               		.loc 1 234 2 is_stmt 1 discriminator 2 view .LVU162
+ 234:UART.cpp      **** 	{
+ 553               		.loc 1 234 2 is_stmt 0 discriminator 2 view .LVU163
+ 554 01aa 00C0      		rjmp .L29
+ 555               	.L27:
+ 556               	/* epilogue start */
+ 237:UART.cpp      **** 	}
+ 238:UART.cpp      **** }
+ 557               		.loc 1 238 1 view .LVU164
+ 558 01ac DF91      		pop r29
+ 559 01ae CF91      		pop r28
+ 560               	.LVL40:
+ 561               		.loc 1 238 1 view .LVU165
+ 562 01b0 1F91      		pop r17
+ 563 01b2 0F91      		pop r16
+ 564 01b4 0895      		ret
+ 565               		.cfi_endproc
+ 566               	.LFE9:
+ 568               	.global	_Z14UART0_PutQueuev
+ 570               	_Z14UART0_PutQueuev:
+ 571               	.LFB10:
+ 239:UART.cpp      **** 
+ 240:UART.cpp      **** 
+ 241:UART.cpp      **** void UART0_PutQueue(void)
+ 242:UART.cpp      **** {
+ 572               		.loc 1 242 1 is_stmt 1 view -0
+ 573               		.cfi_startproc
+ 574               	/* prologue: function */
+ 575               	/* frame size = 0 */
+ 576               	/* stack size = 0 */
+ 577               	.L__stack_usage = 0
+ 243:UART.cpp      **** 	/* enable UDRE interrupt */
+ 244:UART.cpp      **** 	UCSR0B |= (1 << UDRIE0);
+ 578               		.loc 1 244 2 view .LVU167
+ 579               		.loc 1 244 9 is_stmt 0 view .LVU168
+ 580 01b6 E1EC      		ldi r30,lo8(-63)
+ 581 01b8 F0E0      		ldi r31,0
+ 582 01ba 8081      		ld r24,Z
+ 583 01bc 8062      		ori r24,lo8(32)
+ 584 01be 8083      		st Z,r24
+ 585               	/* epilogue start */
+ 245:UART.cpp      **** }
+ 586               		.loc 1 245 1 view .LVU169
+ 587 01c0 0895      		ret
+ 588               		.cfi_endproc
+ 589               	.LFE10:
+ 591               	.global	_Z18UART0_QueueIsEmptyv
+ 593               	_Z18UART0_QueueIsEmptyv:
+ 594               	.LFB11:
+ 246:UART.cpp      **** 
+ 247:UART.cpp      **** 
+ 248:UART.cpp      **** bool UART0_QueueIsEmpty(void)
+ 249:UART.cpp      **** {
+ 595               		.loc 1 249 1 is_stmt 1 view -0
+ 596               		.cfi_startproc
+ 597               	/* prologue: function */
+ 598               	/* frame size = 0 */
+ 599               	/* stack size = 0 */
+ 600               	.L__stack_usage = 0
+ 250:UART.cpp      **** 	return (UART0_TxHead == UART0_TxTail);
+ 601               		.loc 1 250 2 view .LVU171
+ 602               		.loc 1 250 23 is_stmt 0 view .LVU172
+ 603 01c2 2091 0000 		lds r18,_ZL12UART0_TxHead
+ 604 01c6 9091 0000 		lds r25,_ZL12UART0_TxTail
+ 605               		.loc 1 250 38 view .LVU173
+ 606 01ca 81E0      		ldi r24,lo8(1)
+ 607 01cc 2913      		cpse r18,r25
+ 608 01ce 80E0      		ldi r24,0
+ 609               	.L32:
+ 610               	/* epilogue start */
+ 251:UART.cpp      **** }
+ 611               		.loc 1 251 1 view .LVU174
+ 612 01d0 0895      		ret
+ 613               		.cfi_endproc
+ 614               	.LFE11:
+ 616               	.global	__vector_20
+ 618               	__vector_20:
+ 619               	.LFB12:
+ 252:UART.cpp      **** 
+ 253:UART.cpp      **** 
+ 254:UART.cpp      **** /*************************************************************************
+ 255:UART.cpp      **** Function: UART0 Receive Complete interrupt
+ 256:UART.cpp      **** Purpose:  called when the UART has received a character
+ 257:UART.cpp      **** **************************************************************************/
+ 258:UART.cpp      **** ISR(USART0_RX_vect)
+ 259:UART.cpp      **** {
+ 620               		.loc 1 259 1 is_stmt 1 view -0
+ 621               		.cfi_startproc
+ 622 01d2 2F93 2FB7 		__gcc_isr 1
+ 622      2F93 
+ 623 01d8 8F93      		push r24
+ 624               	.LCFI10:
+ 625               		.cfi_def_cfa_offset 3
+ 626               		.cfi_offset 24, -2
+ 627 01da 9F93      		push r25
+ 628               	.LCFI11:
+ 629               		.cfi_def_cfa_offset 4
+ 630               		.cfi_offset 25, -3
+ 631 01dc EF93      		push r30
+ 632               	.LCFI12:
+ 633               		.cfi_def_cfa_offset 5
+ 634               		.cfi_offset 30, -4
+ 635 01de FF93      		push r31
+ 636               	.LCFI13:
+ 637               		.cfi_def_cfa_offset 6
+ 638               		.cfi_offset 31, -5
+ 639               	/* prologue: Signal */
+ 640               	/* frame size = 0 */
+ 641               	/* stack size = 4...8 */
+ 642               	.L__stack_usage = 4 + __gcc_isr.n_pushed
+ 260:UART.cpp      **** 	unsigned char tmphead;
+ 643               		.loc 1 260 2 view .LVU176
+ 261:UART.cpp      **** 	unsigned char data;
+ 644               		.loc 1 261 2 view .LVU177
+ 262:UART.cpp      **** 	unsigned char usr;
+ 645               		.loc 1 262 2 view .LVU178
+ 263:UART.cpp      **** 	unsigned char lastRxError;
+ 646               		.loc 1 263 2 view .LVU179
+ 264:UART.cpp      ****     
+ 265:UART.cpp      ****     
+ 266:UART.cpp      **** 	/* read UART status register and UART data register */
+ 267:UART.cpp      **** 	usr  = UCSR0A;
+ 647               		.loc 1 267 2 view .LVU180
+ 648               		.loc 1 267 7 is_stmt 0 view .LVU181
+ 649 01e0 8091 C000 		lds r24,192
+ 650               	.LVL41:
+ 268:UART.cpp      **** 	data = UDR0;
+ 651               		.loc 1 268 2 is_stmt 1 view .LVU182
+ 652               		.loc 1 268 7 is_stmt 0 view .LVU183
+ 653 01e4 9091 C600 		lds r25,198
+ 654               	.LVL42:
+ 269:UART.cpp      ****     
+ 270:UART.cpp      **** 	/* */
+ 271:UART.cpp      **** 	lastRxError = (usr & (FE0 | DOR0));
+ 655               		.loc 1 271 2 is_stmt 1 view .LVU184
+ 272:UART.cpp      ****     
+ 273:UART.cpp      **** 	/* calculate buffer index */
+ 274:UART.cpp      **** 	tmphead = ( UART0_RxHead + 1) & UART0_RX_BUFFER_MASK;
+ 656               		.loc 1 274 2 view .LVU185
+ 657               		.loc 1 274 32 is_stmt 0 view .LVU186
+ 658 01e8 E091 0000 		lds r30,_ZL12UART0_RxHead
+ 659               		.loc 1 274 27 view .LVU187
+ 660 01ec EF5F      		subi r30,lo8(-(1))
+ 661               		.loc 1 274 10 view .LVU188
+ 662 01ee EF73      		andi r30,lo8(63)
+ 663               	.LVL43:
+ 275:UART.cpp      ****     
+ 276:UART.cpp      **** 	if ( tmphead == UART0_RxTail )
+ 664               		.loc 1 276 2 is_stmt 1 view .LVU189
+ 665               		.loc 1 276 15 is_stmt 0 view .LVU190
+ 666 01f0 2091 0000 		lds r18,_ZL12UART0_RxTail
+ 667               		.loc 1 276 2 view .LVU191
+ 668 01f4 2E17      		cp r18,r30
+ 669 01f6 01F0      		breq .L35
+ 271:UART.cpp      ****     
+ 670               		.loc 1 271 14 view .LVU192
+ 671 01f8 8770      		andi r24,lo8(7)
+ 672               	.LVL44:
+ 277:UART.cpp      **** 	{
+ 278:UART.cpp      **** 		/* error: receive buffer overflow */
+ 279:UART.cpp      **** 		lastRxError = UART_BUFFER_OVERFLOW >> 8;
+ 280:UART.cpp      **** 	}
+ 281:UART.cpp      **** 	else
+ 282:UART.cpp      **** 	{
+ 283:UART.cpp      **** 		/* store new index */
+ 284:UART.cpp      **** 		UART0_RxHead = tmphead;
+ 673               		.loc 1 284 3 is_stmt 1 view .LVU193
+ 674               		.loc 1 284 16 is_stmt 0 view .LVU194
+ 675 01fa E093 0000 		sts _ZL12UART0_RxHead,r30
+ 285:UART.cpp      **** 		/* store received data in buffer */
+ 286:UART.cpp      **** 		UART0_RxBuf[tmphead] = data;
+ 676               		.loc 1 286 3 is_stmt 1 view .LVU195
+ 677               		.loc 1 286 15 is_stmt 0 view .LVU196
+ 678 01fe F0E0      		ldi r31,0
+ 679               		.loc 1 286 24 view .LVU197
+ 680 0200 E050      		subi r30,lo8(-(_ZL11UART0_RxBuf))
+ 681 0202 F040      		sbci r31,hi8(-(_ZL11UART0_RxBuf))
+ 682               	.LVL45:
+ 683               		.loc 1 286 24 view .LVU198
+ 684 0204 9083      		st Z,r25
+ 685               	.LVL46:
+ 686               	.L34:
+ 287:UART.cpp      **** 	}
+ 288:UART.cpp      **** 
+ 289:UART.cpp      **** 	UART0_LastRxError = lastRxError;
+ 687               		.loc 1 289 2 is_stmt 1 view .LVU199
+ 688               		.loc 1 289 20 is_stmt 0 view .LVU200
+ 689 0206 8093 0000 		sts _ZL17UART0_LastRxError,r24
+ 690               	/* epilogue start */
+ 290:UART.cpp      **** }
+ 691               		.loc 1 290 1 view .LVU201
+ 692 020a FF91      		pop r31
+ 693 020c EF91      		pop r30
+ 694 020e 9F91      		pop r25
+ 695               	.LVL47:
+ 696               		.loc 1 290 1 view .LVU202
+ 697 0210 8F91      		pop r24
+ 698               	.LVL48:
+ 699               		.loc 1 290 1 view .LVU203
+ 700 0212 2F91 2FBF 		__gcc_isr 2
+ 700      2F91 
+ 701 0218 1895      		reti
+ 702               	.LVL49:
+ 703               	.L35:
+ 279:UART.cpp      **** 	}
+ 704               		.loc 1 279 15 view .LVU204
+ 705 021a 82E0      		ldi r24,lo8(2)
+ 706               	.LVL50:
+ 279:UART.cpp      **** 	}
+ 707               		.loc 1 279 15 view .LVU205
+ 708 021c 00C0      		rjmp .L34
+ 709               		__gcc_isr 0,r18
+ 710               		.cfi_endproc
+ 711               	.LFE12:
+ 713               	.global	__vector_21
+ 715               	__vector_21:
+ 716               	.LFB13:
+ 291:UART.cpp      **** 
+ 292:UART.cpp      **** 
+ 293:UART.cpp      **** /*************************************************************************
+ 294:UART.cpp      **** Function: UART0 Data Register Empty interrupt
+ 295:UART.cpp      **** Purpose:  called when the UART is ready to transmit the next byte
+ 296:UART.cpp      **** **************************************************************************/
+ 297:UART.cpp      **** ISR(USART0_UDRE_vect)
+ 298:UART.cpp      **** {
+ 717               		.loc 1 298 1 is_stmt 1 view -0
+ 718               		.cfi_startproc
+ 719 021e 8F93 8FB7 		__gcc_isr 1
+ 719      8F93 
+ 720 0224 9F93      		push r25
+ 721               	.LCFI14:
+ 722               		.cfi_def_cfa_offset 3
+ 723               		.cfi_offset 25, -2
+ 724 0226 EF93      		push r30
+ 725               	.LCFI15:
+ 726               		.cfi_def_cfa_offset 4
+ 727               		.cfi_offset 30, -3
+ 728 0228 FF93      		push r31
+ 729               	.LCFI16:
+ 730               		.cfi_def_cfa_offset 5
+ 731               		.cfi_offset 31, -4
+ 732               	/* prologue: Signal */
+ 733               	/* frame size = 0 */
+ 734               	/* stack size = 3...7 */
+ 735               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+ 299:UART.cpp      **** 	unsigned char tmptail;
+ 736               		.loc 1 299 2 view .LVU207
+ 300:UART.cpp      ****     
+ 301:UART.cpp      **** 	if ( UART0_TxHead != UART0_TxTail)
+ 737               		.loc 1 301 2 view .LVU208
+ 738               		.loc 1 301 20 is_stmt 0 view .LVU209
+ 739 022a 9091 0000 		lds r25,_ZL12UART0_TxHead
+ 740 022e 8091 0000 		lds r24,_ZL12UART0_TxTail
+ 741               		.loc 1 301 2 view .LVU210
+ 742 0232 9817      		cp r25,r24
+ 743 0234 01F0      		breq .L37
+ 302:UART.cpp      **** 	{
+ 303:UART.cpp      **** 		/* calculate and store new buffer index */
+ 304:UART.cpp      **** 		tmptail = (UART0_TxTail + 1) & UART0_TX_BUFFER_MASK;
+ 744               		.loc 1 304 3 is_stmt 1 view .LVU211
+ 745               		.loc 1 304 32 is_stmt 0 view .LVU212
+ 746 0236 E091 0000 		lds r30,_ZL12UART0_TxTail
+ 747               		.loc 1 304 27 view .LVU213
+ 748 023a EF5F      		subi r30,lo8(-(1))
+ 749               		.loc 1 304 11 view .LVU214
+ 750 023c EF73      		andi r30,lo8(63)
+ 751               	.LVL51:
+ 305:UART.cpp      **** 		UART0_TxTail = tmptail;
+ 752               		.loc 1 305 3 is_stmt 1 view .LVU215
+ 753               		.loc 1 305 16 is_stmt 0 view .LVU216
+ 754 023e E093 0000 		sts _ZL12UART0_TxTail,r30
+ 306:UART.cpp      **** 
+ 307:UART.cpp      **** 		/* get one byte from buffer and write it to UART */
+ 308:UART.cpp      **** 		UDR0 = UART0_TxBuf[tmptail];  /* start transmission */
+ 755               		.loc 1 308 3 is_stmt 1 view .LVU217
+ 756               		.loc 1 308 22 is_stmt 0 view .LVU218
+ 757 0242 F0E0      		ldi r31,0
+ 758               		.loc 1 308 29 view .LVU219
+ 759 0244 E050      		subi r30,lo8(-(_ZL11UART0_TxBuf))
+ 760 0246 F040      		sbci r31,hi8(-(_ZL11UART0_TxBuf))
+ 761               	.LVL52:
+ 762               		.loc 1 308 29 view .LVU220
+ 763 0248 8081      		ld r24,Z
+ 764               		.loc 1 308 8 view .LVU221
+ 765 024a 8093 C600 		sts 198,r24
+ 766               	.LVL53:
+ 767               	.L36:
+ 768               	/* epilogue start */
+ 309:UART.cpp      **** 	}
+ 310:UART.cpp      **** 	else
+ 311:UART.cpp      **** 	{
+ 312:UART.cpp      **** 		/* tx buffer empty, disable UDRE interrupt */
+ 313:UART.cpp      **** 		UCSR0B &= ~(1 << UDRIE0);
+ 314:UART.cpp      **** 	}
+ 315:UART.cpp      **** }
+ 769               		.loc 1 315 1 view .LVU222
+ 770 024e FF91      		pop r31
+ 771 0250 EF91      		pop r30
+ 772 0252 9F91      		pop r25
+ 773 0254 8F91 8FBF 		__gcc_isr 2
+ 773      8F91 
+ 774 025a 1895      		reti
+ 775               	.L37:
+ 313:UART.cpp      **** 	}
+ 776               		.loc 1 313 3 is_stmt 1 view .LVU223
+ 313:UART.cpp      **** 	}
+ 777               		.loc 1 313 10 is_stmt 0 view .LVU224
+ 778 025c 8091 C100 		lds r24,193
+ 779 0260 8F7D      		andi r24,lo8(-33)
+ 780 0262 8093 C100 		sts 193,r24
+ 781               		.loc 1 315 1 view .LVU225
+ 782 0266 00C0      		rjmp .L36
+ 783               		__gcc_isr 0,r24
+ 784               		.cfi_endproc
+ 785               	.LFE13:
+ 787               	.global	_Z10UART1_Initjhh
+ 789               	_Z10UART1_Initjhh:
+ 790               	.LVL54:
+ 791               	.LFB14:
+ 316:UART.cpp      **** 
+ 317:UART.cpp      **** 
+ 318:UART.cpp      **** /*************************************************************************
+ 319:UART.cpp      **** Function: UART1_Init()
+ 320:UART.cpp      **** Purpose:  initialize UART1 and set baudrate
+ 321:UART.cpp      **** Input:    baudrate, stop bits, parity
+ 322:UART.cpp      **** Returns:  none
+ 323:UART.cpp      **** **************************************************************************/
+ 324:UART.cpp      **** void UART1_Init(unsigned int baudrate, unsigned char stopbit, unsigned char parity)
+ 325:UART.cpp      **** {
+ 792               		.loc 1 325 1 is_stmt 1 view -0
+ 793               		.cfi_startproc
+ 794               		.loc 1 325 1 is_stmt 0 view .LVU227
+ 795 0268 CF93      		push r28
+ 796               	.LCFI17:
+ 797               		.cfi_def_cfa_offset 3
+ 798               		.cfi_offset 28, -2
+ 799 026a DF93      		push r29
+ 800               	.LCFI18:
+ 801               		.cfi_def_cfa_offset 4
+ 802               		.cfi_offset 29, -3
+ 803               	/* prologue: function */
+ 804               	/* frame size = 0 */
+ 805               	/* stack size = 2 */
+ 806               	.L__stack_usage = 2
+ 807 026c D62F      		mov r29,r22
+ 808 026e C42F      		mov r28,r20
+ 326:UART.cpp      **** 	DDRD |= (1 << PORTD3);
+ 809               		.loc 1 326 2 is_stmt 1 view .LVU228
+ 810               		.loc 1 326 7 is_stmt 0 view .LVU229
+ 811 0270 539A      		sbi 0xa,3
+ 327:UART.cpp      **** 	PORTD |= (1 << PORTD3);
+ 812               		.loc 1 327 2 is_stmt 1 view .LVU230
+ 813               		.loc 1 327 8 is_stmt 0 view .LVU231
+ 814 0272 5B9A      		sbi 0xb,3
+ 328:UART.cpp      **** 	
+ 329:UART.cpp      **** 	UART1_TxHead = 0;
+ 815               		.loc 1 329 2 is_stmt 1 view .LVU232
+ 816               		.loc 1 329 15 is_stmt 0 view .LVU233
+ 817 0274 1092 0000 		sts _ZL12UART1_TxHead,__zero_reg__
+ 330:UART.cpp      **** 	UART1_TxTail = 0;
+ 818               		.loc 1 330 2 is_stmt 1 view .LVU234
+ 819               		.loc 1 330 15 is_stmt 0 view .LVU235
+ 820 0278 1092 0000 		sts _ZL12UART1_TxTail,__zero_reg__
+ 331:UART.cpp      **** 	UART1_RxHead = 0;
+ 821               		.loc 1 331 2 is_stmt 1 view .LVU236
+ 822               		.loc 1 331 15 is_stmt 0 view .LVU237
+ 823 027c 1092 0000 		sts _ZL12UART1_RxHead,__zero_reg__
+ 332:UART.cpp      **** 	UART1_RxTail = 0;
+ 824               		.loc 1 332 2 is_stmt 1 view .LVU238
+ 825               		.loc 1 332 15 is_stmt 0 view .LVU239
+ 826 0280 1092 0000 		sts _ZL12UART1_RxTail,__zero_reg__
+ 333:UART.cpp      **** 	
+ 334:UART.cpp      **** 	baudrate = UART_BAUD_SELECT(baudrate, F_CPU);
+ 827               		.loc 1 334 2 is_stmt 1 view .LVU240
+ 828               		.loc 1 334 13 is_stmt 0 view .LVU241
+ 829 0284 B0E0      		ldi r27,0
+ 830 0286 A0E0      		ldi r26,0
+ 831 0288 9C01      		movw r18,r24
+ 832 028a AD01      		movw r20,r26
+ 833               	.LVL55:
+ 834               		.loc 1 334 13 view .LVU242
+ 835 028c 84E0      		ldi r24,4
+ 836               		1:
+ 837 028e 220F      		lsl r18
+ 838 0290 331F      		rol r19
+ 839 0292 441F      		rol r20
+ 840 0294 551F      		rol r21
+ 841 0296 8A95      		dec r24
+ 842 0298 01F4      		brne 1b
+ 843               	.LVL56:
+ 844               		.loc 1 334 13 view .LVU243
+ 845 029a 60E0      		ldi r22,0
+ 846 029c 7DE2      		ldi r23,lo8(45)
+ 847 029e 81E3      		ldi r24,lo8(49)
+ 848 02a0 91E0      		ldi r25,lo8(1)
+ 849               	.LVL57:
+ 850               		.loc 1 334 13 view .LVU244
+ 851 02a2 0E94 0000 		call __udivmodsi4
+ 852               		.loc 1 334 11 view .LVU245
+ 853 02a6 2150      		subi r18,1
+ 854 02a8 3109      		sbc r19,__zero_reg__
+ 855               	.LVL58:
+ 335:UART.cpp      **** 	
+ 336:UART.cpp      **** 	/*Set baud rate */
+ 337:UART.cpp      **** 	UBRR1H = (unsigned char)(baudrate >> 8);
+ 856               		.loc 1 337 2 is_stmt 1 view .LVU246
+ 857               		.loc 1 337 9 is_stmt 0 view .LVU247
+ 858 02aa 3093 CD00 		sts 205,r19
+ 338:UART.cpp      **** 	UBRR1L = (unsigned char)baudrate;
+ 859               		.loc 1 338 2 is_stmt 1 view .LVU248
+ 860               		.loc 1 338 9 is_stmt 0 view .LVU249
+ 861 02ae 2093 CC00 		sts 204,r18
+ 339:UART.cpp      **** 		
+ 340:UART.cpp      **** 	/* Set USART Mode */
+ 341:UART.cpp      **** 	UCSR1C &= ~((1 << UMSEL11) | (1 << UMSEL10));		// Asynchronous USART
+ 862               		.loc 1 341 2 is_stmt 1 view .LVU250
+ 863               		.loc 1 341 9 is_stmt 0 view .LVU251
+ 864 02b2 8091 CA00 		lds r24,202
+ 865 02b6 8F73      		andi r24,lo8(63)
+ 866 02b8 8093 CA00 		sts 202,r24
+ 342:UART.cpp      **** 		
+ 343:UART.cpp      **** 	/* Set Stop Bit(s) */
+ 344:UART.cpp      **** 	if (stopbit == UART_2_STOP_BITS)
+ 867               		.loc 1 344 2 is_stmt 1 view .LVU252
+ 345:UART.cpp      **** 		UCSR1C |= (1 << USBS1);							// 2 Stop bits
+ 868               		.loc 1 345 10 is_stmt 0 view .LVU253
+ 869 02bc 8091 CA00 		lds r24,202
+ 344:UART.cpp      **** 		UCSR1C |= (1 << USBS1);							// 2 Stop bits
+ 870               		.loc 1 344 2 view .LVU254
+ 871 02c0 D230      		cpi r29,lo8(2)
+ 872 02c2 01F4      		brne .L40
+ 873               		.loc 1 345 3 is_stmt 1 view .LVU255
+ 874               		.loc 1 345 10 is_stmt 0 view .LVU256
+ 875 02c4 8860      		ori r24,lo8(8)
+ 876               	.L45:
+ 346:UART.cpp      **** 	else
+ 347:UART.cpp      **** 		UCSR1C &= ~(1 << USBS1);						// 1 Stop bit
+ 877               		.loc 1 347 10 view .LVU257
+ 878 02c6 8093 CA00 		sts 202,r24
+ 348:UART.cpp      **** 
+ 349:UART.cpp      **** 	/* Set Parity */
+ 350:UART.cpp      **** 	if (parity == UART_EVEN_PARITY)
+ 879               		.loc 1 350 2 is_stmt 1 view .LVU258
+ 351:UART.cpp      **** 	{
+ 352:UART.cpp      **** 		UCSR1C |= (1 << UPM11);							// Even parity
+ 880               		.loc 1 352 10 is_stmt 0 view .LVU259
+ 881 02ca 8091 CA00 		lds r24,202
+ 350:UART.cpp      **** 	{
+ 882               		.loc 1 350 2 view .LVU260
+ 883 02ce C230      		cpi r28,lo8(2)
+ 884 02d0 01F4      		brne .L42
+ 885               		.loc 1 352 3 is_stmt 1 view .LVU261
+ 886               		.loc 1 352 10 is_stmt 0 view .LVU262
+ 887 02d2 8062      		ori r24,lo8(32)
+ 888               	.L46:
+ 353:UART.cpp      **** 	}
+ 354:UART.cpp      **** 	else if (parity == UART_ODD_PARITY)
+ 355:UART.cpp      **** 	{
+ 356:UART.cpp      **** 		UCSR1C |= ((1 << UPM11) | (1 << UPM10));		// Odd parity
+ 357:UART.cpp      **** 	}
+ 358:UART.cpp      **** 	else
+ 359:UART.cpp      **** 		UCSR1C &= ~((1 << UPM11) | (1 << UPM10));		// No parity
+ 889               		.loc 1 359 10 view .LVU263
+ 890 02d4 8093 CA00 		sts 202,r24
+ 360:UART.cpp      **** 		
+ 361:UART.cpp      **** 	/* Set Data Bits */
+ 362:UART.cpp      **** 	UCSR1C |= ((1 << UCSZ11) | (1 << UCSZ10));			// 8 Data bits
+ 891               		.loc 1 362 2 is_stmt 1 view .LVU264
+ 892               		.loc 1 362 9 is_stmt 0 view .LVU265
+ 893 02d8 8091 CA00 		lds r24,202
+ 894 02dc 8660      		ori r24,lo8(6)
+ 895 02de 8093 CA00 		sts 202,r24
+ 363:UART.cpp      **** 
+ 364:UART.cpp      **** 	/* Enable interrupts */
+ 365:UART.cpp      **** 	UCSR1B |= ((1 << RXCIE1) | (1 << UDRIE1));
+ 896               		.loc 1 365 2 is_stmt 1 view .LVU266
+ 897               		.loc 1 365 9 is_stmt 0 view .LVU267
+ 898 02e2 8091 C900 		lds r24,201
+ 899 02e6 806A      		ori r24,lo8(-96)
+ 900 02e8 8093 C900 		sts 201,r24
+ 366:UART.cpp      **** 	
+ 367:UART.cpp      **** 	/*Enable receiver and transmitter */
+ 368:UART.cpp      **** 	UCSR1B |= ((1 << RXEN1) | (1 << TXEN1));
+ 901               		.loc 1 368 2 is_stmt 1 view .LVU268
+ 902               		.loc 1 368 9 is_stmt 0 view .LVU269
+ 903 02ec 8091 C900 		lds r24,201
+ 904 02f0 8861      		ori r24,lo8(24)
+ 905 02f2 8093 C900 		sts 201,r24
+ 906               	/* epilogue start */
+ 369:UART.cpp      **** }
+ 907               		.loc 1 369 1 view .LVU270
+ 908 02f6 DF91      		pop r29
+ 909               	.LVL59:
+ 910               		.loc 1 369 1 view .LVU271
+ 911 02f8 CF91      		pop r28
+ 912               	.LVL60:
+ 913               		.loc 1 369 1 view .LVU272
+ 914 02fa 0895      		ret
+ 915               	.LVL61:
+ 916               	.L40:
+ 347:UART.cpp      **** 
+ 917               		.loc 1 347 3 is_stmt 1 view .LVU273
+ 347:UART.cpp      **** 
+ 918               		.loc 1 347 10 is_stmt 0 view .LVU274
+ 919 02fc 877F      		andi r24,lo8(-9)
+ 920 02fe 00C0      		rjmp .L45
+ 921               	.L42:
+ 354:UART.cpp      **** 	{
+ 922               		.loc 1 354 7 is_stmt 1 view .LVU275
+ 923 0300 C330      		cpi r28,lo8(3)
+ 924 0302 01F4      		brne .L44
+ 356:UART.cpp      **** 	}
+ 925               		.loc 1 356 3 view .LVU276
+ 356:UART.cpp      **** 	}
+ 926               		.loc 1 356 10 is_stmt 0 view .LVU277
+ 927 0304 8063      		ori r24,lo8(48)
+ 928 0306 00C0      		rjmp .L46
+ 929               	.L44:
+ 359:UART.cpp      **** 		
+ 930               		.loc 1 359 3 is_stmt 1 view .LVU278
+ 359:UART.cpp      **** 		
+ 931               		.loc 1 359 10 is_stmt 0 view .LVU279
+ 932 0308 8F7C      		andi r24,lo8(-49)
+ 933 030a 00C0      		rjmp .L46
+ 934               		.cfi_endproc
+ 935               	.LFE14:
+ 937               	.global	_Z13UART1_GetCharv
+ 939               	_Z13UART1_GetCharv:
+ 940               	.LFB15:
+ 370:UART.cpp      **** 
+ 371:UART.cpp      **** 
+ 372:UART.cpp      **** /*************************************************************************
+ 373:UART.cpp      **** Function: UART1_GetChar()
+ 374:UART.cpp      **** Purpose:  return byte from ringbuffer  
+ 375:UART.cpp      **** Returns:  lower byte:  received byte from ringbuffer
+ 376:UART.cpp      ****           higher byte: last receive error
+ 377:UART.cpp      **** **************************************************************************/
+ 378:UART.cpp      **** unsigned int UART1_GetChar(void)
+ 379:UART.cpp      **** {
+ 941               		.loc 1 379 1 is_stmt 1 view -0
+ 942               		.cfi_startproc
+ 943               	/* prologue: function */
+ 944               	/* frame size = 0 */
+ 945               	/* stack size = 0 */
+ 946               	.L__stack_usage = 0
+ 380:UART.cpp      **** 	unsigned char tmptail;
+ 947               		.loc 1 380 2 view .LVU281
+ 381:UART.cpp      **** 	unsigned char data;
+ 948               		.loc 1 381 2 view .LVU282
+ 382:UART.cpp      **** 
+ 383:UART.cpp      **** 	if ( UART1_RxHead == UART1_RxTail )
+ 949               		.loc 1 383 2 view .LVU283
+ 950               		.loc 1 383 20 is_stmt 0 view .LVU284
+ 951 030c 9091 0000 		lds r25,_ZL12UART1_RxHead
+ 952 0310 8091 0000 		lds r24,_ZL12UART1_RxTail
+ 953               		.loc 1 383 2 view .LVU285
+ 954 0314 9817      		cp r25,r24
+ 955 0316 01F0      		breq .L49
+ 384:UART.cpp      **** 	{
+ 385:UART.cpp      **** 		return UART_NO_DATA;   /* no data available */
+ 386:UART.cpp      **** 	}
+ 387:UART.cpp      **** 		
+ 388:UART.cpp      **** 	/* calculate /store buffer index */
+ 389:UART.cpp      **** 	tmptail = (UART1_RxTail + 1) & UART1_RX_BUFFER_MASK;
+ 956               		.loc 1 389 2 is_stmt 1 view .LVU286
+ 957               		.loc 1 389 31 is_stmt 0 view .LVU287
+ 958 0318 E091 0000 		lds r30,_ZL12UART1_RxTail
+ 959               		.loc 1 389 26 view .LVU288
+ 960 031c EF5F      		subi r30,lo8(-(1))
+ 961               		.loc 1 389 10 view .LVU289
+ 962 031e EF73      		andi r30,lo8(63)
+ 963               	.LVL62:
+ 390:UART.cpp      **** 	UART1_RxTail = tmptail;
+ 964               		.loc 1 390 2 is_stmt 1 view .LVU290
+ 965               		.loc 1 390 15 is_stmt 0 view .LVU291
+ 966 0320 E093 0000 		sts _ZL12UART1_RxTail,r30
+ 391:UART.cpp      **** 		
+ 392:UART.cpp      **** 	/* get data from receive buffer */
+ 393:UART.cpp      **** 	data = UART1_RxBuf[tmptail];
+ 967               		.loc 1 393 2 is_stmt 1 view .LVU292
+ 968               		.loc 1 393 21 is_stmt 0 view .LVU293
+ 969 0324 F0E0      		ldi r31,0
+ 970               		.loc 1 393 7 view .LVU294
+ 971 0326 E050      		subi r30,lo8(-(_ZL11UART1_RxBuf))
+ 972 0328 F040      		sbci r31,hi8(-(_ZL11UART1_RxBuf))
+ 973               	.LVL63:
+ 974               		.loc 1 393 7 view .LVU295
+ 975 032a 2081      		ld r18,Z
+ 976               	.LVL64:
+ 394:UART.cpp      **** 		
+ 395:UART.cpp      **** 	return (UART1_LastRxError << 8) + data;
+ 977               		.loc 1 395 2 is_stmt 1 view .LVU296
+ 978               		.loc 1 395 10 is_stmt 0 view .LVU297
+ 979 032c 9091 0000 		lds r25,_ZL17UART1_LastRxError
+ 980 0330 892F      		mov r24,r25
+ 981 0332 90E0      		ldi r25,0
+ 982               		.loc 1 395 28 view .LVU298
+ 983 0334 982F      		mov r25,r24
+ 984 0336 8827      		clr r24
+ 985               		.loc 1 395 34 view .LVU299
+ 986 0338 820F      		add r24,r18
+ 987 033a 911D      		adc r25,__zero_reg__
+ 988               		.loc 1 395 36 view .LVU300
+ 989 033c 0895      		ret
+ 990               	.LVL65:
+ 991               	.L49:
+ 385:UART.cpp      **** 	}
+ 992               		.loc 1 385 10 view .LVU301
+ 993 033e 80E0      		ldi r24,0
+ 994 0340 91E0      		ldi r25,lo8(1)
+ 995               	/* epilogue start */
+ 396:UART.cpp      **** }
+ 996               		.loc 1 396 1 view .LVU302
+ 997 0342 0895      		ret
+ 998               		.cfi_endproc
+ 999               	.LFE15:
+ 1001               	.global	_Z13UART1_PutCharh
+ 1003               	_Z13UART1_PutCharh:
+ 1004               	.LVL66:
+ 1005               	.LFB16:
+ 397:UART.cpp      **** 
+ 398:UART.cpp      **** 
+ 399:UART.cpp      **** /*************************************************************************
+ 400:UART.cpp      **** Function: UART1_PutChar()
+ 401:UART.cpp      **** Purpose:  write byte to ringbuffer for transmitting via UART
+ 402:UART.cpp      **** Input:    byte to be transmitted
+ 403:UART.cpp      **** Returns:  none
+ 404:UART.cpp      **** **************************************************************************/
+ 405:UART.cpp      **** void UART1_PutChar(unsigned char data)
+ 406:UART.cpp      **** {
+ 1006               		.loc 1 406 1 is_stmt 1 view -0
+ 1007               		.cfi_startproc
+ 1008               	/* prologue: function */
+ 1009               	/* frame size = 0 */
+ 1010               	/* stack size = 0 */
+ 1011               	.L__stack_usage = 0
+ 407:UART.cpp      **** 	unsigned char tmphead;
+ 1012               		.loc 1 407 2 view .LVU304
+ 408:UART.cpp      **** 		
+ 409:UART.cpp      **** 	/* calculate buffer index */
+ 410:UART.cpp      **** 	tmphead  = (UART1_TxHead + 1) & UART1_TX_BUFFER_MASK;
+ 1013               		.loc 1 410 2 view .LVU305
+ 1014               		.loc 1 410 32 is_stmt 0 view .LVU306
+ 1015 0344 9091 0000 		lds r25,_ZL12UART1_TxHead
+ 1016               		.loc 1 410 27 view .LVU307
+ 1017 0348 9F5F      		subi r25,lo8(-(1))
+ 1018               		.loc 1 410 11 view .LVU308
+ 1019 034a 9F73      		andi r25,lo8(63)
+ 1020               	.LVL67:
+ 1021               	.L51:
+ 411:UART.cpp      **** 		
+ 412:UART.cpp      **** 	/* wait for free space in buffer */
+ 413:UART.cpp      **** 	while ( tmphead == UART1_TxTail );
+ 1022               		.loc 1 413 2 is_stmt 1 view .LVU309
+ 1023               		.loc 1 413 18 view .LVU310
+ 1024 034c 2091 0000 		lds r18,_ZL12UART1_TxTail
+ 1025 0350 2917      		cp r18,r25
+ 1026 0352 01F0      		breq .L51
+ 414:UART.cpp      **** 		
+ 415:UART.cpp      **** 	UART1_TxBuf[tmphead] = data;
+ 1027               		.loc 1 415 2 view .LVU311
+ 1028               		.loc 1 415 14 is_stmt 0 view .LVU312
+ 1029 0354 E92F      		mov r30,r25
+ 1030 0356 F0E0      		ldi r31,0
+ 1031               		.loc 1 415 23 view .LVU313
+ 1032 0358 E050      		subi r30,lo8(-(_ZL11UART1_TxBuf))
+ 1033 035a F040      		sbci r31,hi8(-(_ZL11UART1_TxBuf))
+ 1034 035c 8083      		st Z,r24
+ 416:UART.cpp      **** 	UART1_TxHead = tmphead;
+ 1035               		.loc 1 416 2 is_stmt 1 view .LVU314
+ 1036               		.loc 1 416 15 is_stmt 0 view .LVU315
+ 1037 035e 9093 0000 		sts _ZL12UART1_TxHead,r25
+ 417:UART.cpp      **** 
+ 418:UART.cpp      **** 	/* enable UDRE interrupt */
+ 419:UART.cpp      **** 	UCSR1B |= (1 << UDRIE1);
+ 1038               		.loc 1 419 2 is_stmt 1 view .LVU316
+ 1039               		.loc 1 419 9 is_stmt 0 view .LVU317
+ 1040 0362 8091 C900 		lds r24,201
+ 1041               	.LVL68:
+ 1042               		.loc 1 419 9 view .LVU318
+ 1043 0366 8062      		ori r24,lo8(32)
+ 1044 0368 8093 C900 		sts 201,r24
+ 1045               	/* epilogue start */
+ 420:UART.cpp      **** }
+ 1046               		.loc 1 420 1 view .LVU319
+ 1047 036c 0895      		ret
+ 1048               		.cfi_endproc
+ 1049               	.LFE16:
+ 1051               	.global	_Z15UART1_PutStringPKc
+ 1053               	_Z15UART1_PutStringPKc:
+ 1054               	.LVL69:
+ 1055               	.LFB17:
+ 421:UART.cpp      **** 
+ 422:UART.cpp      **** 
+ 423:UART.cpp      **** /*************************************************************************
+ 424:UART.cpp      **** Function: UART1_PutString()
+ 425:UART.cpp      **** Purpose:  transmit string to UART
+ 426:UART.cpp      **** Input:    string to be transmitted
+ 427:UART.cpp      **** Returns:  none
+ 428:UART.cpp      **** **************************************************************************/
+ 429:UART.cpp      **** void UART1_PutString(const char *s )
+ 430:UART.cpp      **** {
+ 1056               		.loc 1 430 1 is_stmt 1 view -0
+ 1057               		.cfi_startproc
+ 1058               		.loc 1 430 1 is_stmt 0 view .LVU321
+ 1059 036e CF93      		push r28
+ 1060               	.LCFI19:
+ 1061               		.cfi_def_cfa_offset 3
+ 1062               		.cfi_offset 28, -2
+ 1063 0370 DF93      		push r29
+ 1064               	.LCFI20:
+ 1065               		.cfi_def_cfa_offset 4
+ 1066               		.cfi_offset 29, -3
+ 1067               	/* prologue: function */
+ 1068               	/* frame size = 0 */
+ 1069               	/* stack size = 2 */
+ 1070               	.L__stack_usage = 2
+ 1071 0372 EC01      		movw r28,r24
+ 1072               	.LVL70:
+ 1073               	.L55:
+ 431:UART.cpp      **** 	while (*s)
+ 1074               		.loc 1 431 2 is_stmt 1 view .LVU322
+ 1075               		.loc 1 431 10 view .LVU323
+ 1076               		.loc 1 431 9 is_stmt 0 view .LVU324
+ 1077 0374 8991      		ld r24,Y+
+ 1078               	.LVL71:
+ 1079               		.loc 1 431 10 view .LVU325
+ 1080 0376 8823      		tst r24
+ 1081 0378 01F0      		breq .L53
+ 432:UART.cpp      **** 	{
+ 433:UART.cpp      **** 		UART1_PutChar(*s++);
+ 1082               		.loc 1 433 3 is_stmt 1 view .LVU326
+ 1083               	.LVL72:
+ 1084               		.loc 1 433 16 is_stmt 0 view .LVU327
+ 1085 037a 0E94 0000 		call _Z13UART1_PutCharh
+ 1086               	.LVL73:
+ 431:UART.cpp      **** 	while (*s)
+ 1087               		.loc 1 431 2 view .LVU328
+ 1088 037e 00C0      		rjmp .L55
+ 1089               	.LVL74:
+ 1090               	.L53:
+ 1091               	/* epilogue start */
+ 434:UART.cpp      **** 	}
+ 435:UART.cpp      **** }
+ 1092               		.loc 1 435 1 view .LVU329
+ 1093 0380 DF91      		pop r29
+ 1094 0382 CF91      		pop r28
+ 1095               	.LVL75:
+ 1096               		.loc 1 435 1 view .LVU330
+ 1097 0384 0895      		ret
+ 1098               		.cfi_endproc
+ 1099               	.LFE17:
+ 1101               	.global	_Z17UART1_PutString_pPKc
+ 1103               	_Z17UART1_PutString_pPKc:
+ 1104               	.LVL76:
+ 1105               	.LFB18:
+ 436:UART.cpp      **** 
+ 437:UART.cpp      **** 
+ 438:UART.cpp      **** /*************************************************************************
+ 439:UART.cpp      **** Function: UART1_PutString_p()
+ 440:UART.cpp      **** Purpose:  transmit string from program memory to UART
+ 441:UART.cpp      **** Input:    program memory string to be transmitted
+ 442:UART.cpp      **** Returns:  none
+ 443:UART.cpp      **** **************************************************************************/
+ 444:UART.cpp      **** void UART1_PutString_p(const char *progmem_s )
+ 445:UART.cpp      **** {
+ 1106               		.loc 1 445 1 is_stmt 1 view -0
+ 1107               		.cfi_startproc
+ 1108               		.loc 1 445 1 is_stmt 0 view .LVU332
+ 1109 0386 CF93      		push r28
+ 1110               	.LCFI21:
+ 1111               		.cfi_def_cfa_offset 3
+ 1112               		.cfi_offset 28, -2
+ 1113 0388 DF93      		push r29
+ 1114               	.LCFI22:
+ 1115               		.cfi_def_cfa_offset 4
+ 1116               		.cfi_offset 29, -3
+ 1117               	/* prologue: function */
+ 1118               	/* frame size = 0 */
+ 1119               	/* stack size = 2 */
+ 1120               	.L__stack_usage = 2
+ 1121 038a EC01      		movw r28,r24
+ 1122               	.LVL77:
+ 1123               	.L58:
+ 446:UART.cpp      **** 	register char c;
+ 1124               		.loc 1 446 2 is_stmt 1 view .LVU333
+ 447:UART.cpp      **** 		
+ 448:UART.cpp      **** 	while ( (c = pgm_read_byte(progmem_s++)) )
+ 1125               		.loc 1 448 2 view .LVU334
+ 1126               		.loc 1 448 41 view .LVU335
+ 1127               	.LBB4:
+ 1128               		.loc 1 448 15 view .LVU336
+ 1129               		.loc 1 448 15 view .LVU337
+ 1130               		.loc 1 448 15 view .LVU338
+ 1131 038c FE01      		movw r30,r28
+ 1132               	/* #APP */
+ 1133               	 ;  448 "UART.cpp" 1
+ 1134 038e 8491      		lpm r24, Z
+ 1135               		
+ 1136               	 ;  0 "" 2
+ 1137               	.LVL78:
+ 1138               		.loc 1 448 15 view .LVU339
+ 1139               		.loc 1 448 15 is_stmt 0 view .LVU340
+ 1140               	/* #NOAPP */
+ 1141 0390 2196      		adiw r28,1
+ 1142               	.LVL79:
+ 1143               		.loc 1 448 15 view .LVU341
+ 1144               	.LBE4:
+ 1145               		.loc 1 448 41 view .LVU342
+ 1146 0392 8823      		tst r24
+ 1147 0394 01F0      		breq .L56
+ 1148               	.LBB5:
+ 449:UART.cpp      **** 	{
+ 450:UART.cpp      **** 		UART1_PutChar(c);
+ 1149               		.loc 1 450 3 is_stmt 1 view .LVU343
+ 1150               		.loc 1 450 16 is_stmt 0 view .LVU344
+ 1151 0396 0E94 0000 		call _Z13UART1_PutCharh
+ 1152               	.LVL80:
+ 1153               		.loc 1 450 16 view .LVU345
+ 1154               	.LBE5:
+ 448:UART.cpp      **** 	{
+ 1155               		.loc 1 448 2 view .LVU346
+ 1156 039a 00C0      		rjmp .L58
+ 1157               	.LVL81:
+ 1158               	.L56:
+ 1159               	/* epilogue start */
+ 451:UART.cpp      **** 	}
+ 452:UART.cpp      **** }
+ 1160               		.loc 1 452 1 view .LVU347
+ 1161 039c DF91      		pop r29
+ 1162 039e CF91      		pop r28
+ 1163               	.LVL82:
+ 1164               		.loc 1 452 1 view .LVU348
+ 1165 03a0 0895      		ret
+ 1166               		.cfi_endproc
+ 1167               	.LFE18:
+ 1169               	.global	_Z15UART1_Availablev
+ 1171               	_Z15UART1_Availablev:
+ 1172               	.LFB19:
+ 453:UART.cpp      **** 
+ 454:UART.cpp      **** 
+ 455:UART.cpp      **** /*************************************************************************
+ 456:UART.cpp      **** Function: UART1_Available()
+ 457:UART.cpp      **** Purpose:  Determine the number of bytes waiting in the receive buffer
+ 458:UART.cpp      **** Input:    None
+ 459:UART.cpp      **** Returns:  Integer number of bytes in the receive buffer
+ 460:UART.cpp      **** **************************************************************************/
+ 461:UART.cpp      **** int UART1_Available(void)
+ 462:UART.cpp      **** {
+ 1173               		.loc 1 462 1 is_stmt 1 view -0
+ 1174               		.cfi_startproc
+ 1175               	/* prologue: function */
+ 1176               	/* frame size = 0 */
+ 1177               	/* stack size = 0 */
+ 1178               	.L__stack_usage = 0
+ 463:UART.cpp      **** 	//return (UART1_RX_BUFFER_MASK + UART1_RxHead - UART1_RxTail) % UART1_RX_BUFFER_MASK;
+ 464:UART.cpp      **** 	return (UART1_RxHead != UART1_RxTail);
+ 1179               		.loc 1 464 2 view .LVU350
+ 1180               		.loc 1 464 23 is_stmt 0 view .LVU351
+ 1181 03a2 3091 0000 		lds r19,_ZL12UART1_RxHead
+ 1182 03a6 2091 0000 		lds r18,_ZL12UART1_RxTail
+ 1183 03aa 81E0      		ldi r24,lo8(1)
+ 1184 03ac 90E0      		ldi r25,0
+ 1185 03ae 3213      		cpse r19,r18
+ 1186 03b0 00C0      		rjmp .L60
+ 1187 03b2 90E0      		ldi r25,0
+ 1188 03b4 80E0      		ldi r24,0
+ 1189               	.L60:
+ 1190               	/* epilogue start */
+ 465:UART.cpp      **** }
+ 1191               		.loc 1 465 1 view .LVU352
+ 1192 03b6 0895      		ret
+ 1193               		.cfi_endproc
+ 1194               	.LFE19:
+ 1196               	.global	_Z11UART1_Flushv
+ 1198               	_Z11UART1_Flushv:
+ 1199               	.LFB20:
+ 466:UART.cpp      **** 
+ 467:UART.cpp      **** 
+ 468:UART.cpp      **** /*************************************************************************
+ 469:UART.cpp      **** Function: UART1_Flush()
+ 470:UART.cpp      **** Purpose:  Flush bytes waiting the receive buffer. Acutally ignores them.
+ 471:UART.cpp      **** Input:    None
+ 472:UART.cpp      **** Returns:  None
+ 473:UART.cpp      **** **************************************************************************/
+ 474:UART.cpp      **** void UART1_Flush(void)
+ 475:UART.cpp      **** {
+ 1200               		.loc 1 475 1 is_stmt 1 view -0
+ 1201               		.cfi_startproc
+ 1202               	/* prologue: function */
+ 1203               	/* frame size = 0 */
+ 1204               	/* stack size = 0 */
+ 1205               	.L__stack_usage = 0
+ 476:UART.cpp      **** 	UART1_RxHead = UART1_RxTail;
+ 1206               		.loc 1 476 2 view .LVU354
+ 1207               		.loc 1 476 15 is_stmt 0 view .LVU355
+ 1208 03b8 8091 0000 		lds r24,_ZL12UART1_RxTail
+ 1209 03bc 8093 0000 		sts _ZL12UART1_RxHead,r24
+ 1210               	/* epilogue start */
+ 477:UART.cpp      **** }
+ 1211               		.loc 1 477 1 view .LVU356
+ 1212 03c0 0895      		ret
+ 1213               		.cfi_endproc
+ 1214               	.LFE20:
+ 1216               	.global	__vector_28
+ 1218               	__vector_28:
+ 1219               	.LFB21:
+ 478:UART.cpp      **** 
+ 479:UART.cpp      **** 
+ 480:UART.cpp      **** /*************************************************************************
+ 481:UART.cpp      **** Function: UART1 Receive Complete interrupt
+ 482:UART.cpp      **** Purpose:  called when the UART has received a character
+ 483:UART.cpp      **** **************************************************************************/
+ 484:UART.cpp      **** ISR(USART1_RX_vect)
+ 485:UART.cpp      **** {
+ 1220               		.loc 1 485 1 is_stmt 1 view -0
+ 1221               		.cfi_startproc
+ 1222 03c2 2F93 2FB7 		__gcc_isr 1
+ 1222      2F93 
+ 1223 03c8 8F93      		push r24
+ 1224               	.LCFI23:
+ 1225               		.cfi_def_cfa_offset 3
+ 1226               		.cfi_offset 24, -2
+ 1227 03ca 9F93      		push r25
+ 1228               	.LCFI24:
+ 1229               		.cfi_def_cfa_offset 4
+ 1230               		.cfi_offset 25, -3
+ 1231 03cc EF93      		push r30
+ 1232               	.LCFI25:
+ 1233               		.cfi_def_cfa_offset 5
+ 1234               		.cfi_offset 30, -4
+ 1235 03ce FF93      		push r31
+ 1236               	.LCFI26:
+ 1237               		.cfi_def_cfa_offset 6
+ 1238               		.cfi_offset 31, -5
+ 1239               	/* prologue: Signal */
+ 1240               	/* frame size = 0 */
+ 1241               	/* stack size = 4...8 */
+ 1242               	.L__stack_usage = 4 + __gcc_isr.n_pushed
+ 486:UART.cpp      **** 	unsigned char tmphead;
+ 1243               		.loc 1 486 2 view .LVU358
+ 487:UART.cpp      **** 	unsigned char data;
+ 1244               		.loc 1 487 2 view .LVU359
+ 488:UART.cpp      **** 	unsigned char usr;
+ 1245               		.loc 1 488 2 view .LVU360
+ 489:UART.cpp      **** 	unsigned char lastRxError;
+ 1246               		.loc 1 489 2 view .LVU361
+ 490:UART.cpp      **** 	
+ 491:UART.cpp      **** 	
+ 492:UART.cpp      **** 	/* read UART status register and UART data register */
+ 493:UART.cpp      **** 	usr  = UCSR1A;
+ 1247               		.loc 1 493 2 view .LVU362
+ 1248               		.loc 1 493 7 is_stmt 0 view .LVU363
+ 1249 03d0 8091 C800 		lds r24,200
+ 1250               	.LVL83:
+ 494:UART.cpp      **** 	data = UDR1;
+ 1251               		.loc 1 494 2 is_stmt 1 view .LVU364
+ 1252               		.loc 1 494 7 is_stmt 0 view .LVU365
+ 1253 03d4 9091 CE00 		lds r25,206
+ 1254               	.LVL84:
+ 495:UART.cpp      **** 	
+ 496:UART.cpp      **** 	/* */
+ 497:UART.cpp      **** 	lastRxError = (usr & (FE1 | DOR1));
+ 1255               		.loc 1 497 2 is_stmt 1 view .LVU366
+ 498:UART.cpp      **** 	
+ 499:UART.cpp      **** 	/* calculate buffer index */
+ 500:UART.cpp      **** 	tmphead = ( UART1_RxHead + 1) & UART1_RX_BUFFER_MASK;
+ 1256               		.loc 1 500 2 view .LVU367
+ 1257               		.loc 1 500 32 is_stmt 0 view .LVU368
+ 1258 03d8 E091 0000 		lds r30,_ZL12UART1_RxHead
+ 1259               		.loc 1 500 27 view .LVU369
+ 1260 03dc EF5F      		subi r30,lo8(-(1))
+ 1261               		.loc 1 500 10 view .LVU370
+ 1262 03de EF73      		andi r30,lo8(63)
+ 1263               	.LVL85:
+ 501:UART.cpp      **** 	
+ 502:UART.cpp      **** 	if ( tmphead == UART1_RxTail )
+ 1264               		.loc 1 502 2 is_stmt 1 view .LVU371
+ 1265               		.loc 1 502 15 is_stmt 0 view .LVU372
+ 1266 03e0 2091 0000 		lds r18,_ZL12UART1_RxTail
+ 1267               		.loc 1 502 2 view .LVU373
+ 1268 03e4 2E17      		cp r18,r30
+ 1269 03e6 01F0      		breq .L64
+ 497:UART.cpp      **** 	
+ 1270               		.loc 1 497 14 view .LVU374
+ 1271 03e8 8770      		andi r24,lo8(7)
+ 1272               	.LVL86:
+ 503:UART.cpp      **** 	{
+ 504:UART.cpp      **** 		/* error: receive buffer overflow */
+ 505:UART.cpp      **** 		lastRxError = UART_BUFFER_OVERFLOW >> 8;
+ 506:UART.cpp      **** 	}
+ 507:UART.cpp      **** 	else
+ 508:UART.cpp      **** 	{
+ 509:UART.cpp      **** 		/* store new index */
+ 510:UART.cpp      **** 		UART1_RxHead = tmphead;
+ 1273               		.loc 1 510 3 is_stmt 1 view .LVU375
+ 1274               		.loc 1 510 16 is_stmt 0 view .LVU376
+ 1275 03ea E093 0000 		sts _ZL12UART1_RxHead,r30
+ 511:UART.cpp      **** 		/* store received data in buffer */
+ 512:UART.cpp      **** 		UART1_RxBuf[tmphead] = data;
+ 1276               		.loc 1 512 3 is_stmt 1 view .LVU377
+ 1277               		.loc 1 512 15 is_stmt 0 view .LVU378
+ 1278 03ee F0E0      		ldi r31,0
+ 1279               		.loc 1 512 24 view .LVU379
+ 1280 03f0 E050      		subi r30,lo8(-(_ZL11UART1_RxBuf))
+ 1281 03f2 F040      		sbci r31,hi8(-(_ZL11UART1_RxBuf))
+ 1282               	.LVL87:
+ 1283               		.loc 1 512 24 view .LVU380
+ 1284 03f4 9083      		st Z,r25
+ 1285               	.LVL88:
+ 1286               	.L63:
+ 513:UART.cpp      **** 	}
+ 514:UART.cpp      **** 
+ 515:UART.cpp      **** 	UART1_LastRxError = lastRxError;
+ 1287               		.loc 1 515 2 is_stmt 1 view .LVU381
+ 1288               		.loc 1 515 20 is_stmt 0 view .LVU382
+ 1289 03f6 8093 0000 		sts _ZL17UART1_LastRxError,r24
+ 1290               	/* epilogue start */
+ 516:UART.cpp      **** }
+ 1291               		.loc 1 516 1 view .LVU383
+ 1292 03fa FF91      		pop r31
+ 1293 03fc EF91      		pop r30
+ 1294 03fe 9F91      		pop r25
+ 1295               	.LVL89:
+ 1296               		.loc 1 516 1 view .LVU384
+ 1297 0400 8F91      		pop r24
+ 1298               	.LVL90:
+ 1299               		.loc 1 516 1 view .LVU385
+ 1300 0402 2F91 2FBF 		__gcc_isr 2
+ 1300      2F91 
+ 1301 0408 1895      		reti
+ 1302               	.LVL91:
+ 1303               	.L64:
+ 505:UART.cpp      **** 	}
+ 1304               		.loc 1 505 15 view .LVU386
+ 1305 040a 82E0      		ldi r24,lo8(2)
+ 1306               	.LVL92:
+ 505:UART.cpp      **** 	}
+ 1307               		.loc 1 505 15 view .LVU387
+ 1308 040c 00C0      		rjmp .L63
+ 1309               		__gcc_isr 0,r18
+ 1310               		.cfi_endproc
+ 1311               	.LFE21:
+ 1313               	.global	__vector_29
+ 1315               	__vector_29:
+ 1316               	.LFB22:
+ 517:UART.cpp      **** 
+ 518:UART.cpp      **** 
+ 519:UART.cpp      **** /*************************************************************************
+ 520:UART.cpp      **** Function: UART1 Data Register Empty interrupt
+ 521:UART.cpp      **** Purpose:  called when the UART is ready to transmit the next byte
+ 522:UART.cpp      **** **************************************************************************/
+ 523:UART.cpp      **** ISR(USART1_UDRE_vect)
+ 524:UART.cpp      **** {
+ 1317               		.loc 1 524 1 is_stmt 1 view -0
+ 1318               		.cfi_startproc
+ 1319 040e 8F93 8FB7 		__gcc_isr 1
+ 1319      8F93 
+ 1320 0414 9F93      		push r25
+ 1321               	.LCFI27:
+ 1322               		.cfi_def_cfa_offset 3
+ 1323               		.cfi_offset 25, -2
+ 1324 0416 EF93      		push r30
+ 1325               	.LCFI28:
+ 1326               		.cfi_def_cfa_offset 4
+ 1327               		.cfi_offset 30, -3
+ 1328 0418 FF93      		push r31
+ 1329               	.LCFI29:
+ 1330               		.cfi_def_cfa_offset 5
+ 1331               		.cfi_offset 31, -4
+ 1332               	/* prologue: Signal */
+ 1333               	/* frame size = 0 */
+ 1334               	/* stack size = 3...7 */
+ 1335               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+ 525:UART.cpp      **** 	unsigned char tmptail;
+ 1336               		.loc 1 525 2 view .LVU389
+ 526:UART.cpp      **** 	
+ 527:UART.cpp      **** 	if ( UART1_TxHead != UART1_TxTail)
+ 1337               		.loc 1 527 2 view .LVU390
+ 1338               		.loc 1 527 20 is_stmt 0 view .LVU391
+ 1339 041a 9091 0000 		lds r25,_ZL12UART1_TxHead
+ 1340 041e 8091 0000 		lds r24,_ZL12UART1_TxTail
+ 1341               		.loc 1 527 2 view .LVU392
+ 1342 0422 9817      		cp r25,r24
+ 1343 0424 01F0      		breq .L66
+ 528:UART.cpp      **** 	{
+ 529:UART.cpp      **** 		/* calculate and store new buffer index */
+ 530:UART.cpp      **** 		tmptail = (UART1_TxTail + 1) & UART1_TX_BUFFER_MASK;
+ 1344               		.loc 1 530 3 is_stmt 1 view .LVU393
+ 1345               		.loc 1 530 32 is_stmt 0 view .LVU394
+ 1346 0426 E091 0000 		lds r30,_ZL12UART1_TxTail
+ 1347               		.loc 1 530 27 view .LVU395
+ 1348 042a EF5F      		subi r30,lo8(-(1))
+ 1349               		.loc 1 530 11 view .LVU396
+ 1350 042c EF73      		andi r30,lo8(63)
+ 1351               	.LVL93:
+ 531:UART.cpp      **** 		UART1_TxTail = tmptail;
+ 1352               		.loc 1 531 3 is_stmt 1 view .LVU397
+ 1353               		.loc 1 531 16 is_stmt 0 view .LVU398
+ 1354 042e E093 0000 		sts _ZL12UART1_TxTail,r30
+ 532:UART.cpp      **** 
+ 533:UART.cpp      **** 		/* get one byte from buffer and write it to UART */
+ 534:UART.cpp      **** 		UDR1 = UART1_TxBuf[tmptail];  /* start transmission */
+ 1355               		.loc 1 534 3 is_stmt 1 view .LVU399
+ 1356               		.loc 1 534 22 is_stmt 0 view .LVU400
+ 1357 0432 F0E0      		ldi r31,0
+ 1358               		.loc 1 534 29 view .LVU401
+ 1359 0434 E050      		subi r30,lo8(-(_ZL11UART1_TxBuf))
+ 1360 0436 F040      		sbci r31,hi8(-(_ZL11UART1_TxBuf))
+ 1361               	.LVL94:
+ 1362               		.loc 1 534 29 view .LVU402
+ 1363 0438 8081      		ld r24,Z
+ 1364               		.loc 1 534 8 view .LVU403
+ 1365 043a 8093 CE00 		sts 206,r24
+ 1366               	.LVL95:
+ 1367               	.L65:
+ 1368               	/* epilogue start */
+ 535:UART.cpp      **** 	}
+ 536:UART.cpp      **** 	else
+ 537:UART.cpp      **** 	{
+ 538:UART.cpp      **** 		/* tx buffer empty, disable UDRE interrupt */
+ 539:UART.cpp      **** 		UCSR1B &= ~(1 << UDRIE1);
+ 540:UART.cpp      **** 	}
+ 541:UART.cpp      **** }...
+ 1369               		.loc 1 541 1 view .LVU404
+ 1370 043e FF91      		pop r31
+ 1371 0440 EF91      		pop r30
+ 1372 0442 9F91      		pop r25
+ 1373 0444 8F91 8FBF 		__gcc_isr 2
+ 1373      8F91 
+ 1374 044a 1895      		reti
+ 1375               	.L66:
+ 539:UART.cpp      **** 		UCSR1B &= ~(1 << UDRIE1);
+ 1376               		.loc 1 539 3 is_stmt 1 view .LVU405
+ 539:UART.cpp      **** 		UCSR1B &= ~(1 << UDRIE1);
+ 1377               		.loc 1 539 10 is_stmt 0 view .LVU406
+ 1378 044c 8091 C900 		lds r24,201
+ 1379 0450 8F7D      		andi r24,lo8(-33)
+ 1380 0452 8093 C900 		sts 201,r24
+ 1381               		.loc 1 541 1 view .LVU407
+ 1382 0456 00C0      		rjmp .L65
+ 1383               		__gcc_isr 0,r24
+ 1384               		.cfi_endproc
+ 1385               	.LFE22:
+ 1387               		.local	_ZL17UART1_LastRxError
+ 1388               		.comm	_ZL17UART1_LastRxError,1,1
+ 1389               		.local	_ZL12UART1_RxTail
+ 1390               		.comm	_ZL12UART1_RxTail,1,1
+ 1391               		.local	_ZL12UART1_RxHead
+ 1392               		.comm	_ZL12UART1_RxHead,1,1
+ 1393               		.local	_ZL12UART1_TxTail
+ 1394               		.comm	_ZL12UART1_TxTail,1,1
+ 1395               		.local	_ZL12UART1_TxHead
+ 1396               		.comm	_ZL12UART1_TxHead,1,1
+ 1397               		.local	_ZL11UART1_RxBuf
+ 1398               		.comm	_ZL11UART1_RxBuf,64,1
+ 1399               		.local	_ZL11UART1_TxBuf
+ 1400               		.comm	_ZL11UART1_TxBuf,64,1
+ 1401               		.local	_ZL17UART0_LastRxError
+ 1402               		.comm	_ZL17UART0_LastRxError,1,1
+ 1403               		.local	_ZL12UART0_RxTail
+ 1404               		.comm	_ZL12UART0_RxTail,1,1
+ 1405               		.local	_ZL12UART0_RxHead
+ 1406               		.comm	_ZL12UART0_RxHead,1,1
+ 1407               		.local	_ZL12UART0_TxTail
+ 1408               		.comm	_ZL12UART0_TxTail,1,1
+ 1409               		.local	_ZL12UART0_TxHead
+ 1410               		.comm	_ZL12UART0_TxHead,1,1
+ 1411               		.local	_ZL11UART0_RxBuf
+ 1412               		.comm	_ZL11UART0_RxBuf,64,1
+ 1413               		.local	_ZL11UART0_TxBuf
+ 1414               		.comm	_ZL11UART0_TxBuf,64,1
+ 1415               	.Letext0:
+ 1416               		.file 2 "/usr/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 UART.cpp
+     /tmp/cc1WSjeu.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cc1WSjeu.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cc1WSjeu.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cc1WSjeu.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cc1WSjeu.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cc1WSjeu.s:12     .text:0000000000000000 _Z10UART0_Initjhh
+     /tmp/cc1WSjeu.s:1408   .bss:0000000000000089 _ZL12UART0_TxHead
+     /tmp/cc1WSjeu.s:1406   .bss:0000000000000088 _ZL12UART0_TxTail
+     /tmp/cc1WSjeu.s:1404   .bss:0000000000000087 _ZL12UART0_RxHead
+     /tmp/cc1WSjeu.s:1402   .bss:0000000000000086 _ZL12UART0_RxTail
+     /tmp/cc1WSjeu.s:168    .text:00000000000000ae _Z13UART0_GetCharv
+     /tmp/cc1WSjeu.s:1410   .bss:000000000000008a _ZL11UART0_RxBuf
+     /tmp/cc1WSjeu.s:1400   .bss:0000000000000085 _ZL17UART0_LastRxError
+     /tmp/cc1WSjeu.s:232    .text:00000000000000e6 _Z13UART0_PutCharh
+     /tmp/cc1WSjeu.s:1412   .bss:00000000000000ca _ZL11UART0_TxBuf
+     /tmp/cc1WSjeu.s:282    .text:0000000000000110 _Z15UART0_PutStringPKc
+     /tmp/cc1WSjeu.s:332    .text:0000000000000128 _Z17UART0_PutString_pPKc
+     /tmp/cc1WSjeu.s:400    .text:0000000000000144 _Z15UART0_Availablev
+     /tmp/cc1WSjeu.s:427    .text:000000000000015a _Z11UART0_Flushv
+     /tmp/cc1WSjeu.s:447    .text:0000000000000164 _Z15UART0_QueueCharh
+     /tmp/cc1WSjeu.s:505    .text:000000000000018e _Z16UART0_QueueArrayPKch
+     /tmp/cc1WSjeu.s:570    .text:00000000000001b6 _Z14UART0_PutQueuev
+     /tmp/cc1WSjeu.s:593    .text:00000000000001c2 _Z18UART0_QueueIsEmptyv
+     /tmp/cc1WSjeu.s:618    .text:00000000000001d2 __vector_20
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.001
+     /tmp/cc1WSjeu.s:715    .text:000000000000021e __vector_21
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.002
+     /tmp/cc1WSjeu.s:789    .text:0000000000000268 _Z10UART1_Initjhh
+     /tmp/cc1WSjeu.s:1394   .bss:0000000000000004 _ZL12UART1_TxHead
+     /tmp/cc1WSjeu.s:1392   .bss:0000000000000003 _ZL12UART1_TxTail
+     /tmp/cc1WSjeu.s:1390   .bss:0000000000000002 _ZL12UART1_RxHead
+     /tmp/cc1WSjeu.s:1388   .bss:0000000000000001 _ZL12UART1_RxTail
+     /tmp/cc1WSjeu.s:939    .text:000000000000030c _Z13UART1_GetCharv
+     /tmp/cc1WSjeu.s:1396   .bss:0000000000000005 _ZL11UART1_RxBuf
+                             .bss:0000000000000000 _ZL17UART1_LastRxError
+     /tmp/cc1WSjeu.s:1003   .text:0000000000000344 _Z13UART1_PutCharh
+     /tmp/cc1WSjeu.s:1398   .bss:0000000000000045 _ZL11UART1_TxBuf
+     /tmp/cc1WSjeu.s:1053   .text:000000000000036e _Z15UART1_PutStringPKc
+     /tmp/cc1WSjeu.s:1103   .text:0000000000000386 _Z17UART1_PutString_pPKc
+     /tmp/cc1WSjeu.s:1171   .text:00000000000003a2 _Z15UART1_Availablev
+     /tmp/cc1WSjeu.s:1198   .text:00000000000003b8 _Z11UART1_Flushv
+     /tmp/cc1WSjeu.s:1218   .text:00000000000003c2 __vector_28
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.003
+     /tmp/cc1WSjeu.s:1315   .text:000000000000040e __vector_29
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.004
+
+UNDEFINED SYMBOLS
+__udivmodsi4
+__do_clear_bss

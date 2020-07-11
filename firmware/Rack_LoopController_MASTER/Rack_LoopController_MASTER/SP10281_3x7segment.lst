@@ -1,0 +1,723 @@
+   1               		.file	"SP10281_3x7segment.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z14SP10281_Updatev
+  12               	_Z14SP10281_Updatev:
+  13               	.LFB1:
+  14               		.file 1 "SP10281_3x7segment.cpp"
+   1:SP10281_3x7segment.cpp **** /*
+   2:SP10281_3x7segment.cpp ****  * SP10281_3x7segment.cpp
+   3:SP10281_3x7segment.cpp ****  *
+   4:SP10281_3x7segment.cpp ****  * Created: 26-01-2020 20:02:12
+   5:SP10281_3x7segment.cpp ****  *  Author: Esben
+   6:SP10281_3x7segment.cpp ****  */ 
+   7:SP10281_3x7segment.cpp **** 
+   8:SP10281_3x7segment.cpp **** #include <avr/io.h>
+   9:SP10281_3x7segment.cpp **** #include "SP10281_3x7segment.h"
+  10:SP10281_3x7segment.cpp **** 
+  11:SP10281_3x7segment.cpp **** #define SP10281_DIGIT_0	0
+  12:SP10281_3x7segment.cpp **** #define SP10281_DIGIT_1	1
+  13:SP10281_3x7segment.cpp **** #define SP10281_DIGIT_2	2
+  14:SP10281_3x7segment.cpp **** 
+  15:SP10281_3x7segment.cpp **** volatile unsigned char SP10281_DigitData[3] = {0};
+  16:SP10281_3x7segment.cpp **** volatile unsigned char SP10281_DigitCnt = 0;
+  17:SP10281_3x7segment.cpp **** 
+  18:SP10281_3x7segment.cpp **** volatile unsigned char SP10281_OvfCnt = 0;
+  19:SP10281_3x7segment.cpp **** volatile bool SP10281_OvfFlag = false;
+  20:SP10281_3x7segment.cpp **** 
+  21:SP10281_3x7segment.cpp **** volatile const unsigned char SP10281_DigitTable[128] = {
+  22:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [0]		Character: NULL */
+  23:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [1]		Character: SOH */
+  24:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [2]		Character: STX */
+  25:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [3]		Character: ETX */
+  26:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [4]		Character: EOT */
+  27:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [5]		Character: ENQ */
+  28:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [6]		Character: ACK */
+  29:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [7]		Character: BEL */
+  30:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [8]		Character: BS */
+  31:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [9]		Character: TAB */
+  32:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [10]		Character: LF */
+  33:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [11]		Character: VT */
+  34:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [12]		Character: FF */
+  35:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [13]		Character: CR */
+  36:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [14]		Character: SO */
+  37:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [15]		Character: SI */
+  38:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [16]		Character: DLE */
+  39:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [17]		Character: DC1 */
+  40:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [18]		Character: DC2 */
+  41:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [19]		Character: DC3 */
+  42:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [20]		Character: DC4 */
+  43:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [21]		Character: NAK */
+  44:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [22]		Character: SYN */
+  45:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [23]		Character: ETB */
+  46:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [24]		Character: CAN */
+  47:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [25]		Character: EM */
+  48:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [26]		Character: SUB */
+  49:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [27]		Character: ESC */
+  50:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [28]		Character: FS */
+  51:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [29]		Character: GS */
+  52:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [30]		Character: RS */
+  53:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [31]		Character: US */
+  54:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [32]		Character: Space */
+  55:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [33]		Character: ! */
+  56:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00100010),	/* [34]		Character: " */
+  57:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [35]		Character: # */
+  58:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [36]		Character: $ */
+  59:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [37]		Character: % */
+  60:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [38]		Character: & */
+  61:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [39]		Character: ' */
+  62:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111001),	/* [40]		Character: ( */
+  63:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00001111),	/* [41]		Character: ) */
+  64:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [42]		Character: * */
+  65:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [43]		Character: + */
+  66:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [44]		Character: ´ */
+  67:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01000000),	/* [45]		Character: - */
+  68:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [46]		Character: . */
+  69:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01010010),	/* [47]		Character: / */
+  70:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111111),	/* [48]		Character: 0 */
+  71:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000110),	/* [49]		Character: 1 */
+  72:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01011011),	/* [50]		Character: 2 */
+  73:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01001111),	/* [51]		Character: 3 */
+  74:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01100110),	/* [52]		Character: 4 */
+  75:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01101101),	/* [53]		Character: 5 */
+  76:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111101),	/* [54]		Character: 6 */
+  77:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000111),	/* [55]		Character: 7 */
+  78:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111111),	/* [56]		Character: 8 */
+  79:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01101111),	/* [57]		Character: 9 */
+  80:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [58]		Character: : */
+  81:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [59]		Character: ; */
+  82:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [60]		Character: < */
+  83:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [61]		Character: = */
+  84:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [62]		Character: > */
+  85:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [63]		Character: ? */
+  86:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [64]		Character: @ */
+  87:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110111),	/* [65]		Character: A */
+  88:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111100),	/* [66]		Character: B */
+  89:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111001),	/* [67]		Character: C */
+  90:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01011110),	/* [68]		Character: D */
+  91:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111001),	/* [69]		Character: E */
+  92:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110001),	/* [70]		Character: F */
+  93:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111101),	/* [71]		Character: G */
+  94:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110110),	/* [72]		Character: H */
+  95:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000110),	/* [73]		Character: I */
+  96:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00011110),	/* [74]		Character: J */
+  97:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110101),	/* [75]		Character: K */
+  98:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111000),	/* [76]		Character: L */
+  99:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00010101),	/* [77]		Character: M */
+ 100:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01010100),	/* [78]		Character: N */
+ 101:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111111),	/* [79]		Character: O */
+ 102:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110011),	/* [80]		Character: P */
+ 103:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01100111),	/* [81]		Character: Q */
+ 104:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01010000),	/* [82]		Character: R */
+ 105:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00101101),	/* [83]		Character: S */
+ 106:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111000),	/* [84]		Character: T */
+ 107:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111110),	/* [85]		Character: U */
+ 108:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111110),	/* [86]		Character: V */
+ 109:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00101010),	/* [87]		Character: W */
+ 110:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110110),	/* [88]		Character: X */
+ 111:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01101110),	/* [89]		Character: Y */
+ 112:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00011011),	/* [90]		Character: Z */
+ 113:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111001),	/* [91]		Character: [ */
+ 114:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01100100),	/* [92]		Character: \ */
+ 115:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00001111),	/* [93]		Character: ] */
+ 116:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000001),	/* [94]		Character: ^ */
+ 117:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00001000),	/* [95]		Character: _ */
+ 118:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [96]		Character: ` */
+ 119:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110111),	/* [97]		Character: a */
+ 120:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111100),	/* [98]		Character: b */
+ 121:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01011000),	/* [99]		Character: c */
+ 122:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01011110),	/* [100]	Character: d */
+ 123:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111001),	/* [101]	Character: e */
+ 124:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110001),	/* [102]	Character: f */
+ 125:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111101),	/* [103]	Character: g */
+ 126:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110100),	/* [104]	Character: h */
+ 127:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000100),	/* [105]	Character: i */
+ 128:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00011110),	/* [106]	Character: j */
+ 129:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110101),	/* [107]	Character: k */
+ 130:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111000),	/* [108]	Character: l */
+ 131:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00010101),	/* [109]	Character: m */
+ 132:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01010100),	/* [110]	Character: n */
+ 133:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01011100),	/* [111]	Character: o */
+ 134:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110011),	/* [112]	Character: p */
+ 135:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01100111),	/* [113]	Character: q */
+ 136:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01010000),	/* [114]	Character: r */
+ 137:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00101101),	/* [115]	Character: s */
+ 138:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01111000),	/* [116]	Character: t */
+ 139:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00011100),	/* [117]	Character: u */
+ 140:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00011100),	/* [118]	Character: v */
+ 141:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00111110),	/* [119]	Character: w */
+ 142:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01110110),	/* [120]	Character: x */
+ 143:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b01101110),	/* [121]	Character: y */
+ 144:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00011011),	/* [122]	Character: z */
+ 145:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [123]	Character: { */
+ 146:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [124]	Character: | */
+ 147:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [125]	Character: } */
+ 148:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000),	/* [126]	Character: ~ */
+ 149:SP10281_3x7segment.cpp **** 	(unsigned char)~(0b00000000)	/* [127]	Character: DEL */
+ 150:SP10281_3x7segment.cpp **** };
+ 151:SP10281_3x7segment.cpp **** 
+ 152:SP10281_3x7segment.cpp **** void SP10281_Init()
+ 153:SP10281_3x7segment.cpp **** {
+ 154:SP10281_3x7segment.cpp **** 	/* Setup GPIOs */
+ 155:SP10281_3x7segment.cpp **** 	GPIO_SP10281_DIGIT_DDR |= GPIO_SP10281_DIGIT_MASK;	// Set GPIO output pins for digit control
+ 156:SP10281_3x7segment.cpp **** 	GPIO_SP10281_SEGMENT_DDR = 0xFF;					// Set GPIO output pins for individual segments
+ 157:SP10281_3x7segment.cpp **** 	
+ 158:SP10281_3x7segment.cpp **** 	SP10281_WriteNumber(123);
+ 159:SP10281_3x7segment.cpp **** }
+ 160:SP10281_3x7segment.cpp **** 
+ 161:SP10281_3x7segment.cpp **** void SP10281_Update()
+ 162:SP10281_3x7segment.cpp **** {
+  15               		.loc 1 162 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+ 163:SP10281_3x7segment.cpp **** 	static unsigned char tmp = 0;
+  21               		.loc 1 163 2 view .LVU1
+ 164:SP10281_3x7segment.cpp **** 
+ 165:SP10281_3x7segment.cpp **** 	/* Increment digit counter */
+ 166:SP10281_3x7segment.cpp **** 	if (++SP10281_DigitCnt >= SP10281_NUMBER_OF_DIGITS)
+  22               		.loc 1 166 2 view .LVU2
+  23               		.loc 1 166 6 is_stmt 0 view .LVU3
+  24 0000 8091 0000 		lds r24,SP10281_DigitCnt
+  25 0004 8F5F      		subi r24,lo8(-(1))
+  26               		.loc 1 166 25 view .LVU4
+  27 0006 8093 0000 		sts SP10281_DigitCnt,r24
+  28               		.loc 1 166 2 view .LVU5
+  29 000a 8330      		cpi r24,lo8(3)
+  30 000c 00F0      		brlo .L2
+ 167:SP10281_3x7segment.cpp **** 		SP10281_DigitCnt = 0;
+  31               		.loc 1 167 3 is_stmt 1 view .LVU6
+  32               		.loc 1 167 20 is_stmt 0 view .LVU7
+  33 000e 1092 0000 		sts SP10281_DigitCnt,__zero_reg__
+  34               	.L2:
+ 168:SP10281_3x7segment.cpp **** 
+ 169:SP10281_3x7segment.cpp **** 	/* Activate next digit */
+ 170:SP10281_3x7segment.cpp **** 	tmp = (1 << (SP10281_DigitCnt + GPIO_SP10281_DIGIT0_PIN));
+  35               		.loc 1 170 2 is_stmt 1 view .LVU8
+  36               		.loc 1 170 15 is_stmt 0 view .LVU9
+  37 0012 9091 0000 		lds r25,SP10281_DigitCnt
+  38               		.loc 1 170 32 view .LVU10
+  39 0016 9B5F      		subi r25,lo8(-(5))
+  40               		.loc 1 170 6 view .LVU11
+  41 0018 81E0      		ldi r24,lo8(1)
+  42 001a 00C0      		rjmp 2f
+  43               		1:
+  44 001c 880F      		lsl r24
+  45               		2:
+  46 001e 9A95      		dec r25
+  47 0020 02F4      		brpl 1b
+  48 0022 8093 0000 		sts _ZZ14SP10281_UpdatevE3tmp,r24
+ 171:SP10281_3x7segment.cpp **** 	GPIO_SP10281_DIGIT_PORT |= GPIO_SP10281_DIGIT_MASK;
+  49               		.loc 1 171 2 is_stmt 1 view .LVU12
+  50               		.loc 1 171 26 is_stmt 0 view .LVU13
+  51 0026 85B1      		in r24,0x5
+  52 0028 806E      		ori r24,lo8(-32)
+  53 002a 85B9      		out 0x5,r24
+ 172:SP10281_3x7segment.cpp **** 	GPIO_SP10281_DIGIT_PORT &= ~tmp;
+  54               		.loc 1 172 2 is_stmt 1 view .LVU14
+  55               		.loc 1 172 26 is_stmt 0 view .LVU15
+  56 002c 95B1      		in r25,0x5
+  57 002e 8091 0000 		lds r24,_ZZ14SP10281_UpdatevE3tmp
+  58 0032 8095      		com r24
+  59 0034 8923      		and r24,r25
+  60 0036 85B9      		out 0x5,r24
+ 173:SP10281_3x7segment.cpp **** 
+ 174:SP10281_3x7segment.cpp **** 	/* Update segments */
+ 175:SP10281_3x7segment.cpp **** 	GPIO_SP10281_SEGMENT_PORT = SP10281_DigitData[SP10281_DigitCnt];
+  61               		.loc 1 175 2 is_stmt 1 view .LVU16
+  62               		.loc 1 175 48 is_stmt 0 view .LVU17
+  63 0038 E091 0000 		lds r30,SP10281_DigitCnt
+  64 003c F0E0      		ldi r31,0
+  65               		.loc 1 175 64 view .LVU18
+  66 003e E050      		subi r30,lo8(-(SP10281_DigitData))
+  67 0040 F040      		sbci r31,hi8(-(SP10281_DigitData))
+  68 0042 8081      		ld r24,Z
+  69               		.loc 1 175 28 view .LVU19
+  70 0044 82B9      		out 0x2,r24
+  71               	/* epilogue start */
+ 176:SP10281_3x7segment.cpp **** }
+  72               		.loc 1 176 1 view .LVU20
+  73 0046 0895      		ret
+  74               		.cfi_endproc
+  75               	.LFE1:
+  77               	.global	_Z19SP10281_WriteSinglehch
+  79               	_Z19SP10281_WriteSinglehch:
+  80               	.LVL0:
+  81               	.LFB2:
+ 177:SP10281_3x7segment.cpp **** 
+ 178:SP10281_3x7segment.cpp **** void SP10281_WriteSingle(unsigned char dig, char data, unsigned char dot)
+ 179:SP10281_3x7segment.cpp **** {	
+  82               		.loc 1 179 1 is_stmt 1 view -0
+  83               		.cfi_startproc
+  84               	/* prologue: function */
+  85               	/* frame size = 0 */
+  86               	/* stack size = 0 */
+  87               	.L__stack_usage = 0
+ 180:SP10281_3x7segment.cpp **** 	SP10281_DigitData[dig] = SP10281_DigitTable[(unsigned char)data];
+  88               		.loc 1 180 2 view .LVU22
+  89               		.loc 1 180 46 is_stmt 0 view .LVU23
+  90 0048 70E0      		ldi r23,0
+  91               		.loc 1 180 20 view .LVU24
+  92 004a E82F      		mov r30,r24
+  93 004c F0E0      		ldi r31,0
+  94               		.loc 1 180 65 view .LVU25
+  95 004e 6050      		subi r22,lo8(-(SP10281_DigitTable))
+  96 0050 7040      		sbci r23,hi8(-(SP10281_DigitTable))
+  97               	.LVL1:
+  98               		.loc 1 180 65 view .LVU26
+  99 0052 DB01      		movw r26,r22
+ 100 0054 8C91      		ld r24,X
+ 101               	.LVL2:
+ 102               		.loc 1 180 25 view .LVU27
+ 103 0056 E050      		subi r30,lo8(-(SP10281_DigitData))
+ 104 0058 F040      		sbci r31,hi8(-(SP10281_DigitData))
+ 105               	.LVL3:
+ 106               		.loc 1 180 25 view .LVU28
+ 107 005a 8083      		st Z,r24
+ 181:SP10281_3x7segment.cpp **** 	
+ 182:SP10281_3x7segment.cpp **** 	/* Set or clear dot */
+ 183:SP10281_3x7segment.cpp **** 	if (dot)
+ 108               		.loc 1 183 2 is_stmt 1 view .LVU29
+ 184:SP10281_3x7segment.cpp **** 		SP10281_DigitData[dig] &= 0b01111111;
+ 109               		.loc 1 184 26 is_stmt 0 view .LVU30
+ 110 005c 8081      		ld r24,Z
+ 183:SP10281_3x7segment.cpp **** 		SP10281_DigitData[dig] &= 0b01111111;
+ 111               		.loc 1 183 2 view .LVU31
+ 112 005e 4423      		tst r20
+ 113 0060 01F0      		breq .L4
+ 114               		.loc 1 184 3 is_stmt 1 view .LVU32
+ 115               		.loc 1 184 26 is_stmt 0 view .LVU33
+ 116 0062 8F77      		andi r24,lo8(127)
+ 117               	.L6:
+ 185:SP10281_3x7segment.cpp **** 	else
+ 186:SP10281_3x7segment.cpp **** 		SP10281_DigitData[dig] |= 0b10000000;
+ 118               		.loc 1 186 26 view .LVU34
+ 119 0064 8083      		st Z,r24
+ 120               	/* epilogue start */
+ 187:SP10281_3x7segment.cpp **** }
+ 121               		.loc 1 187 1 view .LVU35
+ 122 0066 0895      		ret
+ 123               	.L4:
+ 186:SP10281_3x7segment.cpp **** }
+ 124               		.loc 1 186 3 is_stmt 1 view .LVU36
+ 186:SP10281_3x7segment.cpp **** }
+ 125               		.loc 1 186 26 is_stmt 0 view .LVU37
+ 126 0068 8068      		ori r24,lo8(-128)
+ 127 006a 00C0      		rjmp .L6
+ 128               		.cfi_endproc
+ 129               	.LFE2:
+ 132               	_Z19SP10281_WriteNumbers.part.0:
+ 133               	.LVL4:
+ 134               	.LFB5:
+ 188:SP10281_3x7segment.cpp **** 
+ 189:SP10281_3x7segment.cpp **** void SP10281_WriteAll(char c2, char c1, char c0, unsigned char dot2, unsigned char dot1, unsigned c
+ 190:SP10281_3x7segment.cpp **** {
+ 191:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_0, c0, dot0);
+ 192:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_1, c1, dot1);
+ 193:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_2, c2, dot2);
+ 194:SP10281_3x7segment.cpp **** }
+ 195:SP10281_3x7segment.cpp **** 
+ 196:SP10281_3x7segment.cpp **** /* Writes a number between -99 and 999 to the display */
+ 197:SP10281_3x7segment.cpp **** void SP10281_WriteNumber(short num)
+ 135               		.loc 1 197 6 is_stmt 1 view -0
+ 136               		.cfi_startproc
+ 137               		.loc 1 197 6 is_stmt 0 view .LVU39
+ 138 006c CF93      		push r28
+ 139               	.LCFI0:
+ 140               		.cfi_def_cfa_offset 3
+ 141               		.cfi_offset 28, -2
+ 142 006e DF93      		push r29
+ 143               	.LCFI1:
+ 144               		.cfi_def_cfa_offset 4
+ 145               		.cfi_offset 29, -3
+ 146               	/* prologue: function */
+ 147               	/* frame size = 0 */
+ 148               	/* stack size = 2 */
+ 149               	.L__stack_usage = 2
+ 150 0070 EC01      		movw r28,r24
+ 198:SP10281_3x7segment.cpp **** {
+ 199:SP10281_3x7segment.cpp **** 	short tmp = 0;
+ 200:SP10281_3x7segment.cpp **** 	
+ 201:SP10281_3x7segment.cpp **** 	if (num >= -99 && num <= 999)
+ 202:SP10281_3x7segment.cpp **** 	{
+ 203:SP10281_3x7segment.cpp **** 		if (num < 0)
+ 151               		.loc 1 203 3 is_stmt 1 view .LVU40
+ 152 0072 97FF      		sbrs r25,7
+ 153 0074 00C0      		rjmp .L8
+ 204:SP10281_3x7segment.cpp **** 		{
+ 205:SP10281_3x7segment.cpp **** 			SP10281_WriteSingle(SP10281_DIGIT_2, '-', 0);
+ 154               		.loc 1 205 4 view .LVU41
+ 155               		.loc 1 205 23 is_stmt 0 view .LVU42
+ 156 0076 40E0      		ldi r20,0
+ 157 0078 6DE2      		ldi r22,lo8(45)
+ 158 007a 82E0      		ldi r24,lo8(2)
+ 159               	.LVL5:
+ 160               		.loc 1 205 23 view .LVU43
+ 161 007c 0E94 0000 		call _Z19SP10281_WriteSinglehch
+ 162               	.LVL6:
+ 206:SP10281_3x7segment.cpp **** 			num = -num;
+ 163               		.loc 1 206 4 is_stmt 1 view .LVU44
+ 164               		.loc 1 206 8 is_stmt 0 view .LVU45
+ 165 0080 8827      		clr r24
+ 166 0082 9927      		clr r25
+ 167 0084 8C1B      		sub r24,r28
+ 168 0086 9D0B      		sbc r25,r29
+ 169               	.LVL7:
+ 170               	.L9:
+ 207:SP10281_3x7segment.cpp **** 		}
+ 208:SP10281_3x7segment.cpp **** 		else
+ 209:SP10281_3x7segment.cpp **** 		{
+ 210:SP10281_3x7segment.cpp **** 			tmp = num / 100;
+ 211:SP10281_3x7segment.cpp **** 			tmp += '0';
+ 212:SP10281_3x7segment.cpp **** 			SP10281_WriteSingle(SP10281_DIGIT_2, tmp, 0);
+ 213:SP10281_3x7segment.cpp **** 			num %= 100;
+ 214:SP10281_3x7segment.cpp **** 		}
+ 215:SP10281_3x7segment.cpp **** 		
+ 216:SP10281_3x7segment.cpp **** 		tmp = num / 10;
+ 171               		.loc 1 216 3 is_stmt 1 view .LVU46
+ 172               		.loc 1 216 7 is_stmt 0 view .LVU47
+ 173 0088 6AE0      		ldi r22,lo8(10)
+ 174 008a 70E0      		ldi r23,0
+ 175 008c 0E94 0000 		call __divmodhi4
+ 176 0090 EC01      		movw r28,r24
+ 177               	.LVL8:
+ 217:SP10281_3x7segment.cpp **** 		tmp += '0';
+ 178               		.loc 1 217 3 is_stmt 1 view .LVU48
+ 218:SP10281_3x7segment.cpp **** 		SP10281_WriteSingle(SP10281_DIGIT_1, tmp, 0);
+ 179               		.loc 1 218 3 view .LVU49
+ 217:SP10281_3x7segment.cpp **** 		tmp += '0';
+ 180               		.loc 1 217 7 is_stmt 0 view .LVU50
+ 181 0092 605D      		subi r22,-48
+ 182 0094 7F4F      		sbci r23,-1
+ 183               	.LVL9:
+ 184               		.loc 1 218 22 view .LVU51
+ 185 0096 40E0      		ldi r20,0
+ 186 0098 81E0      		ldi r24,lo8(1)
+ 187 009a 0E94 0000 		call _Z19SP10281_WriteSinglehch
+ 188               	.LVL10:
+ 219:SP10281_3x7segment.cpp **** 		num %= 10;
+ 189               		.loc 1 219 3 is_stmt 1 view .LVU52
+ 220:SP10281_3x7segment.cpp **** 		
+ 221:SP10281_3x7segment.cpp **** 		tmp = num + '0';
+ 190               		.loc 1 221 3 view .LVU53
+ 222:SP10281_3x7segment.cpp **** 		SP10281_WriteSingle(SP10281_DIGIT_0, tmp, 0);
+ 191               		.loc 1 222 3 view .LVU54
+ 221:SP10281_3x7segment.cpp **** 		SP10281_WriteSingle(SP10281_DIGIT_0, tmp, 0);
+ 192               		.loc 1 221 7 is_stmt 0 view .LVU55
+ 193 009e BE01      		movw r22,r28
+ 194 00a0 605D      		subi r22,-48
+ 195 00a2 7F4F      		sbci r23,-1
+ 196               		.loc 1 222 22 view .LVU56
+ 197 00a4 40E0      		ldi r20,0
+ 198 00a6 80E0      		ldi r24,0
+ 199               	/* epilogue start */
+ 223:SP10281_3x7segment.cpp **** 	}
+ 224:SP10281_3x7segment.cpp **** }
+ 200               		.loc 1 224 1 view .LVU57
+ 201 00a8 DF91      		pop r29
+ 202 00aa CF91      		pop r28
+ 222:SP10281_3x7segment.cpp **** 	}
+ 203               		.loc 1 222 22 view .LVU58
+ 204 00ac 0C94 0000 		jmp _Z19SP10281_WriteSinglehch
+ 205               	.LVL11:
+ 206               	.L8:
+ 210:SP10281_3x7segment.cpp **** 			tmp += '0';
+ 207               		.loc 1 210 4 is_stmt 1 view .LVU59
+ 210:SP10281_3x7segment.cpp **** 			tmp += '0';
+ 208               		.loc 1 210 8 is_stmt 0 view .LVU60
+ 209 00b0 64E6      		ldi r22,lo8(100)
+ 210 00b2 70E0      		ldi r23,0
+ 211 00b4 0E94 0000 		call __divmodhi4
+ 212               	.LVL12:
+ 210:SP10281_3x7segment.cpp **** 			tmp += '0';
+ 213               		.loc 1 210 8 view .LVU61
+ 214 00b8 D82F      		mov r29,r24
+ 215 00ba C92F      		mov r28,r25
+ 216               	.LVL13:
+ 211:SP10281_3x7segment.cpp **** 			SP10281_WriteSingle(SP10281_DIGIT_2, tmp, 0);
+ 217               		.loc 1 211 4 is_stmt 1 view .LVU62
+ 212:SP10281_3x7segment.cpp **** 			num %= 100;
+ 218               		.loc 1 212 4 view .LVU63
+ 211:SP10281_3x7segment.cpp **** 			SP10281_WriteSingle(SP10281_DIGIT_2, tmp, 0);
+ 219               		.loc 1 211 8 is_stmt 0 view .LVU64
+ 220 00bc 605D      		subi r22,-48
+ 221 00be 7F4F      		sbci r23,-1
+ 222               	.LVL14:
+ 212:SP10281_3x7segment.cpp **** 			num %= 100;
+ 223               		.loc 1 212 23 view .LVU65
+ 224 00c0 40E0      		ldi r20,0
+ 225 00c2 82E0      		ldi r24,lo8(2)
+ 226 00c4 0E94 0000 		call _Z19SP10281_WriteSinglehch
+ 227               	.LVL15:
+ 213:SP10281_3x7segment.cpp **** 		}
+ 228               		.loc 1 213 4 is_stmt 1 view .LVU66
+ 213:SP10281_3x7segment.cpp **** 		}
+ 229               		.loc 1 213 8 is_stmt 0 view .LVU67
+ 230 00c8 8D2F      		mov r24,r29
+ 231 00ca 9C2F      		mov r25,r28
+ 232               	.LVL16:
+ 213:SP10281_3x7segment.cpp **** 		}
+ 233               		.loc 1 213 8 view .LVU68
+ 234 00cc 00C0      		rjmp .L9
+ 235               		.cfi_endproc
+ 236               	.LFE5:
+ 238               	.global	_Z12SP10281_Initv
+ 240               	_Z12SP10281_Initv:
+ 241               	.LFB0:
+ 153:SP10281_3x7segment.cpp **** 	/* Setup GPIOs */
+ 242               		.loc 1 153 1 is_stmt 1 view -0
+ 243               		.cfi_startproc
+ 244               	/* prologue: function */
+ 245               	/* frame size = 0 */
+ 246               	/* stack size = 0 */
+ 247               	.L__stack_usage = 0
+ 155:SP10281_3x7segment.cpp **** 	GPIO_SP10281_SEGMENT_DDR = 0xFF;					// Set GPIO output pins for individual segments
+ 248               		.loc 1 155 2 view .LVU70
+ 155:SP10281_3x7segment.cpp **** 	GPIO_SP10281_SEGMENT_DDR = 0xFF;					// Set GPIO output pins for individual segments
+ 249               		.loc 1 155 25 is_stmt 0 view .LVU71
+ 250 00ce 84B1      		in r24,0x4
+ 251 00d0 806E      		ori r24,lo8(-32)
+ 252 00d2 84B9      		out 0x4,r24
+ 156:SP10281_3x7segment.cpp **** 	
+ 253               		.loc 1 156 2 is_stmt 1 view .LVU72
+ 156:SP10281_3x7segment.cpp **** 	
+ 254               		.loc 1 156 27 is_stmt 0 view .LVU73
+ 255 00d4 8FEF      		ldi r24,lo8(-1)
+ 256 00d6 81B9      		out 0x1,r24
+ 158:SP10281_3x7segment.cpp **** }
+ 257               		.loc 1 158 2 is_stmt 1 view .LVU74
+ 258               	.LVL17:
+ 259               	.LBB4:
+ 260               	.LBI4:
+ 197:SP10281_3x7segment.cpp **** {
+ 261               		.loc 1 197 6 view .LVU75
+ 262               	.LBB5:
+ 199:SP10281_3x7segment.cpp **** 	
+ 263               		.loc 1 199 2 view .LVU76
+ 201:SP10281_3x7segment.cpp **** 	{
+ 264               		.loc 1 201 2 view .LVU77
+ 265 00d8 8BE7      		ldi r24,lo8(123)
+ 266 00da 90E0      		ldi r25,0
+ 267 00dc 0C94 0000 		jmp _Z19SP10281_WriteNumbers.part.0
+ 268               	.LVL18:
+ 269               	.LBE5:
+ 270               	.LBE4:
+ 271               		.cfi_endproc
+ 272               	.LFE0:
+ 274               	.global	_Z16SP10281_WriteAllccchhh
+ 276               	_Z16SP10281_WriteAllccchhh:
+ 277               	.LVL19:
+ 278               	.LFB3:
+ 190:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_0, c0, dot0);
+ 279               		.loc 1 190 1 view -0
+ 280               		.cfi_startproc
+ 190:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_0, c0, dot0);
+ 281               		.loc 1 190 1 is_stmt 0 view .LVU79
+ 282 00e0 EF92      		push r14
+ 283               	.LCFI2:
+ 284               		.cfi_def_cfa_offset 3
+ 285               		.cfi_offset 14, -2
+ 286 00e2 0F93      		push r16
+ 287               	.LCFI3:
+ 288               		.cfi_def_cfa_offset 4
+ 289               		.cfi_offset 16, -3
+ 290 00e4 1F93      		push r17
+ 291               	.LCFI4:
+ 292               		.cfi_def_cfa_offset 5
+ 293               		.cfi_offset 17, -4
+ 294 00e6 CF93      		push r28
+ 295               	.LCFI5:
+ 296               		.cfi_def_cfa_offset 6
+ 297               		.cfi_offset 28, -5
+ 298 00e8 DF93      		push r29
+ 299               	.LCFI6:
+ 300               		.cfi_def_cfa_offset 7
+ 301               		.cfi_offset 29, -6
+ 302               	/* prologue: function */
+ 303               	/* frame size = 0 */
+ 304               	/* stack size = 5 */
+ 305               	.L__stack_usage = 5
+ 306 00ea C82F      		mov r28,r24
+ 307 00ec 162F      		mov r17,r22
+ 308 00ee 642F      		mov r22,r20
+ 309               	.LVL20:
+ 190:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_0, c0, dot0);
+ 310               		.loc 1 190 1 view .LVU80
+ 311 00f0 D22F      		mov r29,r18
+ 312 00f2 4E2D      		mov r20,r14
+ 313               	.LVL21:
+ 191:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_1, c1, dot1);
+ 314               		.loc 1 191 2 is_stmt 1 view .LVU81
+ 191:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_1, c1, dot1);
+ 315               		.loc 1 191 21 is_stmt 0 view .LVU82
+ 316 00f4 80E0      		ldi r24,0
+ 317               	.LVL22:
+ 191:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_1, c1, dot1);
+ 318               		.loc 1 191 21 view .LVU83
+ 319 00f6 0E94 0000 		call _Z19SP10281_WriteSinglehch
+ 320               	.LVL23:
+ 192:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_2, c2, dot2);
+ 321               		.loc 1 192 2 is_stmt 1 view .LVU84
+ 192:SP10281_3x7segment.cpp **** 	SP10281_WriteSingle(SP10281_DIGIT_2, c2, dot2);
+ 322               		.loc 1 192 21 is_stmt 0 view .LVU85
+ 323 00fa 402F      		mov r20,r16
+ 324 00fc 612F      		mov r22,r17
+ 325 00fe 81E0      		ldi r24,lo8(1)
+ 326 0100 0E94 0000 		call _Z19SP10281_WriteSinglehch
+ 327               	.LVL24:
+ 193:SP10281_3x7segment.cpp **** }
+ 328               		.loc 1 193 2 is_stmt 1 view .LVU86
+ 193:SP10281_3x7segment.cpp **** }
+ 329               		.loc 1 193 21 is_stmt 0 view .LVU87
+ 330 0104 4D2F      		mov r20,r29
+ 331 0106 6C2F      		mov r22,r28
+ 332 0108 82E0      		ldi r24,lo8(2)
+ 333               	/* epilogue start */
+ 194:SP10281_3x7segment.cpp **** 
+ 334               		.loc 1 194 1 view .LVU88
+ 335 010a DF91      		pop r29
+ 336               	.LVL25:
+ 194:SP10281_3x7segment.cpp **** 
+ 337               		.loc 1 194 1 view .LVU89
+ 338 010c CF91      		pop r28
+ 339               	.LVL26:
+ 194:SP10281_3x7segment.cpp **** 
+ 340               		.loc 1 194 1 view .LVU90
+ 341 010e 1F91      		pop r17
+ 342               	.LVL27:
+ 194:SP10281_3x7segment.cpp **** 
+ 343               		.loc 1 194 1 view .LVU91
+ 344 0110 0F91      		pop r16
+ 345               	.LVL28:
+ 194:SP10281_3x7segment.cpp **** 
+ 346               		.loc 1 194 1 view .LVU92
+ 347 0112 EF90      		pop r14
+ 348               	.LVL29:
+ 193:SP10281_3x7segment.cpp **** }
+ 349               		.loc 1 193 21 view .LVU93
+ 350 0114 0C94 0000 		jmp _Z19SP10281_WriteSinglehch
+ 351               	.LVL30:
+ 193:SP10281_3x7segment.cpp **** }
+ 352               		.loc 1 193 21 view .LVU94
+ 353               		.cfi_endproc
+ 354               	.LFE3:
+ 356               	.global	_Z19SP10281_WriteNumbers
+ 358               	_Z19SP10281_WriteNumbers:
+ 359               	.LVL31:
+ 360               	.LFB4:
+ 198:SP10281_3x7segment.cpp **** 	short tmp = 0;
+ 361               		.loc 1 198 1 is_stmt 1 view -0
+ 362               		.cfi_startproc
+ 363               	/* prologue: function */
+ 364               	/* frame size = 0 */
+ 365               	/* stack size = 0 */
+ 366               	.L__stack_usage = 0
+ 199:SP10281_3x7segment.cpp **** 	
+ 367               		.loc 1 199 2 view .LVU96
+ 201:SP10281_3x7segment.cpp **** 	{
+ 368               		.loc 1 201 2 view .LVU97
+ 201:SP10281_3x7segment.cpp **** 	{
+ 369               		.loc 1 201 17 is_stmt 0 view .LVU98
+ 370 0118 9C01      		movw r18,r24
+ 371 011a 2D59      		subi r18,-99
+ 372 011c 3F4F      		sbci r19,-1
+ 201:SP10281_3x7segment.cpp **** 	{
+ 373               		.loc 1 201 2 view .LVU99
+ 374 011e 2B34      		cpi r18,75
+ 375 0120 3440      		sbci r19,4
+ 376 0122 00F4      		brsh .L12
+ 377 0124 0C94 0000 		jmp _Z19SP10281_WriteNumbers.part.0
+ 378               	.LVL32:
+ 379               	.L12:
+ 380               	/* epilogue start */
+ 381               		.loc 1 224 1 view .LVU100
+ 382 0128 0895      		ret
+ 383               		.cfi_endproc
+ 384               	.LFE4:
+ 386               		.local	_ZZ14SP10281_UpdatevE3tmp
+ 387               		.comm	_ZZ14SP10281_UpdatevE3tmp,1,1
+ 388               	.global	SP10281_DigitTable
+ 389               		.data
+ 392               	SP10281_DigitTable:
+ 393 0000 FFFF FFFF 		.ascii	"\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377"
+ 393      FFFF FFFF 
+ 393      FFFF FFFF 
+ 393      FFFF FF
+ 394 000f FFFF FFFF 		.ascii	"\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377"
+ 394      FFFF FFFF 
+ 394      FFFF FFFF 
+ 394      FFFF FF
+ 395 001e FFFF FFFF 		.ascii	"\377\377\377\377\335\377\377\377\377\377\306\360\377\377\377"
+ 395      DDFF FFFF 
+ 395      FFFF C6F0 
+ 395      FFFF FF
+ 396 002d BFFF ADC0 		.ascii	"\277\377\255\300\371\244\260\231\222\202\370\200\220\377\377"
+ 396      F9A4 B099 
+ 396      9282 F880 
+ 396      90FF FF
+ 397 003c FFFF FFFF 		.ascii	"\377\377\377\377\377\210\203\306\241\206\216\302\211\371\341"
+ 397      FF88 83C6 
+ 397      A186 8EC2 
+ 397      89F9 E1
+ 398 004b 8AC7 EAAB 		.ascii	"\212\307\352\253\300\214\230\257\322\207\301\301\325\211\221"
+ 398      C08C 98AF 
+ 398      D287 C1C1 
+ 398      D589 91
+ 399 005a E4C6 9BF0 		.ascii	"\344\306\233\360\376\367\377\210\203\247\241\206\216\302\213"
+ 399      FEF7 FF88 
+ 399      83A7 A186 
+ 399      8EC2 8B
+ 400 0069 FBE1 8AC7 		.ascii	"\373\341\212\307\352\253\243\214\230\257\322\207\343\343\301"
+ 400      EAAB A38C 
+ 400      98AF D287 
+ 400      E3E3 C1
+ 401 0078 8991 E4FF 		.ascii	"\211\221\344\377\377\377\377\377"
+ 401      FFFF FFFF 
+ 402               	.global	SP10281_OvfFlag
+ 403               		.section .bss
+ 406               	SP10281_OvfFlag:
+ 407 0000 00        		.zero	1
+ 408               	.global	SP10281_OvfCnt
+ 411               	SP10281_OvfCnt:
+ 412 0001 00        		.zero	1
+ 413               	.global	SP10281_DigitCnt
+ 416               	SP10281_DigitCnt:
+ 417 0002 00        		.zero	1
+ 418               	.global	SP10281_DigitData
+ 421               	SP10281_DigitData:
+ 422 0003 0000 00   		.zero	3
+ 423               		.text
+ 424               	.Letext0:
+ 425               		.file 2 "SP10281_3x7segment.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 SP10281_3x7segment.cpp
+     /tmp/ccAsKjkd.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccAsKjkd.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccAsKjkd.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccAsKjkd.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccAsKjkd.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccAsKjkd.s:12     .text:0000000000000000 _Z14SP10281_Updatev
+     /tmp/ccAsKjkd.s:416    .bss:0000000000000002 SP10281_DigitCnt
+                             .bss:0000000000000006 _ZZ14SP10281_UpdatevE3tmp
+     /tmp/ccAsKjkd.s:421    .bss:0000000000000003 SP10281_DigitData
+     /tmp/ccAsKjkd.s:79     .text:0000000000000048 _Z19SP10281_WriteSinglehch
+     /tmp/ccAsKjkd.s:392    .data:0000000000000000 SP10281_DigitTable
+     /tmp/ccAsKjkd.s:132    .text:000000000000006c _Z19SP10281_WriteNumbers.part.0
+     /tmp/ccAsKjkd.s:240    .text:00000000000000ce _Z12SP10281_Initv
+     /tmp/ccAsKjkd.s:276    .text:00000000000000e0 _Z16SP10281_WriteAllccchhh
+     /tmp/ccAsKjkd.s:358    .text:0000000000000118 _Z19SP10281_WriteNumbers
+     /tmp/ccAsKjkd.s:406    .bss:0000000000000000 SP10281_OvfFlag
+     /tmp/ccAsKjkd.s:411    .bss:0000000000000001 SP10281_OvfCnt
+
+UNDEFINED SYMBOLS
+__divmodhi4
+__do_copy_data
+__do_clear_bss

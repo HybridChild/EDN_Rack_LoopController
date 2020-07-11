@@ -1,0 +1,156 @@
+   1               		.file	"util.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z16Util_ReverseByteh
+  12               	_Z16Util_ReverseByteh:
+  13               	.LVL0:
+  14               	.LFB0:
+  15               		.file 1 "util.cpp"
+   1:util.cpp      **** /*
+   2:util.cpp      ****  * util.cpp
+   3:util.cpp      ****  *
+   4:util.cpp      ****  * Created: 26-01-2020 19:36:30
+   5:util.cpp      ****  *  Author: Esben
+   6:util.cpp      ****  */ 
+   7:util.cpp      **** 
+   8:util.cpp      **** #include "util.h"
+   9:util.cpp      **** 
+  10:util.cpp      **** uint8_t Util_ReverseByte(uint8_t b)
+  11:util.cpp      **** {
+  16               		.loc 1 11 1 view -0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  12:util.cpp      **** 	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+  22               		.loc 1 12 2 view .LVU1
+  23               		.loc 1 12 22 is_stmt 0 view .LVU2
+  24 0000 8295      		swap r24
+  25               	.LVL1:
+  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+  26               		.loc 1 13 2 is_stmt 1 view .LVU3
+  27               		.loc 1 13 9 is_stmt 0 view .LVU4
+  28 0002 90E0      		ldi r25,0
+  29               	.LVL2:
+  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+  30               		.loc 1 14 2 is_stmt 1 view .LVU5
+  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+  31               		.loc 1 13 17 is_stmt 0 view .LVU6
+  32 0004 9C01      		movw r18,r24
+  33 0006 3595      		asr r19
+  34 0008 2795      		ror r18
+  35 000a 3595      		asr r19
+  36 000c 2795      		ror r18
+  37 000e 2373      		andi r18,lo8(51)
+  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+  38               		.loc 1 13 35 view .LVU7
+  39 0010 880F      		lsl r24
+  40 0012 991F      		rol r25
+  41 0014 880F      		lsl r24
+  42 0016 991F      		rol r25
+  43               	.LVL3:
+  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+  44               		.loc 1 13 35 view .LVU8
+  45 0018 8C7C      		andi r24,lo8(-52)
+  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+  46               		.loc 1 13 22 view .LVU9
+  47 001a 282B      		or r18,r24
+  48               		.loc 1 14 9 view .LVU10
+  49 001c 30E0      		ldi r19,0
+  50               	.LVL4:
+  15:util.cpp      **** 	return b;
+  51               		.loc 1 15 2 is_stmt 1 view .LVU11
+  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+  52               		.loc 1 14 17 is_stmt 0 view .LVU12
+  53 001e C901      		movw r24,r18
+  54 0020 9595      		asr r25
+  55 0022 8795      		ror r24
+  56 0024 8575      		andi r24,lo8(85)
+  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+  57               		.loc 1 14 35 view .LVU13
+  58 0026 220F      		lsl r18
+  59 0028 331F      		rol r19
+  60               	.LVL5:
+  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+  61               		.loc 1 14 35 view .LVU14
+  62 002a 2A7A      		andi r18,lo8(-86)
+  16:util.cpp      **** }
+  63               		.loc 1 16 1 view .LVU15
+  64 002c 822B      		or r24,r18
+  65               	/* epilogue start */
+  66 002e 0895      		ret
+  67               		.cfi_endproc
+  68               	.LFE0:
+  70               	.global	_Z12Util_Bit2Inth
+  72               	_Z12Util_Bit2Inth:
+  73               	.LVL6:
+  74               	.LFB1:
+  17:util.cpp      **** 
+  18:util.cpp      **** uint8_t Util_Bit2Int(uint8_t val)
+  19:util.cpp      **** {
+  75               		.loc 1 19 1 is_stmt 1 view -0
+  76               		.cfi_startproc
+  77               	/* prologue: function */
+  78               	/* frame size = 0 */
+  79               	/* stack size = 0 */
+  80               	.L__stack_usage = 0
+  81               		.loc 1 19 1 is_stmt 0 view .LVU17
+  82 0030 982F      		mov r25,r24
+  20:util.cpp      **** 	uint8_t i = 0;
+  83               		.loc 1 20 2 is_stmt 1 view .LVU18
+  84               	.LVL7:
+  85               		.loc 1 20 10 is_stmt 0 view .LVU19
+  86 0032 80E0      		ldi r24,0
+  87               	.LVL8:
+  88               	.L4:
+  21:util.cpp      **** 	
+  22:util.cpp      **** 	while (val)
+  89               		.loc 1 22 2 is_stmt 1 view .LVU20
+  90               		.loc 1 22 9 view .LVU21
+  91 0034 9923      		tst r25
+  92 0036 01F0      		breq .L2
+  23:util.cpp      **** 	{
+  24:util.cpp      **** 		val = (val >> 1);
+  93               		.loc 1 24 3 view .LVU22
+  94               		.loc 1 24 7 is_stmt 0 view .LVU23
+  95 0038 9695      		lsr r25
+  96               	.LVL9:
+  25:util.cpp      **** 		i++;
+  97               		.loc 1 25 3 is_stmt 1 view .LVU24
+  98               		.loc 1 25 4 is_stmt 0 view .LVU25
+  99 003a 8F5F      		subi r24,lo8(-(1))
+ 100               	.LVL10:
+  22:util.cpp      **** 	{
+ 101               		.loc 1 22 2 view .LVU26
+ 102 003c 00C0      		rjmp .L4
+ 103               	.LVL11:
+ 104               	.L2:
+ 105               	/* epilogue start */
+  26:util.cpp      **** 	}
+  27:util.cpp      **** 	
+  28:util.cpp      **** 	return i;
+  29:util.cpp      **** }...
+ 106               		.loc 1 29 1 view .LVU27
+ 107 003e 0895      		ret
+ 108               		.cfi_endproc
+ 109               	.LFE1:
+ 111               	.Letext0:
+ 112               		.file 2 "/usr/lib/gcc/avr/9.2.0/include/stdint-gcc.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 util.cpp
+     /tmp/cc2efo1N.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cc2efo1N.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cc2efo1N.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cc2efo1N.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cc2efo1N.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cc2efo1N.s:12     .text:0000000000000000 _Z16Util_ReverseByteh
+     /tmp/cc2efo1N.s:72     .text:0000000000000030 _Z12Util_Bit2Inth
+
+NO UNDEFINED SYMBOLS

@@ -1,0 +1,428 @@
+   1               		.file	"Segment7.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z20Segment7_WriteSinglehch
+  12               	_Z20Segment7_WriteSinglehch:
+  13               	.LVL0:
+  14               	.LFB0:
+  15               		.file 1 "Segment7.cpp"
+   1:Segment7.cpp  **** /*
+   2:Segment7.cpp  ****  * Segment7.cpp
+   3:Segment7.cpp  ****  *
+   4:Segment7.cpp  ****  * Created: 09-02-2020 14:48:32
+   5:Segment7.cpp  ****  *  Author: Esben
+   6:Segment7.cpp  ****  */ 
+   7:Segment7.cpp  **** 
+   8:Segment7.cpp  **** #include "Segment7.h"
+   9:Segment7.cpp  **** #include "MCP23017.h"
+  10:Segment7.cpp  **** #include "System.h"
+  11:Segment7.cpp  **** 
+  12:Segment7.cpp  **** volatile const unsigned char Segment7_DigitTable[128] = {
+  13:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [0]		Character: NULL */
+  14:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [1]		Character: SOH */
+  15:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [2]		Character: STX */
+  16:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [3]		Character: ETX */
+  17:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [4]		Character: EOT */
+  18:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [5]		Character: ENQ */
+  19:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [6]		Character: ACK */
+  20:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [7]		Character: BEL */
+  21:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [8]		Character: BS */
+  22:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [9]		Character: TAB */
+  23:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [10]		Character: LF */
+  24:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [11]		Character: VT */
+  25:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [12]		Character: FF */
+  26:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [13]		Character: CR */
+  27:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [14]		Character: SO */
+  28:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [15]		Character: SI */
+  29:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [16]		Character: DLE */
+  30:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [17]		Character: DC1 */
+  31:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [18]		Character: DC2 */
+  32:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [19]		Character: DC3 */
+  33:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [20]		Character: DC4 */
+  34:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [21]		Character: NAK */
+  35:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [22]		Character: SYN */
+  36:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [23]		Character: ETB */
+  37:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [24]		Character: CAN */
+  38:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [25]		Character: EM */
+  39:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [26]		Character: SUB */
+  40:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [27]		Character: ESC */
+  41:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [28]		Character: FS */
+  42:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [29]		Character: GS */
+  43:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [30]		Character: RS */
+  44:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [31]		Character: US */
+  45:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [32]		Character: Space */
+  46:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [33]		Character: ! */
+  47:Segment7.cpp  **** 	(unsigned char)~(0b00100010),	/* [34]		Character: " */
+  48:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [35]		Character: # */
+  49:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [36]		Character: $ */
+  50:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [37]		Character: % */
+  51:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [38]		Character: & */
+  52:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [39]		Character: ' */
+  53:Segment7.cpp  **** 	(unsigned char)~(0b00111001),	/* [40]		Character: ( */
+  54:Segment7.cpp  **** 	(unsigned char)~(0b00001111),	/* [41]		Character: ) */
+  55:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [42]		Character: * */
+  56:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [43]		Character: + */
+  57:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [44]		Character: ´ */
+  58:Segment7.cpp  **** 	(unsigned char)~(0b01000000),	/* [45]		Character: - */
+  59:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [46]		Character: . */
+  60:Segment7.cpp  **** 	(unsigned char)~(0b01010010),	/* [47]		Character: / */
+  61:Segment7.cpp  **** 	(unsigned char)~(0b00111111),	/* [48]		Character: 0 */
+  62:Segment7.cpp  **** 	(unsigned char)~(0b00000110),	/* [49]		Character: 1 */
+  63:Segment7.cpp  **** 	(unsigned char)~(0b01011011),	/* [50]		Character: 2 */
+  64:Segment7.cpp  **** 	(unsigned char)~(0b01001111),	/* [51]		Character: 3 */
+  65:Segment7.cpp  **** 	(unsigned char)~(0b01100110),	/* [52]		Character: 4 */
+  66:Segment7.cpp  **** 	(unsigned char)~(0b01101101),	/* [53]		Character: 5 */
+  67:Segment7.cpp  **** 	(unsigned char)~(0b01111101),	/* [54]		Character: 6 */
+  68:Segment7.cpp  **** 	(unsigned char)~(0b00000111),	/* [55]		Character: 7 */
+  69:Segment7.cpp  **** 	(unsigned char)~(0b01111111),	/* [56]		Character: 8 */
+  70:Segment7.cpp  **** 	(unsigned char)~(0b01101111),	/* [57]		Character: 9 */
+  71:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [58]		Character: : */
+  72:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [59]		Character: ; */
+  73:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [60]		Character: < */
+  74:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [61]		Character: = */
+  75:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [62]		Character: > */
+  76:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [63]		Character: ? */
+  77:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [64]		Character: @ */
+  78:Segment7.cpp  **** 	(unsigned char)~(0b01110111),	/* [65]		Character: A */
+  79:Segment7.cpp  **** 	(unsigned char)~(0b01111100),	/* [66]		Character: B */
+  80:Segment7.cpp  **** 	(unsigned char)~(0b00111001),	/* [67]		Character: C */
+  81:Segment7.cpp  **** 	(unsigned char)~(0b01011110),	/* [68]		Character: D */
+  82:Segment7.cpp  **** 	(unsigned char)~(0b01111001),	/* [69]		Character: E */
+  83:Segment7.cpp  **** 	(unsigned char)~(0b01110001),	/* [70]		Character: F */
+  84:Segment7.cpp  **** 	(unsigned char)~(0b00111101),	/* [71]		Character: G */
+  85:Segment7.cpp  **** 	(unsigned char)~(0b01110110),	/* [72]		Character: H */
+  86:Segment7.cpp  **** 	(unsigned char)~(0b00000110),	/* [73]		Character: I */
+  87:Segment7.cpp  **** 	(unsigned char)~(0b00011110),	/* [74]		Character: J */
+  88:Segment7.cpp  **** 	(unsigned char)~(0b01110101),	/* [75]		Character: K */
+  89:Segment7.cpp  **** 	(unsigned char)~(0b00111000),	/* [76]		Character: L */
+  90:Segment7.cpp  **** 	(unsigned char)~(0b00010101),	/* [77]		Character: M */
+  91:Segment7.cpp  **** 	(unsigned char)~(0b01010100),	/* [78]		Character: N */
+  92:Segment7.cpp  **** 	(unsigned char)~(0b00111111),	/* [79]		Character: O */
+  93:Segment7.cpp  **** 	(unsigned char)~(0b01110011),	/* [80]		Character: P */
+  94:Segment7.cpp  **** 	(unsigned char)~(0b01100111),	/* [81]		Character: Q */
+  95:Segment7.cpp  **** 	(unsigned char)~(0b01010000),	/* [82]		Character: R */
+  96:Segment7.cpp  **** 	(unsigned char)~(0b00101101),	/* [83]		Character: S */
+  97:Segment7.cpp  **** 	(unsigned char)~(0b01111000),	/* [84]		Character: T */
+  98:Segment7.cpp  **** 	(unsigned char)~(0b00111110),	/* [85]		Character: U */
+  99:Segment7.cpp  **** 	(unsigned char)~(0b00111110),	/* [86]		Character: V */
+ 100:Segment7.cpp  **** 	(unsigned char)~(0b00101010),	/* [87]		Character: W */
+ 101:Segment7.cpp  **** 	(unsigned char)~(0b01110110),	/* [88]		Character: X */
+ 102:Segment7.cpp  **** 	(unsigned char)~(0b01101110),	/* [89]		Character: Y */
+ 103:Segment7.cpp  **** 	(unsigned char)~(0b00011011),	/* [90]		Character: Z */
+ 104:Segment7.cpp  **** 	(unsigned char)~(0b00111001),	/* [91]		Character: [ */
+ 105:Segment7.cpp  **** 	(unsigned char)~(0b01100100),	/* [92]		Character: \ */
+ 106:Segment7.cpp  **** 	(unsigned char)~(0b00001111),	/* [93]		Character: ] */
+ 107:Segment7.cpp  **** 	(unsigned char)~(0b00000001),	/* [94]		Character: ^ */
+ 108:Segment7.cpp  **** 	(unsigned char)~(0b00001000),	/* [95]		Character: _ */
+ 109:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [96]		Character: ` */
+ 110:Segment7.cpp  **** 	(unsigned char)~(0b01110111),	/* [97]		Character: a */
+ 111:Segment7.cpp  **** 	(unsigned char)~(0b01111100),	/* [98]		Character: b */
+ 112:Segment7.cpp  **** 	(unsigned char)~(0b01011000),	/* [99]		Character: c */
+ 113:Segment7.cpp  **** 	(unsigned char)~(0b01011110),	/* [100]	Character: d */
+ 114:Segment7.cpp  **** 	(unsigned char)~(0b01111001),	/* [101]	Character: e */
+ 115:Segment7.cpp  **** 	(unsigned char)~(0b01110001),	/* [102]	Character: f */
+ 116:Segment7.cpp  **** 	(unsigned char)~(0b00111101),	/* [103]	Character: g */
+ 117:Segment7.cpp  **** 	(unsigned char)~(0b01110100),	/* [104]	Character: h */
+ 118:Segment7.cpp  **** 	(unsigned char)~(0b00000100),	/* [105]	Character: i */
+ 119:Segment7.cpp  **** 	(unsigned char)~(0b00011110),	/* [106]	Character: j */
+ 120:Segment7.cpp  **** 	(unsigned char)~(0b01110101),	/* [107]	Character: k */
+ 121:Segment7.cpp  **** 	(unsigned char)~(0b00111000),	/* [108]	Character: l */
+ 122:Segment7.cpp  **** 	(unsigned char)~(0b00010101),	/* [109]	Character: m */
+ 123:Segment7.cpp  **** 	(unsigned char)~(0b01010100),	/* [110]	Character: n */
+ 124:Segment7.cpp  **** 	(unsigned char)~(0b01011100),	/* [111]	Character: o */
+ 125:Segment7.cpp  **** 	(unsigned char)~(0b01110011),	/* [112]	Character: p */
+ 126:Segment7.cpp  **** 	(unsigned char)~(0b01100111),	/* [113]	Character: q */
+ 127:Segment7.cpp  **** 	(unsigned char)~(0b01010000),	/* [114]	Character: r */
+ 128:Segment7.cpp  **** 	(unsigned char)~(0b00101101),	/* [115]	Character: s */
+ 129:Segment7.cpp  **** 	(unsigned char)~(0b01111000),	/* [116]	Character: t */
+ 130:Segment7.cpp  **** 	(unsigned char)~(0b00011100),	/* [117]	Character: u */
+ 131:Segment7.cpp  **** 	(unsigned char)~(0b00011100),	/* [118]	Character: v */
+ 132:Segment7.cpp  **** 	(unsigned char)~(0b00111110),	/* [119]	Character: w */
+ 133:Segment7.cpp  **** 	(unsigned char)~(0b01110110),	/* [120]	Character: x */
+ 134:Segment7.cpp  **** 	(unsigned char)~(0b01101110),	/* [121]	Character: y */
+ 135:Segment7.cpp  **** 	(unsigned char)~(0b00011011),	/* [122]	Character: z */
+ 136:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [123]	Character: { */
+ 137:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [124]	Character: | */
+ 138:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [125]	Character: } */
+ 139:Segment7.cpp  **** 	(unsigned char)~(0b00000000),	/* [126]	Character: ~ */
+ 140:Segment7.cpp  **** 	(unsigned char)~(0b00000000)	/* [127]	Character: DEL */
+ 141:Segment7.cpp  **** };
+ 142:Segment7.cpp  **** 
+ 143:Segment7.cpp  **** 
+ 144:Segment7.cpp  **** void Segment7_WriteSingle(uint8_t dig, char chr, uint8_t dot)
+ 145:Segment7.cpp  **** {
+  16               		.loc 1 145 1 view -0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  22               		.loc 1 145 1 is_stmt 0 view .LVU1
+  23 0000 942F      		mov r25,r20
+ 146:Segment7.cpp  **** 	unsigned char tmp = Segment7_DigitTable[(uint8_t)chr];
+  24               		.loc 1 146 2 is_stmt 1 view .LVU2
+  25               		.loc 1 146 42 is_stmt 0 view .LVU3
+  26 0002 E62F      		mov r30,r22
+  27 0004 F0E0      		ldi r31,0
+  28               		.loc 1 146 54 view .LVU4
+  29 0006 E050      		subi r30,lo8(-(Segment7_DigitTable))
+  30 0008 F040      		sbci r31,hi8(-(Segment7_DigitTable))
+  31 000a 4081      		ld r20,Z
+  32               	.LVL1:
+ 147:Segment7.cpp  **** 	
+ 148:Segment7.cpp  **** 	if (dot)
+  33               		.loc 1 148 2 is_stmt 1 view .LVU5
+  34 000c 9111      		cpse r25,__zero_reg__
+ 149:Segment7.cpp  **** 	{
+ 150:Segment7.cpp  **** 		tmp |= (1 << 7);
+  35               		.loc 1 150 3 view .LVU6
+  36               		.loc 1 150 7 is_stmt 0 view .LVU7
+  37 000e 4068      		ori r20,lo8(-128)
+  38               	.LVL2:
+  39               	.L2:
+ 151:Segment7.cpp  **** 	}
+ 152:Segment7.cpp  **** 	
+ 153:Segment7.cpp  **** 	if (dig == 0)
+  40               		.loc 1 153 2 is_stmt 1 view .LVU8
+  41 0010 8111      		cpse r24,__zero_reg__
+  42 0012 00C0      		rjmp .L3
+ 154:Segment7.cpp  **** 	{
+ 155:Segment7.cpp  **** 		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_0_1, OLATB, tmp);
+  43               		.loc 1 155 3 view .LVU9
+  44               		.loc 1 155 20 is_stmt 0 view .LVU10
+  45 0014 65E1      		ldi r22,lo8(21)
+  46               	.LVL3:
+  47               		.loc 1 155 20 view .LVU11
+  48 0016 81E0      		ldi r24,lo8(1)
+  49               	.LVL4:
+  50               	.L10:
+ 156:Segment7.cpp  **** 	}
+ 157:Segment7.cpp  **** 	else if (dig == 1)
+ 158:Segment7.cpp  **** 	{
+ 159:Segment7.cpp  **** 		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_0_1, OLATA, tmp);
+ 160:Segment7.cpp  **** 	}
+ 161:Segment7.cpp  **** 	else if (dig == 2)
+ 162:Segment7.cpp  **** 	{
+ 163:Segment7.cpp  **** 		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_2_3, OLATB, tmp);
+ 164:Segment7.cpp  **** 	}
+ 165:Segment7.cpp  **** 	else if (dig == 3)
+ 166:Segment7.cpp  **** 	{
+ 167:Segment7.cpp  **** 		MCP23017_WriteReg(MCP23017_ADDR_7SEG_DIGIT_2_3, OLATA, tmp);
+  51               		.loc 1 167 20 view .LVU12
+  52 0018 0C94 0000 		jmp _Z17MCP23017_WriteReghhh
+  53               	.LVL5:
+  54               	.L3:
+ 157:Segment7.cpp  **** 	{
+  55               		.loc 1 157 7 is_stmt 1 view .LVU13
+ 159:Segment7.cpp  **** 	}
+  56               		.loc 1 159 20 is_stmt 0 view .LVU14
+  57 001c 64E1      		ldi r22,lo8(20)
+  58               	.LVL6:
+ 157:Segment7.cpp  **** 	{
+  59               		.loc 1 157 7 view .LVU15
+  60 001e 8130      		cpi r24,lo8(1)
+  61 0020 01F0      		breq .L10
+ 161:Segment7.cpp  **** 	{
+  62               		.loc 1 161 7 is_stmt 1 view .LVU16
+ 163:Segment7.cpp  **** 	}
+  63               		.loc 1 163 20 is_stmt 0 view .LVU17
+  64 0022 65E1      		ldi r22,lo8(21)
+ 161:Segment7.cpp  **** 	{
+  65               		.loc 1 161 7 view .LVU18
+  66 0024 8230      		cpi r24,lo8(2)
+  67 0026 01F0      		breq .L10
+ 165:Segment7.cpp  **** 	{
+  68               		.loc 1 165 7 is_stmt 1 view .LVU19
+  69 0028 8330      		cpi r24,lo8(3)
+  70 002a 01F4      		brne .L1
+  71               		.loc 1 167 3 view .LVU20
+  72               		.loc 1 167 20 is_stmt 0 view .LVU21
+  73 002c 64E1      		ldi r22,lo8(20)
+  74 002e 82E0      		ldi r24,lo8(2)
+  75               	.LVL7:
+  76               		.loc 1 167 20 view .LVU22
+  77 0030 00C0      		rjmp .L10
+  78               	.LVL8:
+  79               	.L1:
+  80               	/* epilogue start */
+ 168:Segment7.cpp  **** 	}
+ 169:Segment7.cpp  **** }
+  81               		.loc 1 169 1 view .LVU23
+  82 0032 0895      		ret
+  83               		.cfi_endproc
+  84               	.LFE0:
+  86               	.global	_Z17Segment7_WriteAllcccchhhh
+  88               	_Z17Segment7_WriteAllcccchhhh:
+  89               	.LVL9:
+  90               	.LFB1:
+ 170:Segment7.cpp  **** 
+ 171:Segment7.cpp  **** void Segment7_WriteAll(char c3, char c2, char c1, char c0, uint8_t dot3, uint8_t dot2, uint8_t dot1
+ 172:Segment7.cpp  **** {
+  91               		.loc 1 172 1 is_stmt 1 view -0
+  92               		.cfi_startproc
+  93               		.loc 1 172 1 is_stmt 0 view .LVU25
+  94 0034 AF92      		push r10
+  95               	.LCFI0:
+  96               		.cfi_def_cfa_offset 3
+  97               		.cfi_offset 10, -2
+  98 0036 CF92      		push r12
+  99               	.LCFI1:
+ 100               		.cfi_def_cfa_offset 4
+ 101               		.cfi_offset 12, -3
+ 102 0038 EF92      		push r14
+ 103               	.LCFI2:
+ 104               		.cfi_def_cfa_offset 5
+ 105               		.cfi_offset 14, -4
+ 106 003a 0F93      		push r16
+ 107               	.LCFI3:
+ 108               		.cfi_def_cfa_offset 6
+ 109               		.cfi_offset 16, -5
+ 110 003c 1F93      		push r17
+ 111               	.LCFI4:
+ 112               		.cfi_def_cfa_offset 7
+ 113               		.cfi_offset 17, -6
+ 114 003e CF93      		push r28
+ 115               	.LCFI5:
+ 116               		.cfi_def_cfa_offset 8
+ 117               		.cfi_offset 28, -7
+ 118 0040 DF93      		push r29
+ 119               	.LCFI6:
+ 120               		.cfi_def_cfa_offset 9
+ 121               		.cfi_offset 29, -8
+ 122               	/* prologue: function */
+ 123               	/* frame size = 0 */
+ 124               	/* stack size = 7 */
+ 125               	.L__stack_usage = 7
+ 126 0042 C82F      		mov r28,r24
+ 127 0044 D62F      		mov r29,r22
+ 128 0046 142F      		mov r17,r20
+ 129 0048 622F      		mov r22,r18
+ 130               	.LVL10:
+ 131               		.loc 1 172 1 view .LVU26
+ 132 004a 4A2D      		mov r20,r10
+ 133               	.LVL11:
+ 173:Segment7.cpp  **** 	Segment7_WriteSingle(0, c0, dot0);
+ 134               		.loc 1 173 2 is_stmt 1 view .LVU27
+ 135               		.loc 1 173 22 is_stmt 0 view .LVU28
+ 136 004c 80E0      		ldi r24,0
+ 137               	.LVL12:
+ 138               		.loc 1 173 22 view .LVU29
+ 139 004e 0E94 0000 		call _Z20Segment7_WriteSinglehch
+ 140               	.LVL13:
+ 174:Segment7.cpp  **** 	Segment7_WriteSingle(1, c1, dot1);
+ 141               		.loc 1 174 2 is_stmt 1 view .LVU30
+ 142               		.loc 1 174 22 is_stmt 0 view .LVU31
+ 143 0052 4C2D      		mov r20,r12
+ 144 0054 612F      		mov r22,r17
+ 145 0056 81E0      		ldi r24,lo8(1)
+ 146 0058 0E94 0000 		call _Z20Segment7_WriteSinglehch
+ 147               	.LVL14:
+ 175:Segment7.cpp  **** 	Segment7_WriteSingle(2, c2, dot2);
+ 148               		.loc 1 175 2 is_stmt 1 view .LVU32
+ 149               		.loc 1 175 22 is_stmt 0 view .LVU33
+ 150 005c 4E2D      		mov r20,r14
+ 151 005e 6D2F      		mov r22,r29
+ 152 0060 82E0      		ldi r24,lo8(2)
+ 153 0062 0E94 0000 		call _Z20Segment7_WriteSinglehch
+ 154               	.LVL15:
+ 176:Segment7.cpp  **** 	Segment7_WriteSingle(3, c3, dot3);
+ 155               		.loc 1 176 2 is_stmt 1 view .LVU34
+ 156               		.loc 1 176 22 is_stmt 0 view .LVU35
+ 157 0066 402F      		mov r20,r16
+ 158 0068 6C2F      		mov r22,r28
+ 159 006a 83E0      		ldi r24,lo8(3)
+ 160               	/* epilogue start */
+ 177:Segment7.cpp  **** }
+ 161               		.loc 1 177 1 view .LVU36
+ 162 006c DF91      		pop r29
+ 163               	.LVL16:
+ 164               		.loc 1 177 1 view .LVU37
+ 165 006e CF91      		pop r28
+ 166               	.LVL17:
+ 167               		.loc 1 177 1 view .LVU38
+ 168 0070 1F91      		pop r17
+ 169               	.LVL18:
+ 170               		.loc 1 177 1 view .LVU39
+ 171 0072 0F91      		pop r16
+ 172               	.LVL19:
+ 173               		.loc 1 177 1 view .LVU40
+ 174 0074 EF90      		pop r14
+ 175               	.LVL20:
+ 176               		.loc 1 177 1 view .LVU41
+ 177 0076 CF90      		pop r12
+ 178               	.LVL21:
+ 179               		.loc 1 177 1 view .LVU42
+ 180 0078 AF90      		pop r10
+ 181               	.LVL22:
+ 176:Segment7.cpp  **** 	Segment7_WriteSingle(3, c3, dot3);
+ 182               		.loc 1 176 22 view .LVU43
+ 183 007a 0C94 0000 		jmp _Z20Segment7_WriteSinglehch
+ 184               	.LVL23:
+ 176:Segment7.cpp  **** 	Segment7_WriteSingle(3, c3, dot3);
+ 185               		.loc 1 176 22 view .LVU44
+ 186               		.cfi_endproc
+ 187               	.LFE1:
+ 189               	.global	Segment7_DigitTable
+ 190               		.data
+ 193               	Segment7_DigitTable:
+ 194 0000 FFFF FFFF 		.ascii	"\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377"
+ 194      FFFF FFFF 
+ 194      FFFF FFFF 
+ 194      FFFF FF
+ 195 000f FFFF FFFF 		.ascii	"\377\377\377\377\377\377\377\377\377\377\377\377\377\377\377"
+ 195      FFFF FFFF 
+ 195      FFFF FFFF 
+ 195      FFFF FF
+ 196 001e FFFF FFFF 		.ascii	"\377\377\377\377\335\377\377\377\377\377\306\360\377\377\377"
+ 196      DDFF FFFF 
+ 196      FFFF C6F0 
+ 196      FFFF FF
+ 197 002d BFFF ADC0 		.ascii	"\277\377\255\300\371\244\260\231\222\202\370\200\220\377\377"
+ 197      F9A4 B099 
+ 197      9282 F880 
+ 197      90FF FF
+ 198 003c FFFF FFFF 		.ascii	"\377\377\377\377\377\210\203\306\241\206\216\302\211\371\341"
+ 198      FF88 83C6 
+ 198      A186 8EC2 
+ 198      89F9 E1
+ 199 004b 8AC7 EAAB 		.ascii	"\212\307\352\253\300\214\230\257\322\207\301\301\325\211\221"
+ 199      C08C 98AF 
+ 199      D287 C1C1 
+ 199      D589 91
+ 200 005a E4C6 9BF0 		.ascii	"\344\306\233\360\376\367\377\210\203\247\241\206\216\302\213"
+ 200      FEF7 FF88 
+ 200      83A7 A186 
+ 200      8EC2 8B
+ 201 0069 FBE1 8AC7 		.ascii	"\373\341\212\307\352\253\243\214\230\257\322\207\343\343\301"
+ 201      EAAB A38C 
+ 201      98AF D287 
+ 201      E3E3 C1
+ 202 0078 8991 E4FF 		.ascii	"\211\221\344\377\377\377\377\377"
+ 202      FFFF FFFF 
+ 203               		.text
+ 204               	.Letext0:
+ 205               		.file 2 "/usr/lib/gcc/avr/9.2.0/include/stdint-gcc.h"
+ 206               		.file 3 "Footswitch.h"
+ 207               		.file 4 "MasterCom.h"
+ 208               		.file 5 "System.h"
+ 209               		.file 6 "MCP23017.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 Segment7.cpp
+     /tmp/cck9eE8v.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cck9eE8v.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cck9eE8v.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cck9eE8v.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cck9eE8v.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cck9eE8v.s:12     .text:0000000000000000 _Z20Segment7_WriteSinglehch
+     /tmp/cck9eE8v.s:193    .data:0000000000000000 Segment7_DigitTable
+     /tmp/cck9eE8v.s:88     .text:0000000000000034 _Z17Segment7_WriteAllcccchhhh
+
+UNDEFINED SYMBOLS
+_Z17MCP23017_WriteReghhh
+__do_copy_data

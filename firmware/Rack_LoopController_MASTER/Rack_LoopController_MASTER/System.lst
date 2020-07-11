@@ -1,0 +1,4304 @@
+   1               		.file	"System.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z30System_HandleTempSelectTimeoutv
+  12               	_Z30System_HandleTempSelectTimeoutv:
+  13               	.LFB4:
+  14               		.file 1 "System.cpp"
+   1:System.cpp    **** /*
+   2:System.cpp    ****  * System.cpp
+   3:System.cpp    ****  *
+   4:System.cpp    ****  * Created: 03-02-2020 20:56:34
+   5:System.cpp    ****  *  Author: Esben
+   6:System.cpp    ****  */ 
+   7:System.cpp    **** 
+   8:System.cpp    **** #include <avr/eeprom.h>
+   9:System.cpp    **** #include "System.h"
+  10:System.cpp    **** #include "MCP23017.h"
+  11:System.cpp    **** #include "SP10281_3x7segment.h"
+  12:System.cpp    **** #include "RotaryEncoder.h"
+  13:System.cpp    **** #include "PedalCom.h"
+  14:System.cpp    **** #include "UI.h"
+  15:System.cpp    **** #include "util.h"
+  16:System.cpp    **** 
+  17:System.cpp    **** void System_UpdateUI_LEDs();
+  18:System.cpp    **** void System_UpdateUI_Relays();
+  19:System.cpp    **** void System_ChangePreset();
+  20:System.cpp    **** void System_UpdateLoopCtrl();
+  21:System.cpp    **** 
+  22:System.cpp    **** volatile uint16_t System_TempSelectOvfCnt = 0;
+  23:System.cpp    **** volatile bool System_TempSelectFlag = false;
+  24:System.cpp    **** volatile uint16_t System_MarkSelectionOvfCnt = 0;
+  25:System.cpp    **** volatile bool System_MarkSelectionFlag = false;
+  26:System.cpp    **** 
+  27:System.cpp    **** volatile System_State SystemState = BOOT_UP;
+  28:System.cpp    **** volatile System_State LastSystemState = BOOT_UP;
+  29:System.cpp    **** volatile System_Preset ActivePreset = PRESET_1;
+  30:System.cpp    **** volatile System_Preset LastActivePreset = PRESET_1;
+  31:System.cpp    **** volatile System_Preset TempSelectPreset = PRESET_1;
+  32:System.cpp    **** volatile System_Preset LastTempSelectPreset = PRESET_1;
+  33:System.cpp    **** volatile System_RunMode SystemRunMode = RUN_PRESET_MODE;
+  34:System.cpp    **** volatile MIDI_Channel TempSelectMidiChannel = MIDI_CH_OMNI;
+  35:System.cpp    **** volatile MIDI_Channel LastTempSelectMidiChannel = MIDI_CH_OMNI;
+  36:System.cpp    **** volatile MIDI_Channel System_MidiChannel = MIDI_CH_OMNI;
+  37:System.cpp    **** volatile System_UI_Mode SystemUIMode = MODE_RUN;
+  38:System.cpp    **** volatile System_UI_Mode LastSystemUIMode = MODE_RUN;
+  39:System.cpp    **** volatile System_SetMidiEdit SetMidiEdit = MIDI_IN;
+  40:System.cpp    **** volatile uint8_t TempSelectMidiPC = 0;
+  41:System.cpp    **** volatile uint8_t LastTempSelectMidiPC = 0;
+  42:System.cpp    **** 
+  43:System.cpp    **** Preset PresetTable[NUMBER_OF_PRESETS];
+  44:System.cpp    **** Preset LoopModePreset = {0, 0, MIDI_PC_OFF, MIDI_PC_OFF};
+  45:System.cpp    **** Preset LastLoopModePreset = {0, 0, MIDI_PC_OFF, MIDI_PC_OFF};
+  46:System.cpp    **** 
+  47:System.cpp    **** volatile uint8_t UserEditSelection = 0;
+  48:System.cpp    **** volatile uint8_t LastUserEditSelection = 0;
+  49:System.cpp    **** 
+  50:System.cpp    **** void System_Run()
+  51:System.cpp    **** {
+  52:System.cpp    **** 	switch (SystemState)
+  53:System.cpp    **** 	{
+  54:System.cpp    **** 		case BOOT_UP:
+  55:System.cpp    **** 			/* Fill preset table from EEPROM */
+  56:System.cpp    **** 			eeprom_read_block((void*)PresetTable, (void*)EEPROM_PRESETS_BASE_ADDR, sizeof(Preset) * NUMBER_O
+  57:System.cpp    **** 			
+  58:System.cpp    **** 			/* Get device MIDI channel from EEPROM */
+  59:System.cpp    **** 			System_MidiChannel = (MIDI_Channel)eeprom_read_byte((uint8_t*)EEPROM_MIDI_CH_ADDR);
+  60:System.cpp    **** 			
+  61:System.cpp    **** 			if (System_MidiChannel > MIDI_CH_MAX)
+  62:System.cpp    **** 			{
+  63:System.cpp    **** 				System_MidiChannel = MIDI_CH_OMNI;
+  64:System.cpp    **** 				eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, System_MidiChannel);
+  65:System.cpp    **** 			}
+  66:System.cpp    **** 			
+  67:System.cpp    **** 			/* Check if button pressed for MIDI channel edit */
+  68:System.cpp    **** 			if (RotaryEncoder_IsPressed())
+  69:System.cpp    **** 			{
+  70:System.cpp    **** 				/* Update UI mode LEDs */
+  71:System.cpp    **** 				ModeRunLED.Clear();
+  72:System.cpp    **** 				ModeEditPresetLED.Clear();
+  73:System.cpp    **** 				ModeEditMidiLED.Set();
+  74:System.cpp    **** 				
+  75:System.cpp    **** 				if (System_MidiChannel == MIDI_CH_OMNI)
+  76:System.cpp    **** 				{
+  77:System.cpp    **** 					SP10281_WriteAll('o', 'm', 'n', 0, 0, 0);
+  78:System.cpp    **** 				} 
+  79:System.cpp    **** 				else
+  80:System.cpp    **** 				{
+  81:System.cpp    **** 					SP10281_WriteNumber(System_MidiChannel);
+  82:System.cpp    **** 				}
+  83:System.cpp    **** 				
+  84:System.cpp    **** 				SystemState = EDIT_MIDI_CHANNEL;
+  85:System.cpp    **** 			} 
+  86:System.cpp    **** 			else
+  87:System.cpp    **** 			{
+  88:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+  89:System.cpp    **** 			}
+  90:System.cpp    **** 			
+  91:System.cpp    **** 			break;
+  92:System.cpp    **** 		
+  93:System.cpp    **** 		case EDIT_MIDI_CHANNEL:
+  94:System.cpp    **** 			/* If user is selecting new MIDI channel */
+  95:System.cpp    **** 			if (TempSelectMidiChannel != LastTempSelectMidiChannel)
+  96:System.cpp    **** 			{
+  97:System.cpp    **** 				/* Write selected MIDI channel to 7-segment display */
+  98:System.cpp    **** 				if (TempSelectMidiChannel == MIDI_CH_OMNI)
+  99:System.cpp    **** 				{
+ 100:System.cpp    **** 					SP10281_WriteAll('o', 'm', 'n', 0, 0, 0);
+ 101:System.cpp    **** 				}
+ 102:System.cpp    **** 				else
+ 103:System.cpp    **** 				{
+ 104:System.cpp    **** 					SP10281_WriteNumber(TempSelectMidiChannel);
+ 105:System.cpp    **** 				}
+ 106:System.cpp    **** 				
+ 107:System.cpp    **** 				/* Start timer */
+ 108:System.cpp    **** 				System_TempSelectOvfCnt = 1;
+ 109:System.cpp    **** 			}
+ 110:System.cpp    **** 			
+ 111:System.cpp    **** 			LastTempSelectMidiChannel = TempSelectMidiChannel;
+ 112:System.cpp    **** 			
+ 113:System.cpp    **** 			break;
+ 114:System.cpp    **** 		
+ 115:System.cpp    **** 		case INITIALIZE_SYSTEM:			
+ 116:System.cpp    **** 			/* Write active preset to 7-segment display */
+ 117:System.cpp    **** 			SP10281_WriteNumber(ActivePreset+1);
+ 118:System.cpp    **** 			
+ 119:System.cpp    **** 			/* Update mode LEDs */
+ 120:System.cpp    **** 			ModeRunLED.Set();
+ 121:System.cpp    **** 			ModeEditPresetLED.Clear();
+ 122:System.cpp    **** 			ModeEditMidiLED.Clear();
+ 123:System.cpp    **** 			
+ 124:System.cpp    **** 			/* Set appropriate System State */
+ 125:System.cpp    **** 			if (SystemRunMode == RUN_PRESET_MODE)
+ 126:System.cpp    **** 			{
+ 127:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+ 128:System.cpp    **** 			}
+ 129:System.cpp    **** 			else if (SystemRunMode == RUN_LOOP_MODE)
+ 130:System.cpp    **** 			{
+ 131:System.cpp    **** 				SystemState = ENTER_RUN_LOOP_CTRL;
+ 132:System.cpp    **** 			}
+ 133:System.cpp    **** 			
+ 134:System.cpp    **** 			break;
+ 135:System.cpp    **** 			
+ 136:System.cpp    **** 		case ENTER_RUN_PRESET_CTRL:
+ 137:System.cpp    **** 			/* Update state variables */
+ 138:System.cpp    **** 			SystemRunMode = RUN_PRESET_MODE;
+ 139:System.cpp    **** 			SystemState = RUN_PRESET_CTRL;
+ 140:System.cpp    **** 			
+ 141:System.cpp    **** 			/* Stop timer */
+ 142:System.cpp    **** 			System_TempSelectOvfCnt = 0;
+ 143:System.cpp    **** 			
+ 144:System.cpp    **** 			/* Change LastActivePreset to force update */
+ 145:System.cpp    **** 			LastActivePreset = System_Preset(ActivePreset ^ (1 << 0));
+ 146:System.cpp    **** 			
+ 147:System.cpp    **** 		case RUN_PRESET_CTRL:
+ 148:System.cpp    **** 			/* If active preset has changed since last cycle then update system */
+ 149:System.cpp    **** 			if (ActivePreset != LastActivePreset)
+ 150:System.cpp    **** 			{
+ 151:System.cpp    **** 				System_ChangePreset();
+ 152:System.cpp    **** 			}
+ 153:System.cpp    **** 			
+ 154:System.cpp    **** 			/* If user is browsing presets */
+ 155:System.cpp    **** 			if (TempSelectPreset != LastTempSelectPreset)
+ 156:System.cpp    **** 			{
+ 157:System.cpp    **** 				/* Update 7-segment display */
+ 158:System.cpp    **** 				SP10281_WriteNumber(TempSelectPreset + 1);
+ 159:System.cpp    **** 								
+ 160:System.cpp    **** 				/* Update UI LEDs */
+ 161:System.cpp    **** 				LoopModePreset = PresetTable[TempSelectPreset];
+ 162:System.cpp    **** 				System_UpdateUI_LEDs();
+ 163:System.cpp    **** 			}
+ 164:System.cpp    **** 			
+ 165:System.cpp    **** 			break;
+ 166:System.cpp    **** 		
+ 167:System.cpp    **** 		case ENTER_RUN_LOOP_CTRL:
+ 168:System.cpp    **** 			/* Update 7-segment display */
+ 169:System.cpp    **** 			SP10281_WriteAll('M', 'L', 'C', 0, 0, 0);
+ 170:System.cpp    **** 			
+ 171:System.cpp    **** 			/* Update state variables */
+ 172:System.cpp    **** 			SystemRunMode = RUN_LOOP_MODE;
+ 173:System.cpp    **** 			SystemState = RUN_LOOP_CTRL;
+ 174:System.cpp    **** 			
+ 175:System.cpp    **** 			/* Stop timer */
+ 176:System.cpp    **** 			System_TempSelectOvfCnt = 0;
+ 177:System.cpp    **** 			
+ 178:System.cpp    **** 			/* Change LastLoopModePreset to force update */
+ 179:System.cpp    **** 			LastLoopModePreset.Active_Loops = LoopModePreset.Active_Loops ^ (1 << 0);
+ 180:System.cpp    **** 			
+ 181:System.cpp    **** 		case RUN_LOOP_CTRL:
+ 182:System.cpp    **** 			/* If active loops or ctrl switches has changed since last cycle */
+ 183:System.cpp    **** 			if (LoopModePreset != LastLoopModePreset)
+ 184:System.cpp    **** 			{
+ 185:System.cpp    **** 				System_UpdateLoopCtrl();
+ 186:System.cpp    **** 			}
+ 187:System.cpp    **** 			
+ 188:System.cpp    **** 			/* If user is browsing presets */
+ 189:System.cpp    **** 			if (TempSelectPreset != LastTempSelectPreset)
+ 190:System.cpp    **** 			{
+ 191:System.cpp    **** 				/* Update 7-segment display */
+ 192:System.cpp    **** 				SP10281_WriteNumber(TempSelectPreset + 1);
+ 193:System.cpp    **** 							
+ 194:System.cpp    **** 				/* Update UI LEDs */
+ 195:System.cpp    **** 				LoopModePreset = PresetTable[TempSelectPreset];
+ 196:System.cpp    **** 				System_UpdateUI_LEDs();
+ 197:System.cpp    **** 			}
+ 198:System.cpp    **** 			
+ 199:System.cpp    **** 			break;
+ 200:System.cpp    **** 		
+ 201:System.cpp    **** 		case ENTER_TUNER:
+ 202:System.cpp    **** 		
+ 203:System.cpp    **** 		case TUNER:
+ 204:System.cpp    **** 			break;
+ 205:System.cpp    **** 		
+ 206:System.cpp    **** 		case ENTER_EDIT_UI_MODE:
+ 207:System.cpp    **** 			/* Change LastSystemUIMode to force update */
+ 208:System.cpp    **** 			LastSystemUIMode = System_UI_Mode(SystemUIMode ^ (1 << 0));
+ 209:System.cpp    **** 			
+ 210:System.cpp    **** 			System_ChangePreset();
+ 211:System.cpp    **** 			
+ 212:System.cpp    **** 			SystemState = EDIT_UI_MODE;
+ 213:System.cpp    **** 			
+ 214:System.cpp    **** 		case EDIT_UI_MODE:
+ 215:System.cpp    **** 			/* If user is changing the UI mode then update mode LEDs*/
+ 216:System.cpp    **** 			if (SystemUIMode != LastSystemUIMode)
+ 217:System.cpp    **** 			{
+ 218:System.cpp    **** 				if (SystemUIMode == MODE_RUN)
+ 219:System.cpp    **** 				{
+ 220:System.cpp    **** 					ModeRunLED.AutoToggle();
+ 221:System.cpp    **** 					ModeEditPresetLED.Clear();
+ 222:System.cpp    **** 					ModeEditMidiLED.Clear();
+ 223:System.cpp    **** 				}
+ 224:System.cpp    **** 				else if (SystemUIMode == MODE_EDIT_PRESET)
+ 225:System.cpp    **** 				{
+ 226:System.cpp    **** 					ModeRunLED.Clear();
+ 227:System.cpp    **** 					ModeEditPresetLED.AutoToggle();
+ 228:System.cpp    **** 					ModeEditMidiLED.Clear();
+ 229:System.cpp    **** 				}
+ 230:System.cpp    **** 				else if (SystemUIMode == MODE_EDIT_MIDI)
+ 231:System.cpp    **** 				{
+ 232:System.cpp    **** 					ModeRunLED.Clear();
+ 233:System.cpp    **** 					ModeEditPresetLED.Clear();
+ 234:System.cpp    **** 					ModeEditMidiLED.AutoToggle();
+ 235:System.cpp    **** 				}
+ 236:System.cpp    **** 			}
+ 237:System.cpp    **** 			
+ 238:System.cpp    **** 			LastSystemUIMode = SystemUIMode;
+ 239:System.cpp    **** 			
+ 240:System.cpp    **** 			break;
+ 241:System.cpp    **** 		
+ 242:System.cpp    **** 		case ENTER_EDIT_PRESET:
+ 243:System.cpp    **** 			/* Disable Auto toggle */
+ 244:System.cpp    **** 			ModeRunLED.Clear();
+ 245:System.cpp    **** 			ModeEditPresetLED.Set();
+ 246:System.cpp    **** 			ModeEditMidiLED.Clear();
+ 247:System.cpp    **** 			
+ 248:System.cpp    **** 			LoopModePreset = PresetTable[ActivePreset];
+ 249:System.cpp    **** 			
+ 250:System.cpp    **** 			UserEditSelection = 0;
+ 251:System.cpp    **** 			LastUserEditSelection = 1;
+ 252:System.cpp    **** 			
+ 253:System.cpp    **** 			SystemState = EDIT_PRESET;
+ 254:System.cpp    **** 			
+ 255:System.cpp    **** 		case EDIT_PRESET:
+ 256:System.cpp    **** 			/* If user is selecting */
+ 257:System.cpp    **** 			if (UserEditSelection != LastUserEditSelection)
+ 258:System.cpp    **** 			{
+ 259:System.cpp    **** 				/* Blank LEDs except from selection */
+ 260:System.cpp    **** 				if (UserEditSelection <= 7)
+ 261:System.cpp    **** 				{
+ 262:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATA, (1 << UserEditSelection));
+ 263:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, (1 << UI_MODE_PRESET_LED_PIN));
+ 264:System.cpp    **** 				}
+ 265:System.cpp    **** 				else
+ 266:System.cpp    **** 				{
+ 267:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATA, 0x00);
+ 268:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, ((1 << UI_MODE_PRESET_LED_PIN) | (1 << (UserEd
+ 269:System.cpp    **** 				}
+ 270:System.cpp    **** 				
+ 271:System.cpp    **** 				/* Start timer */
+ 272:System.cpp    **** 				System_MarkSelectionOvfCnt = 1;
+ 273:System.cpp    **** 			}
+ 274:System.cpp    **** 			
+ 275:System.cpp    **** 			LastUserEditSelection = UserEditSelection;
+ 276:System.cpp    **** 			break;
+ 277:System.cpp    **** 			
+ 278:System.cpp    **** 		case ENTER_EDIT_MIDI_IN_OUT:
+ 279:System.cpp    **** 			/* Disable Auto toggle */
+ 280:System.cpp    **** 			ModeRunLED.Clear();
+ 281:System.cpp    **** 			ModeEditPresetLED.Clear();
+ 282:System.cpp    **** 			ModeEditMidiLED.Set();
+ 283:System.cpp    **** 			
+ 284:System.cpp    **** 			/* Update 7-segment display */
+ 285:System.cpp    **** 			if (SetMidiEdit == MIDI_IN)
+ 286:System.cpp    **** 			{
+ 287:System.cpp    **** 				SP10281_WriteAll('i', 'n', ' ', 0, 0, 0);
+ 288:System.cpp    **** 			}
+ 289:System.cpp    **** 			else
+ 290:System.cpp    **** 			{
+ 291:System.cpp    **** 				SP10281_WriteAll('o', 'u', 't', 0, 0, 0);
+ 292:System.cpp    **** 			}
+ 293:System.cpp    **** 			
+ 294:System.cpp    **** 			SystemState = EDIT_MIDI_IN_OUT;
+ 295:System.cpp    **** 			
+ 296:System.cpp    **** 		case EDIT_MIDI_IN_OUT:
+ 297:System.cpp    **** 			break;
+ 298:System.cpp    **** 		
+ 299:System.cpp    **** 		case ENTER_EDIT_MIDI_PC:
+ 300:System.cpp    **** 			/* Get setup for active preset */
+ 301:System.cpp    **** 			if (SetMidiEdit == MIDI_IN)
+ 302:System.cpp    **** 			{
+ 303:System.cpp    **** 				TempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_In;
+ 304:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_In;
+ 305:System.cpp    **** 			}
+ 306:System.cpp    **** 			else
+ 307:System.cpp    **** 			{
+ 308:System.cpp    **** 				TempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_Out;
+ 309:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_Out;
+ 310:System.cpp    **** 			}
+ 311:System.cpp    **** 			
+ 312:System.cpp    **** 			/* Update 7-segment display */
+ 313:System.cpp    **** 			if (TempSelectMidiPC == MIDI_PC_OFF)
+ 314:System.cpp    **** 			{
+ 315:System.cpp    **** 				SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
+ 316:System.cpp    **** 			}
+ 317:System.cpp    **** 			else
+ 318:System.cpp    **** 			{
+ 319:System.cpp    **** 				SP10281_WriteNumber(TempSelectMidiPC);
+ 320:System.cpp    **** 			}
+ 321:System.cpp    **** 			
+ 322:System.cpp    **** 			SystemState = EDIT_MIDI_PC;
+ 323:System.cpp    **** 			
+ 324:System.cpp    **** 		case EDIT_MIDI_PC:
+ 325:System.cpp    **** 			
+ 326:System.cpp    **** 			break;
+ 327:System.cpp    **** 		
+ 328:System.cpp    **** 		default:
+ 329:System.cpp    **** 			break;
+ 330:System.cpp    **** 	}
+ 331:System.cpp    **** 	
+ 332:System.cpp    **** 	LastActivePreset = ActivePreset;
+ 333:System.cpp    **** 	LastSystemState = SystemState;
+ 334:System.cpp    **** 	LastLoopModePreset = LoopModePreset;
+ 335:System.cpp    **** 	LastTempSelectPreset = TempSelectPreset;
+ 336:System.cpp    **** }
+ 337:System.cpp    **** 
+ 338:System.cpp    **** void System_HandleRotaryEncoderInput()
+ 339:System.cpp    **** {
+ 340:System.cpp    **** 	switch (SystemState)
+ 341:System.cpp    **** 	{
+ 342:System.cpp    **** 		case EDIT_MIDI_CHANNEL:
+ 343:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 344:System.cpp    **** 			{
+ 345:System.cpp    **** 				System_MidiChannel = TempSelectMidiChannel;
+ 346:System.cpp    **** 			}
+ 347:System.cpp    **** 			else if (RotEnc_State == LONG_PRESS)
+ 348:System.cpp    **** 			{
+ 349:System.cpp    **** 				/* Store selected MIDI channel and continue */
+ 350:System.cpp    **** 				System_MidiChannel = TempSelectMidiChannel;
+ 351:System.cpp    **** 				eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, (uint8_t)System_MidiChannel);
+ 352:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+ 353:System.cpp    **** 			}
+ 354:System.cpp    **** 			else if (RotEnc_State == ROT_RIGHT)
+ 355:System.cpp    **** 			{
+ 356:System.cpp    **** 				/* Increment selected MIDI channel */
+ 357:System.cpp    **** 				if (TempSelectMidiChannel < MIDI_CH_MAX)
+ 358:System.cpp    **** 				{
+ 359:System.cpp    **** 					TempSelectMidiChannel = MIDI_Channel(TempSelectMidiChannel + 1);
+ 360:System.cpp    **** 				}
+ 361:System.cpp    **** 			}
+ 362:System.cpp    **** 			else if (RotEnc_State == ROT_LEFT)
+ 363:System.cpp    **** 			{
+ 364:System.cpp    **** 				/* Decrement selected MIDI channel */
+ 365:System.cpp    **** 				if (TempSelectMidiChannel > MIDI_CH_OMNI)
+ 366:System.cpp    **** 				{
+ 367:System.cpp    **** 					TempSelectMidiChannel = MIDI_Channel(TempSelectMidiChannel - 1);
+ 368:System.cpp    **** 				}
+ 369:System.cpp    **** 			}
+ 370:System.cpp    **** 
+ 371:System.cpp    **** 			break;
+ 372:System.cpp    **** 		
+ 373:System.cpp    **** 		case RUN_PRESET_CTRL:
+ 374:System.cpp    **** 		case RUN_LOOP_CTRL:
+ 375:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 376:System.cpp    **** 			{
+ 377:System.cpp    **** 				ActivePreset = TempSelectPreset;
+ 378:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+ 379:System.cpp    **** 			}
+ 380:System.cpp    **** 			else if (RotEnc_State == LONG_PRESS)
+ 381:System.cpp    **** 			{
+ 382:System.cpp    **** 				ActivePreset = TempSelectPreset;
+ 383:System.cpp    **** 				
+ 384:System.cpp    **** 				SystemState = ENTER_EDIT_UI_MODE;
+ 385:System.cpp    **** 			}
+ 386:System.cpp    **** 			else if (RotEnc_State == ROT_RIGHT)
+ 387:System.cpp    **** 			{
+ 388:System.cpp    **** 				/* Increment temporary selected preset */
+ 389:System.cpp    **** 				if (TempSelectPreset < PRESET_8)
+ 390:System.cpp    **** 				{
+ 391:System.cpp    **** 					TempSelectPreset = System_Preset(TempSelectPreset + 1);
+ 392:System.cpp    **** 				}
+ 393:System.cpp    **** 				
+ 394:System.cpp    **** 				/* Start timer */
+ 395:System.cpp    **** 				System_TempSelectOvfCnt = 1;
+ 396:System.cpp    **** 			}
+ 397:System.cpp    **** 			else if (RotEnc_State == ROT_LEFT)
+ 398:System.cpp    **** 			{
+ 399:System.cpp    **** 				/* Decrement temporary selected preset */
+ 400:System.cpp    **** 				if (TempSelectPreset > PRESET_1)
+ 401:System.cpp    **** 				{
+ 402:System.cpp    **** 					TempSelectPreset = System_Preset(TempSelectPreset - 1);
+ 403:System.cpp    **** 				}
+ 404:System.cpp    **** 				
+ 405:System.cpp    **** 				/* Start timer */
+ 406:System.cpp    **** 				System_TempSelectOvfCnt = 1;
+ 407:System.cpp    **** 			}
+ 408:System.cpp    **** 
+ 409:System.cpp    **** 			break;
+ 410:System.cpp    **** 			
+ 411:System.cpp    **** 		case EDIT_UI_MODE:
+ 412:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 413:System.cpp    **** 			{
+ 414:System.cpp    **** 				if (SystemUIMode == MODE_RUN)
+ 415:System.cpp    **** 				{
+ 416:System.cpp    **** 					SystemState = INITIALIZE_SYSTEM;
+ 417:System.cpp    **** 				}
+ 418:System.cpp    **** 				else if (SystemUIMode == MODE_EDIT_PRESET)
+ 419:System.cpp    **** 				{
+ 420:System.cpp    **** 					SystemState = ENTER_EDIT_PRESET;
+ 421:System.cpp    **** 				}
+ 422:System.cpp    **** 				else if (SystemUIMode == MODE_EDIT_MIDI)
+ 423:System.cpp    **** 				{
+ 424:System.cpp    **** 					SystemState = ENTER_EDIT_MIDI_IN_OUT;
+ 425:System.cpp    **** 				}
+ 426:System.cpp    **** 			}
+ 427:System.cpp    **** 			else if (RotEnc_State == LONG_PRESS)
+ 428:System.cpp    **** 			{
+ 429:System.cpp    **** 			}
+ 430:System.cpp    **** 			else if (RotEnc_State == ROT_RIGHT)
+ 431:System.cpp    **** 			{
+ 432:System.cpp    **** 				/* Increment UI mode */
+ 433:System.cpp    **** 				if (SystemUIMode < MODE_EDIT_MIDI)
+ 434:System.cpp    **** 				{
+ 435:System.cpp    **** 					SystemUIMode = System_UI_Mode(SystemUIMode + 1);
+ 436:System.cpp    **** 				}
+ 437:System.cpp    **** 			}
+ 438:System.cpp    **** 			else if (RotEnc_State == ROT_LEFT)
+ 439:System.cpp    **** 			{
+ 440:System.cpp    **** 				/* Increment UI mode */
+ 441:System.cpp    **** 				if (SystemUIMode > MODE_RUN)
+ 442:System.cpp    **** 				{
+ 443:System.cpp    **** 					SystemUIMode = System_UI_Mode(SystemUIMode - 1);
+ 444:System.cpp    **** 				}
+ 445:System.cpp    **** 			}
+ 446:System.cpp    **** 			
+ 447:System.cpp    **** 			break;
+ 448:System.cpp    **** 		
+ 449:System.cpp    **** 		case EDIT_PRESET:
+ 450:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 451:System.cpp    **** 			{
+ 452:System.cpp    **** 				/* Update temporary preset */
+ 453:System.cpp    **** 				if (UserEditSelection < NUMBER_OF_LOOPS)
+ 454:System.cpp    **** 				{
+ 455:System.cpp    **** 					LoopModePreset.Active_Loops ^= (1 << UserEditSelection);
+ 456:System.cpp    **** 				}
+ 457:System.cpp    **** 				else
+ 458:System.cpp    **** 				{
+ 459:System.cpp    **** 					LoopModePreset.Active_CtrlSwitches ^= (1 << (UserEditSelection - 8));
+ 460:System.cpp    **** 				}
+ 461:System.cpp    **** 				
+ 462:System.cpp    **** 				/* Update relays */
+ 463:System.cpp    **** 				//System_UpdateUI_Relays();
+ 464:System.cpp    **** 				
+ 465:System.cpp    **** 				/* Update UI LEDs */
+ 466:System.cpp    **** 				System_UpdateUI_LEDs();
+ 467:System.cpp    **** 				
+ 468:System.cpp    **** 			}
+ 469:System.cpp    **** 			else if (RotEnc_State == LONG_PRESS)
+ 470:System.cpp    **** 			{
+ 471:System.cpp    **** 				/* Store changes in EEPROM */
+ 472:System.cpp    **** 				eeprom_write_block((void*)&LoopModePreset, (void*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * siz
+ 473:System.cpp    **** 				
+ 474:System.cpp    **** 				/* Update PresetTable */
+ 475:System.cpp    **** 				PresetTable[ActivePreset].Active_Loops = LoopModePreset.Active_Loops;
+ 476:System.cpp    **** 				PresetTable[ActivePreset].Active_CtrlSwitches = LoopModePreset.Active_CtrlSwitches;
+ 477:System.cpp    **** 				
+ 478:System.cpp    **** 				/* Return to Edit UI mode */
+ 479:System.cpp    **** 				SystemState = ENTER_EDIT_UI_MODE;
+ 480:System.cpp    **** 			}
+ 481:System.cpp    **** 			else if (RotEnc_State == ROT_RIGHT)
+ 482:System.cpp    **** 			{
+ 483:System.cpp    **** 				if (UserEditSelection < 11)
+ 484:System.cpp    **** 				{
+ 485:System.cpp    **** 					UserEditSelection++;
+ 486:System.cpp    **** 				}
+ 487:System.cpp    **** 			}
+ 488:System.cpp    **** 			else if (RotEnc_State == ROT_LEFT)
+ 489:System.cpp    **** 			{
+ 490:System.cpp    **** 				if (UserEditSelection > 0)
+ 491:System.cpp    **** 				{
+ 492:System.cpp    **** 					UserEditSelection--;
+ 493:System.cpp    **** 				}
+ 494:System.cpp    **** 			}
+ 495:System.cpp    **** 			break;
+ 496:System.cpp    **** 			
+ 497:System.cpp    **** 		case EDIT_MIDI_IN_OUT:
+ 498:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 499:System.cpp    **** 			{
+ 500:System.cpp    **** 				SystemState = ENTER_EDIT_MIDI_PC;
+ 501:System.cpp    **** 			}
+ 502:System.cpp    **** 			else if (RotEnc_State == LONG_PRESS)
+ 503:System.cpp    **** 			{
+ 504:System.cpp    **** 				/* Return to Edit UI mode */
+ 505:System.cpp    **** 				SystemState = ENTER_EDIT_UI_MODE;
+ 506:System.cpp    **** 			}
+ 507:System.cpp    **** 			else if (RotEnc_State == ROT_RIGHT)
+ 508:System.cpp    **** 			{
+ 509:System.cpp    **** 				SetMidiEdit = MIDI_OUT;
+ 510:System.cpp    **** 				SP10281_WriteAll('o', 'u', 't', 0, 0, 0);
+ 511:System.cpp    **** 			}
+ 512:System.cpp    **** 			else if (RotEnc_State == ROT_LEFT)
+ 513:System.cpp    **** 			{
+ 514:System.cpp    **** 				SetMidiEdit = MIDI_IN;
+ 515:System.cpp    **** 				SP10281_WriteAll('i', 'n', ' ', 0, 0, 0);
+ 516:System.cpp    **** 			}
+ 517:System.cpp    **** 			
+ 518:System.cpp    **** 			break;
+ 519:System.cpp    **** 			
+ 520:System.cpp    **** 		case EDIT_MIDI_PC:
+ 521:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 522:System.cpp    **** 			{
+ 523:System.cpp    **** 				/* Stop timeout timer */
+ 524:System.cpp    **** 				System_TempSelectOvfCnt = 0;
+ 525:System.cpp    **** 				
+ 526:System.cpp    **** 				LastTempSelectMidiPC = TempSelectMidiPC;
+ 527:System.cpp    **** 			}
+ 528:System.cpp    **** 			else if (RotEnc_State == LONG_PRESS)
+ 529:System.cpp    **** 			{
+ 530:System.cpp    **** 				if (SetMidiEdit == MIDI_IN)
+ 531:System.cpp    **** 				{
+ 532:System.cpp    **** 					PresetTable[ActivePreset].MIDI_PC_In = TempSelectMidiPC;
+ 533:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 2), Te
+ 534:System.cpp    **** 				}
+ 535:System.cpp    **** 				else
+ 536:System.cpp    **** 				{
+ 537:System.cpp    **** 					PresetTable[ActivePreset].MIDI_PC_Out = TempSelectMidiPC;
+ 538:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 3), Te
+ 539:System.cpp    **** 				}
+ 540:System.cpp    **** 				
+ 541:System.cpp    **** 				SystemState = ENTER_EDIT_MIDI_IN_OUT;
+ 542:System.cpp    **** 			}
+ 543:System.cpp    **** 			else if (RotEnc_State == ROT_RIGHT)
+ 544:System.cpp    **** 			{
+ 545:System.cpp    **** 				if (TempSelectMidiPC != MIDI_PC_MAX)
+ 546:System.cpp    **** 				{
+ 547:System.cpp    **** 					TempSelectMidiPC++;
+ 548:System.cpp    **** 				}
+ 549:System.cpp    **** 				
+ 550:System.cpp    **** 				/* Update 7-segment display */
+ 551:System.cpp    **** 				if (TempSelectMidiPC == MIDI_PC_OFF)
+ 552:System.cpp    **** 				{
+ 553:System.cpp    **** 					SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
+ 554:System.cpp    **** 				}
+ 555:System.cpp    **** 				else
+ 556:System.cpp    **** 				{
+ 557:System.cpp    **** 					SP10281_WriteNumber(TempSelectMidiPC);
+ 558:System.cpp    **** 				}
+ 559:System.cpp    **** 				
+ 560:System.cpp    **** 				/* Start timeout timer */
+ 561:System.cpp    **** 				System_TempSelectOvfCnt = 1;
+ 562:System.cpp    **** 			}
+ 563:System.cpp    **** 			else if (RotEnc_State == ROT_LEFT)
+ 564:System.cpp    **** 			{
+ 565:System.cpp    **** 				if (TempSelectMidiPC > MIDI_PC_MAX || TempSelectMidiPC == 0)
+ 566:System.cpp    **** 				{
+ 567:System.cpp    **** 					TempSelectMidiPC = MIDI_PC_OFF;
+ 568:System.cpp    **** 				}
+ 569:System.cpp    **** 				else if (TempSelectMidiPC > 0)
+ 570:System.cpp    **** 				{
+ 571:System.cpp    **** 					TempSelectMidiPC--;
+ 572:System.cpp    **** 				}
+ 573:System.cpp    **** 				
+ 574:System.cpp    **** 				/* Update 7-segment display */
+ 575:System.cpp    **** 				if (TempSelectMidiPC == MIDI_PC_OFF)
+ 576:System.cpp    **** 				{
+ 577:System.cpp    **** 					SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
+ 578:System.cpp    **** 				}
+ 579:System.cpp    **** 				else
+ 580:System.cpp    **** 				{
+ 581:System.cpp    **** 					SP10281_WriteNumber(TempSelectMidiPC);
+ 582:System.cpp    **** 				}
+ 583:System.cpp    **** 				
+ 584:System.cpp    **** 				/* Start timeout timer */
+ 585:System.cpp    **** 				System_TempSelectOvfCnt = 1;
+ 586:System.cpp    **** 			}
+ 587:System.cpp    **** 			
+ 588:System.cpp    **** 			break;
+ 589:System.cpp    **** 		
+ 590:System.cpp    **** 		default:
+ 591:System.cpp    **** 			break;
+ 592:System.cpp    **** 	}
+ 593:System.cpp    **** }
+ 594:System.cpp    **** 
+ 595:System.cpp    **** void System_HandleTempSelectTimeout()
+ 596:System.cpp    **** {
+  15               		.loc 1 596 1 view -0
+  16               		.cfi_startproc
+  17 0000 EF92      		push r14
+  18               	.LCFI0:
+  19               		.cfi_def_cfa_offset 3
+  20               		.cfi_offset 14, -2
+  21 0002 0F93      		push r16
+  22               	.LCFI1:
+  23               		.cfi_def_cfa_offset 4
+  24               		.cfi_offset 16, -3
+  25               	/* prologue: function */
+  26               	/* frame size = 0 */
+  27               	/* stack size = 2 */
+  28               	.L__stack_usage = 2
+ 597:System.cpp    **** 	switch (SystemState)
+  29               		.loc 1 597 2 view .LVU1
+  30               		.loc 1 597 10 is_stmt 0 view .LVU2
+  31 0004 8091 0000 		lds r24,SystemState
+  32               		.loc 1 597 2 view .LVU3
+  33 0008 8630      		cpi r24,lo8(6)
+  34 000a 01F0      		breq .L2
+  35 000c 00F4      		brsh .L3
+  36 000e 8130      		cpi r24,lo8(1)
+  37 0010 01F0      		breq .L4
+  38 0012 8430      		cpi r24,lo8(4)
+  39 0014 01F0      		breq .L5
+  40               	.L1:
+  41               	/* epilogue start */
+ 598:System.cpp    **** 	{
+ 599:System.cpp    **** 		case EDIT_MIDI_CHANNEL:
+ 600:System.cpp    **** 			TempSelectMidiChannel = System_MidiChannel;
+ 601:System.cpp    **** 			break;
+ 602:System.cpp    **** 			
+ 603:System.cpp    **** 		case RUN_PRESET_CTRL:
+ 604:System.cpp    **** 			if (RotaryEncoder_IsPressed())
+ 605:System.cpp    **** 			{
+ 606:System.cpp    **** 				ActivePreset = TempSelectPreset;
+ 607:System.cpp    **** 			}
+ 608:System.cpp    **** 			else
+ 609:System.cpp    **** 			{
+ 610:System.cpp    **** 				TempSelectPreset = ActivePreset;
+ 611:System.cpp    **** 				LastTempSelectPreset = ActivePreset;
+ 612:System.cpp    **** 			}
+ 613:System.cpp    **** 
+ 614:System.cpp    **** 			SystemState = ENTER_RUN_PRESET_CTRL;
+ 615:System.cpp    **** 			break;
+ 616:System.cpp    **** 			
+ 617:System.cpp    **** 		case RUN_LOOP_CTRL:
+ 618:System.cpp    **** 			if (RotaryEncoder_IsPressed())
+ 619:System.cpp    **** 			{
+ 620:System.cpp    **** 				ActivePreset = TempSelectPreset;
+ 621:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+ 622:System.cpp    **** 			}
+ 623:System.cpp    **** 			else
+ 624:System.cpp    **** 			{
+ 625:System.cpp    **** 				TempSelectPreset = ActivePreset;
+ 626:System.cpp    **** 				LastTempSelectPreset = ActivePreset;
+ 627:System.cpp    **** 				SystemState = ENTER_RUN_LOOP_CTRL;
+ 628:System.cpp    **** 			}
+ 629:System.cpp    **** 			
+ 630:System.cpp    **** 			break;
+ 631:System.cpp    **** 			
+ 632:System.cpp    **** 		case EDIT_MIDI_PC:
+ 633:System.cpp    **** 			TempSelectMidiPC = LastTempSelectMidiPC;
+ 634:System.cpp    **** 			
+ 635:System.cpp    **** 			/* Update 7-segment display */
+ 636:System.cpp    **** 			if (TempSelectMidiPC == MIDI_PC_OFF)
+ 637:System.cpp    **** 			{
+ 638:System.cpp    **** 				SP10281_WriteAll('o', 'f', 'f', 0, 0, 0);
+ 639:System.cpp    **** 			}
+ 640:System.cpp    **** 			else
+ 641:System.cpp    **** 			{
+ 642:System.cpp    **** 				SP10281_WriteNumber(TempSelectMidiPC);
+ 643:System.cpp    **** 			}
+ 644:System.cpp    **** 			
+ 645:System.cpp    **** 			break;
+ 646:System.cpp    **** 			
+ 647:System.cpp    **** 		default:
+ 648:System.cpp    **** 			break;
+ 649:System.cpp    **** 	}
+ 650:System.cpp    **** }
+  42               		.loc 1 650 1 view .LVU4
+  43 0016 0F91      		pop r16
+  44 0018 EF90      		pop r14
+  45 001a 0895      		ret
+  46               	.L3:
+ 597:System.cpp    **** 	switch (SystemState)
+  47               		.loc 1 597 2 view .LVU5
+  48 001c 8031      		cpi r24,lo8(16)
+  49 001e 01F4      		brne .L1
+ 632:System.cpp    **** 			TempSelectMidiPC = LastTempSelectMidiPC;
+  50               		.loc 1 632 3 is_stmt 1 view .LVU6
+ 633:System.cpp    **** 			
+  51               		.loc 1 633 4 view .LVU7
+ 633:System.cpp    **** 			
+  52               		.loc 1 633 21 is_stmt 0 view .LVU8
+  53 0020 8091 0000 		lds r24,LastTempSelectMidiPC
+  54 0024 8093 0000 		sts TempSelectMidiPC,r24
+ 636:System.cpp    **** 			{
+  55               		.loc 1 636 4 is_stmt 1 view .LVU9
+ 636:System.cpp    **** 			{
+  56               		.loc 1 636 25 is_stmt 0 view .LVU10
+  57 0028 8091 0000 		lds r24,TempSelectMidiPC
+ 636:System.cpp    **** 			{
+  58               		.loc 1 636 4 view .LVU11
+  59 002c 8F3F      		cpi r24,lo8(-1)
+  60 002e 01F4      		brne .L11
+ 638:System.cpp    **** 			}
+  61               		.loc 1 638 5 is_stmt 1 view .LVU12
+ 638:System.cpp    **** 			}
+  62               		.loc 1 638 21 is_stmt 0 view .LVU13
+  63 0030 E12C      		mov r14,__zero_reg__
+  64 0032 00E0      		ldi r16,0
+  65 0034 20E0      		ldi r18,0
+  66 0036 46E6      		ldi r20,lo8(102)
+  67 0038 66E6      		ldi r22,lo8(102)
+  68 003a 8FE6      		ldi r24,lo8(111)
+  69 003c 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+  70               	.LVL0:
+  71 0040 00C0      		rjmp .L1
+  72               	.L4:
+ 599:System.cpp    **** 			TempSelectMidiChannel = System_MidiChannel;
+  73               		.loc 1 599 3 is_stmt 1 view .LVU14
+ 600:System.cpp    **** 			break;
+  74               		.loc 1 600 4 view .LVU15
+ 600:System.cpp    **** 			break;
+  75               		.loc 1 600 26 is_stmt 0 view .LVU16
+  76 0042 8091 0000 		lds r24,System_MidiChannel
+  77 0046 8093 0000 		sts TempSelectMidiChannel,r24
+ 601:System.cpp    **** 			
+  78               		.loc 1 601 4 is_stmt 1 view .LVU17
+  79 004a 00C0      		rjmp .L1
+  80               	.L5:
+ 603:System.cpp    **** 			if (RotaryEncoder_IsPressed())
+  81               		.loc 1 603 3 view .LVU18
+ 604:System.cpp    **** 			{
+  82               		.loc 1 604 4 view .LVU19
+ 604:System.cpp    **** 			{
+  83               		.loc 1 604 31 is_stmt 0 view .LVU20
+  84 004c 0E94 0000 		call _Z23RotaryEncoder_IsPressedv
+  85               	.LVL1:
+ 604:System.cpp    **** 			{
+  86               		.loc 1 604 4 view .LVU21
+  87 0050 8823      		tst r24
+  88 0052 01F0      		breq .L8
+  89               	.L14:
+ 620:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+  90               		.loc 1 620 5 is_stmt 1 view .LVU22
+ 620:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+  91               		.loc 1 620 18 is_stmt 0 view .LVU23
+  92 0054 8091 0000 		lds r24,TempSelectPreset
+  93 0058 8093 0000 		sts ActivePreset,r24
+  94 005c 00C0      		rjmp .L13
+  95               	.L8:
+ 610:System.cpp    **** 				LastTempSelectPreset = ActivePreset;
+  96               		.loc 1 610 5 is_stmt 1 view .LVU24
+ 610:System.cpp    **** 				LastTempSelectPreset = ActivePreset;
+  97               		.loc 1 610 22 is_stmt 0 view .LVU25
+  98 005e 8091 0000 		lds r24,ActivePreset
+  99 0062 8093 0000 		sts TempSelectPreset,r24
+ 611:System.cpp    **** 			}
+ 100               		.loc 1 611 5 is_stmt 1 view .LVU26
+ 611:System.cpp    **** 			}
+ 101               		.loc 1 611 26 is_stmt 0 view .LVU27
+ 102 0066 8091 0000 		lds r24,ActivePreset
+ 103 006a 8093 0000 		sts LastTempSelectPreset,r24
+ 614:System.cpp    **** 			break;
+ 104               		.loc 1 614 4 is_stmt 1 view .LVU28
+ 105               	.L13:
+ 621:System.cpp    **** 			}
+ 106               		.loc 1 621 5 view .LVU29
+ 621:System.cpp    **** 			}
+ 107               		.loc 1 621 17 is_stmt 0 view .LVU30
+ 108 006e 83E0      		ldi r24,lo8(3)
+ 109               	.L12:
+ 627:System.cpp    **** 			}
+ 110               		.loc 1 627 17 view .LVU31
+ 111 0070 8093 0000 		sts SystemState,r24
+ 112 0074 00C0      		rjmp .L1
+ 113               	.L2:
+ 617:System.cpp    **** 			if (RotaryEncoder_IsPressed())
+ 114               		.loc 1 617 3 is_stmt 1 view .LVU32
+ 618:System.cpp    **** 			{
+ 115               		.loc 1 618 4 view .LVU33
+ 618:System.cpp    **** 			{
+ 116               		.loc 1 618 31 is_stmt 0 view .LVU34
+ 117 0076 0E94 0000 		call _Z23RotaryEncoder_IsPressedv
+ 118               	.LVL2:
+ 618:System.cpp    **** 			{
+ 119               		.loc 1 618 4 view .LVU35
+ 120 007a 8111      		cpse r24,__zero_reg__
+ 121 007c 00C0      		rjmp .L14
+ 625:System.cpp    **** 				LastTempSelectPreset = ActivePreset;
+ 122               		.loc 1 625 5 is_stmt 1 view .LVU36
+ 625:System.cpp    **** 				LastTempSelectPreset = ActivePreset;
+ 123               		.loc 1 625 22 is_stmt 0 view .LVU37
+ 124 007e 8091 0000 		lds r24,ActivePreset
+ 125 0082 8093 0000 		sts TempSelectPreset,r24
+ 626:System.cpp    **** 				SystemState = ENTER_RUN_LOOP_CTRL;
+ 126               		.loc 1 626 5 is_stmt 1 view .LVU38
+ 626:System.cpp    **** 				SystemState = ENTER_RUN_LOOP_CTRL;
+ 127               		.loc 1 626 26 is_stmt 0 view .LVU39
+ 128 0086 8091 0000 		lds r24,ActivePreset
+ 129 008a 8093 0000 		sts LastTempSelectPreset,r24
+ 627:System.cpp    **** 			}
+ 130               		.loc 1 627 5 is_stmt 1 view .LVU40
+ 627:System.cpp    **** 			}
+ 131               		.loc 1 627 17 is_stmt 0 view .LVU41
+ 132 008e 85E0      		ldi r24,lo8(5)
+ 133 0090 00C0      		rjmp .L12
+ 134               	.L11:
+ 642:System.cpp    **** 			}
+ 135               		.loc 1 642 5 is_stmt 1 view .LVU42
+ 642:System.cpp    **** 			}
+ 136               		.loc 1 642 24 is_stmt 0 view .LVU43
+ 137 0092 8091 0000 		lds r24,TempSelectMidiPC
+ 138 0096 90E0      		ldi r25,0
+ 139               	/* epilogue start */
+ 140               		.loc 1 650 1 view .LVU44
+ 141 0098 0F91      		pop r16
+ 142 009a EF90      		pop r14
+ 642:System.cpp    **** 			}
+ 143               		.loc 1 642 24 view .LVU45
+ 144 009c 0C94 0000 		jmp _Z19SP10281_WriteNumbers
+ 145               	.LVL3:
+ 146               		.cfi_endproc
+ 147               	.LFE4:
+ 149               	.global	_Z26System_HandleMarkSelectionv
+ 151               	_Z26System_HandleMarkSelectionv:
+ 152               	.LFB5:
+ 651:System.cpp    **** 
+ 652:System.cpp    **** void System_HandleMarkSelection()
+ 653:System.cpp    **** {
+ 153               		.loc 1 653 1 is_stmt 1 view -0
+ 154               		.cfi_startproc
+ 155               	/* prologue: function */
+ 156               	/* frame size = 0 */
+ 157               	/* stack size = 0 */
+ 158               	.L__stack_usage = 0
+ 654:System.cpp    **** 	if (SystemState == EDIT_PRESET)
+ 159               		.loc 1 654 2 view .LVU47
+ 160               		.loc 1 654 18 is_stmt 0 view .LVU48
+ 161 00a0 8091 0000 		lds r24,SystemState
+ 162               		.loc 1 654 2 view .LVU49
+ 163 00a4 8C30      		cpi r24,lo8(12)
+ 164 00a6 01F4      		brne .L15
+ 655:System.cpp    **** 	{
+ 656:System.cpp    **** 		MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATA, LoopModePreset.Active_Loops);
+ 165               		.loc 1 656 3 is_stmt 1 view .LVU50
+ 166               		.loc 1 656 20 is_stmt 0 view .LVU51
+ 167 00a8 4091 0000 		lds r20,LoopModePreset
+ 168 00ac 64E1      		ldi r22,lo8(20)
+ 169 00ae 80E0      		ldi r24,0
+ 170 00b0 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 171               	.LVL4:
+ 657:System.cpp    **** 		MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, ((1 << UI_MODE_PRESET_LED_PIN) | (LoopModePreset.
+ 172               		.loc 1 657 3 is_stmt 1 view .LVU52
+ 173               		.loc 1 657 120 is_stmt 0 view .LVU53
+ 174 00b4 4091 0000 		lds r20,LoopModePreset+1
+ 175 00b8 4F70      		andi r20,lo8(15)
+ 176               		.loc 1 657 82 view .LVU54
+ 177 00ba 4064      		ori r20,lo8(64)
+ 178               		.loc 1 657 20 view .LVU55
+ 179 00bc 65E1      		ldi r22,lo8(21)
+ 180 00be 80E0      		ldi r24,0
+ 181 00c0 0C94 0000 		jmp _Z17MCP23017_WriteReghhh
+ 182               	.LVL5:
+ 183               	.L15:
+ 184               	/* epilogue start */
+ 658:System.cpp    **** 	}
+ 659:System.cpp    **** }
+ 185               		.loc 1 659 1 view .LVU56
+ 186 00c4 0895      		ret
+ 187               		.cfi_endproc
+ 188               	.LFE5:
+ 190               	.global	_Z25System_HandlePedalCommand3CMDhPh
+ 192               	_Z25System_HandlePedalCommand3CMDhPh:
+ 193               	.LVL6:
+ 194               	.LFB6:
+ 660:System.cpp    **** 
+ 661:System.cpp    **** unsigned char System_HandlePedalCommand(CMD cmd, uint8_t length, uint8_t *dat)
+ 662:System.cpp    **** {
+ 195               		.loc 1 662 1 is_stmt 1 view -0
+ 196               		.cfi_startproc
+ 197               	/* prologue: function */
+ 198               	/* frame size = 0 */
+ 199               	/* stack size = 0 */
+ 200               	.L__stack_usage = 0
+ 201               		.loc 1 662 1 is_stmt 0 view .LVU58
+ 202 00c6 FA01      		movw r30,r20
+ 663:System.cpp    **** 	unsigned char response = ACK_BYTE;
+ 203               		.loc 1 663 2 is_stmt 1 view .LVU59
+ 204               	.LVL7:
+ 664:System.cpp    **** 	
+ 665:System.cpp    **** 	if (cmd == FootswitchShortPress)
+ 205               		.loc 1 665 2 view .LVU60
+ 206               	.LBB2:
+ 207 00c8 813B      		cpi r24,lo8(-79)
+ 208 00ca 01F4      		brne .L18
+ 209               	.LBE2:
+ 666:System.cpp    **** 	{
+ 667:System.cpp    **** 		if (SystemState == RUN_PRESET_CTRL)
+ 210               		.loc 1 667 3 view .LVU61
+ 211               	.LBB7:
+ 212               	.LBB3:
+ 213               		.loc 1 667 19 is_stmt 0 view .LVU62
+ 214 00cc 8091 0000 		lds r24,SystemState
+ 215               	.LVL8:
+ 216               		.loc 1 667 3 view .LVU63
+ 217 00d0 8430      		cpi r24,lo8(4)
+ 218 00d2 01F4      		brne .L19
+ 219               	.LBB4:
+ 668:System.cpp    **** 		{
+ 669:System.cpp    **** 			System_Preset tmpPreset = (System_Preset)(Util_Bit2Int(dat[0]) - 1);
+ 220               		.loc 1 669 4 is_stmt 1 view .LVU64
+ 221               		.loc 1 669 58 is_stmt 0 view .LVU65
+ 222 00d4 8081      		ld r24,Z
+ 223 00d6 0E94 0000 		call _Z12Util_Bit2Inth
+ 224               	.LVL9:
+ 225               		.loc 1 669 70 view .LVU66
+ 226 00da 8150      		subi r24,lo8(-(-1))
+ 227               	.LVL10:
+ 670:System.cpp    **** 			
+ 671:System.cpp    **** 			/* Force update even if received preset is same as active preset */
+ 672:System.cpp    **** 			if (tmpPreset == ActivePreset)
+ 228               		.loc 1 672 4 is_stmt 1 view .LVU67
+ 229               		.loc 1 672 18 is_stmt 0 view .LVU68
+ 230 00dc 9091 0000 		lds r25,ActivePreset
+ 231               		.loc 1 672 4 view .LVU69
+ 232 00e0 9813      		cpse r25,r24
+ 233 00e2 00C0      		rjmp .L20
+ 673:System.cpp    **** 			{
+ 674:System.cpp    **** 				LastActivePreset = System_Preset(ActivePreset ^ (1 << 0));
+ 234               		.loc 1 674 5 is_stmt 1 view .LVU70
+ 235               		.loc 1 674 24 is_stmt 0 view .LVU71
+ 236 00e4 8091 0000 		lds r24,ActivePreset
+ 237               	.LVL11:
+ 238               		.loc 1 674 51 view .LVU72
+ 239 00e8 91E0      		ldi r25,lo8(1)
+ 240 00ea 8927      		eor r24,r25
+ 241               		.loc 1 674 22 view .LVU73
+ 242 00ec 8093 0000 		sts LastActivePreset,r24
+ 243               	.L21:
+ 675:System.cpp    **** 			}
+ 676:System.cpp    **** 			else
+ 677:System.cpp    **** 			{
+ 678:System.cpp    **** 				ActivePreset = tmpPreset;
+ 679:System.cpp    **** 			}
+ 680:System.cpp    **** 			
+ 681:System.cpp    **** 			TempSelectPreset = ActivePreset;
+ 244               		.loc 1 681 4 is_stmt 1 view .LVU74
+ 245               		.loc 1 681 21 is_stmt 0 view .LVU75
+ 246 00f0 8091 0000 		lds r24,ActivePreset
+ 247 00f4 8093 0000 		sts TempSelectPreset,r24
+ 248               	.L39:
+ 249               		.loc 1 681 21 view .LVU76
+ 250               	.LBE4:
+ 251               	.LBE3:
+ 252               	.LBE7:
+ 663:System.cpp    **** 	
+ 253               		.loc 1 663 16 view .LVU77
+ 254 00f8 8CEA      		ldi r24,lo8(-84)
+ 255               	.LBB8:
+ 256               	.LBB6:
+ 257 00fa 0895      		ret
+ 258               	.LVL12:
+ 259               	.L20:
+ 260               	.LBB5:
+ 678:System.cpp    **** 			}
+ 261               		.loc 1 678 5 is_stmt 1 view .LVU78
+ 678:System.cpp    **** 			}
+ 262               		.loc 1 678 18 is_stmt 0 view .LVU79
+ 263 00fc 8093 0000 		sts ActivePreset,r24
+ 264 0100 00C0      		rjmp .L21
+ 265               	.LVL13:
+ 266               	.L19:
+ 678:System.cpp    **** 			}
+ 267               		.loc 1 678 18 view .LVU80
+ 268               	.LBE5:
+ 682:System.cpp    **** 		} 
+ 683:System.cpp    **** 		else if (SystemState == RUN_LOOP_CTRL)
+ 269               		.loc 1 683 8 is_stmt 1 view .LVU81
+ 270               		.loc 1 683 24 is_stmt 0 view .LVU82
+ 271 0102 8091 0000 		lds r24,SystemState
+ 272               		.loc 1 683 8 view .LVU83
+ 273 0106 8630      		cpi r24,lo8(6)
+ 274 0108 01F4      		brne .L42
+ 684:System.cpp    **** 		{
+ 685:System.cpp    **** 			LoopModePreset.Active_Loops ^= dat[0];
+ 275               		.loc 1 685 4 is_stmt 1 view .LVU84
+ 276               		.loc 1 685 32 is_stmt 0 view .LVU85
+ 277 010a 8091 0000 		lds r24,LoopModePreset
+ 278 010e 9081      		ld r25,Z
+ 279 0110 8927      		eor r24,r25
+ 280 0112 8093 0000 		sts LoopModePreset,r24
+ 281 0116 00C0      		rjmp .L39
+ 282               	.LVL14:
+ 283               	.L18:
+ 284               		.loc 1 685 32 view .LVU86
+ 285               	.LBE6:
+ 686:System.cpp    **** 		}
+ 687:System.cpp    **** 		else if (SystemState == TUNER)
+ 688:System.cpp    **** 		{
+ 689:System.cpp    **** 			SystemState = INITIALIZE_SYSTEM;
+ 690:System.cpp    **** 		}
+ 691:System.cpp    **** 	}
+ 692:System.cpp    **** 	else if (cmd == FootswitchLongPress)
+ 286               		.loc 1 692 7 is_stmt 1 view .LVU87
+ 287 0118 823B      		cpi r24,lo8(-78)
+ 288 011a 01F4      		brne .L24
+ 693:System.cpp    **** 	{
+ 694:System.cpp    **** 		if (SystemState == RUN_PRESET_CTRL)
+ 289               		.loc 1 694 3 view .LVU88
+ 290               		.loc 1 694 19 is_stmt 0 view .LVU89
+ 291 011c 8091 0000 		lds r24,SystemState
+ 292               	.LVL15:
+ 293               		.loc 1 694 3 view .LVU90
+ 294 0120 8430      		cpi r24,lo8(4)
+ 295 0122 01F4      		brne .L25
+ 695:System.cpp    **** 		{
+ 696:System.cpp    **** 			SystemRunMode = RUN_LOOP_MODE;
+ 296               		.loc 1 696 4 is_stmt 1 view .LVU91
+ 297               		.loc 1 696 18 is_stmt 0 view .LVU92
+ 298 0124 81E0      		ldi r24,lo8(1)
+ 299 0126 8093 0000 		sts SystemRunMode,r24
+ 697:System.cpp    **** 			SystemState = INITIALIZE_SYSTEM;
+ 300               		.loc 1 697 4 is_stmt 1 view .LVU93
+ 301               	.L29:
+ 698:System.cpp    **** 		}
+ 699:System.cpp    **** 		else if (SystemState == RUN_LOOP_CTRL)
+ 700:System.cpp    **** 		{
+ 701:System.cpp    **** 			/* Determine if top or bottom row of footswitches was pressed */
+ 702:System.cpp    **** 			if (dat[0] & 0x0F)	// If bottom row then (de)activate Ctrl switches
+ 703:System.cpp    **** 			{
+ 704:System.cpp    **** 				LoopModePreset.Active_CtrlSwitches ^= dat[0];
+ 705:System.cpp    **** 			}
+ 706:System.cpp    **** 			else				// If top row then change to Preset mode
+ 707:System.cpp    **** 			{
+ 708:System.cpp    **** 				SystemRunMode = RUN_PRESET_MODE;
+ 709:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+ 710:System.cpp    **** 			}
+ 711:System.cpp    **** 		}
+ 712:System.cpp    **** 		else if (SystemState == TUNER)
+ 713:System.cpp    **** 		{
+ 714:System.cpp    **** 			SystemState = INITIALIZE_SYSTEM;
+ 715:System.cpp    **** 		}
+ 716:System.cpp    **** 	}
+ 717:System.cpp    **** 	else if (cmd == FootswitchLongLongPress)
+ 718:System.cpp    **** 	{
+ 719:System.cpp    **** 		if (SystemState == RUN_PRESET_CTRL || SystemState == RUN_LOOP_CTRL)
+ 720:System.cpp    **** 		{
+ 721:System.cpp    **** 			SystemState = TUNER;
+ 722:System.cpp    **** 		}
+ 723:System.cpp    **** 		else if (SystemState == TUNER)
+ 724:System.cpp    **** 		{
+ 725:System.cpp    **** 			SystemState = INITIALIZE_SYSTEM;
+ 302               		.loc 1 725 4 view .LVU94
+ 303               		.loc 1 725 16 is_stmt 0 view .LVU95
+ 304 012a 82E0      		ldi r24,lo8(2)
+ 305 012c 00C0      		rjmp .L40
+ 306               	.L25:
+ 699:System.cpp    **** 		{
+ 307               		.loc 1 699 8 is_stmt 1 view .LVU96
+ 699:System.cpp    **** 		{
+ 308               		.loc 1 699 24 is_stmt 0 view .LVU97
+ 309 012e 8091 0000 		lds r24,SystemState
+ 699:System.cpp    **** 		{
+ 310               		.loc 1 699 8 view .LVU98
+ 311 0132 8630      		cpi r24,lo8(6)
+ 312 0134 01F4      		brne .L42
+ 702:System.cpp    **** 			{
+ 313               		.loc 1 702 4 is_stmt 1 view .LVU99
+ 702:System.cpp    **** 			{
+ 314               		.loc 1 702 13 is_stmt 0 view .LVU100
+ 315 0136 9081      		ld r25,Z
+ 702:System.cpp    **** 			{
+ 316               		.loc 1 702 4 view .LVU101
+ 317 0138 892F      		mov r24,r25
+ 318 013a 8F70      		andi r24,lo8(15)
+ 319 013c 01F0      		breq .L27
+ 704:System.cpp    **** 			}
+ 320               		.loc 1 704 5 is_stmt 1 view .LVU102
+ 704:System.cpp    **** 			}
+ 321               		.loc 1 704 40 is_stmt 0 view .LVU103
+ 322 013e 8091 0000 		lds r24,LoopModePreset+1
+ 323 0142 8927      		eor r24,r25
+ 324 0144 8093 0000 		sts LoopModePreset+1,r24
+ 325 0148 00C0      		rjmp .L39
+ 326               	.L27:
+ 708:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+ 327               		.loc 1 708 5 is_stmt 1 view .LVU104
+ 708:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+ 328               		.loc 1 708 19 is_stmt 0 view .LVU105
+ 329 014a 1092 0000 		sts SystemRunMode,__zero_reg__
+ 709:System.cpp    **** 			}
+ 330               		.loc 1 709 5 is_stmt 1 view .LVU106
+ 331 014e 00C0      		rjmp .L29
+ 332               	.LVL16:
+ 333               	.L24:
+ 717:System.cpp    **** 	{
+ 334               		.loc 1 717 7 view .LVU107
+ 335 0150 843B      		cpi r24,lo8(-76)
+ 336 0152 01F4      		brne .L32
+ 719:System.cpp    **** 		{
+ 337               		.loc 1 719 3 view .LVU108
+ 719:System.cpp    **** 		{
+ 338               		.loc 1 719 19 is_stmt 0 view .LVU109
+ 339 0154 8091 0000 		lds r24,SystemState
+ 340               	.LVL17:
+ 719:System.cpp    **** 		{
+ 341               		.loc 1 719 38 view .LVU110
+ 342 0158 8430      		cpi r24,lo8(4)
+ 343 015a 01F0      		breq .L28
+ 719:System.cpp    **** 		{
+ 344               		.loc 1 719 53 discriminator 2 view .LVU111
+ 345 015c 8091 0000 		lds r24,SystemState
+ 719:System.cpp    **** 		{
+ 346               		.loc 1 719 38 discriminator 2 view .LVU112
+ 347 0160 8630      		cpi r24,lo8(6)
+ 348 0162 01F0      		breq .L28
+ 349               	.L42:
+ 723:System.cpp    **** 		{
+ 350               		.loc 1 723 8 is_stmt 1 view .LVU113
+ 723:System.cpp    **** 		{
+ 351               		.loc 1 723 24 is_stmt 0 view .LVU114
+ 352 0164 8091 0000 		lds r24,SystemState
+ 723:System.cpp    **** 		{
+ 353               		.loc 1 723 8 view .LVU115
+ 354 0168 8830      		cpi r24,lo8(8)
+ 355 016a 01F4      		brne .L39
+ 356 016c 00C0      		rjmp .L29
+ 357               	.L28:
+ 721:System.cpp    **** 		}
+ 358               		.loc 1 721 4 is_stmt 1 view .LVU116
+ 721:System.cpp    **** 		}
+ 359               		.loc 1 721 16 is_stmt 0 view .LVU117
+ 360 016e 88E0      		ldi r24,lo8(8)
+ 361               	.L40:
+ 362               		.loc 1 725 16 view .LVU118
+ 363 0170 8093 0000 		sts SystemState,r24
+ 364 0174 00C0      		rjmp .L39
+ 365               	.LVL18:
+ 366               	.L32:
+ 726:System.cpp    **** 		}
+ 727:System.cpp    **** 	}
+ 728:System.cpp    **** 	else
+ 729:System.cpp    **** 	{
+ 730:System.cpp    **** 		response = NACK_BYTE;
+ 367               		.loc 1 730 12 view .LVU119
+ 368 0176 8AE2      		ldi r24,lo8(42)
+ 369               	.LVL19:
+ 370               		.loc 1 730 12 view .LVU120
+ 371               	.LBE8:
+ 731:System.cpp    **** 	}
+ 732:System.cpp    **** 	
+ 733:System.cpp    **** 	return response;
+ 372               		.loc 1 733 2 is_stmt 1 view .LVU121
+ 373               	/* epilogue start */
+ 734:System.cpp    **** }
+ 374               		.loc 1 734 1 is_stmt 0 view .LVU122
+ 375 0178 0895      		ret
+ 376               		.cfi_endproc
+ 377               	.LFE6:
+ 379               	.global	_Z30System_HandleMIDIProgramChangev
+ 381               	_Z30System_HandleMIDIProgramChangev:
+ 382               	.LFB7:
+ 735:System.cpp    **** 
+ 736:System.cpp    **** void System_HandleMIDIProgramChange()
+ 737:System.cpp    **** {
+ 383               		.loc 1 737 1 is_stmt 1 view -0
+ 384               		.cfi_startproc
+ 385               	/* prologue: function */
+ 386               	/* frame size = 0 */
+ 387               	/* stack size = 0 */
+ 388               	.L__stack_usage = 0
+ 738:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_PRESETS; i++)
+ 389               		.loc 1 738 2 view .LVU124
+ 390               	.LVL20:
+ 391               	.LBB9:
+ 392               		.loc 1 738 24 view .LVU125
+ 393 017a E0E0      		ldi r30,lo8(PresetTable)
+ 394 017c F0E0      		ldi r31,hi8(PresetTable)
+ 395               		.loc 1 738 15 is_stmt 0 view .LVU126
+ 396 017e 80E0      		ldi r24,0
+ 397               	.LVL21:
+ 398               	.L46:
+ 739:System.cpp    **** 	{
+ 740:System.cpp    **** 		if (PresetTable[i].MIDI_PC_In == MIDI_ReceivedProgram)
+ 399               		.loc 1 740 3 is_stmt 1 view .LVU127
+ 400               		.loc 1 740 33 is_stmt 0 view .LVU128
+ 401 0180 9091 0000 		lds r25,MIDI_ReceivedProgram
+ 402               		.loc 1 740 3 view .LVU129
+ 403 0184 2281      		ldd r18,Z+2
+ 404 0186 2913      		cpse r18,r25
+ 405 0188 00C0      		rjmp .L45
+ 741:System.cpp    **** 		{
+ 742:System.cpp    **** 			ActivePreset = (System_Preset)i;
+ 406               		.loc 1 742 4 is_stmt 1 view .LVU130
+ 407               		.loc 1 742 17 is_stmt 0 view .LVU131
+ 408 018a 8093 0000 		sts ActivePreset,r24
+ 409               	.L45:
+ 738:System.cpp    **** 	{
+ 410               		.loc 1 738 2 is_stmt 1 discriminator 2 view .LVU132
+ 411 018e 8F5F      		subi r24,lo8(-(1))
+ 412               	.LVL22:
+ 738:System.cpp    **** 	{
+ 413               		.loc 1 738 24 discriminator 2 view .LVU133
+ 414 0190 3496      		adiw r30,4
+ 415 0192 8830      		cpi r24,lo8(8)
+ 416 0194 01F4      		brne .L46
+ 417               	/* epilogue start */
+ 418               	.LBE9:
+ 743:System.cpp    **** 		}
+ 744:System.cpp    **** 	}
+ 745:System.cpp    **** }
+ 419               		.loc 1 745 1 is_stmt 0 view .LVU134
+ 420 0196 0895      		ret
+ 421               		.cfi_endproc
+ 422               	.LFE7:
+ 424               	.global	_Z20System_UpdateUI_LEDsv
+ 426               	_Z20System_UpdateUI_LEDsv:
+ 427               	.LFB8:
+ 746:System.cpp    **** 
+ 747:System.cpp    **** void System_UpdateUI_LEDs()
+ 748:System.cpp    **** {
+ 428               		.loc 1 748 1 is_stmt 1 view -0
+ 429               		.cfi_startproc
+ 430 0198 0F93      		push r16
+ 431               	.LCFI2:
+ 432               		.cfi_def_cfa_offset 3
+ 433               		.cfi_offset 16, -2
+ 434 019a 1F93      		push r17
+ 435               	.LCFI3:
+ 436               		.cfi_def_cfa_offset 4
+ 437               		.cfi_offset 17, -3
+ 438 019c CF93      		push r28
+ 439               	.LCFI4:
+ 440               		.cfi_def_cfa_offset 5
+ 441               		.cfi_offset 28, -4
+ 442 019e DF93      		push r29
+ 443               	.LCFI5:
+ 444               		.cfi_def_cfa_offset 6
+ 445               		.cfi_offset 29, -5
+ 446               	/* prologue: function */
+ 447               	/* frame size = 0 */
+ 448               	/* stack size = 4 */
+ 449               	.L__stack_usage = 4
+ 749:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_LOOPS; i++)
+ 450               		.loc 1 749 2 view .LVU136
+ 451               	.LVL23:
+ 452               	.LBB10:
+ 453               		.loc 1 749 24 view .LVU137
+ 454 01a0 C0E0      		ldi r28,lo8(LoopLEDs)
+ 455 01a2 D0E0      		ldi r29,hi8(LoopLEDs)
+ 456               	.LBE10:
+ 748:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_LOOPS; i++)
+ 457               		.loc 1 748 1 is_stmt 0 view .LVU138
+ 458 01a4 10E0      		ldi r17,0
+ 459 01a6 00E0      		ldi r16,0
+ 460               	.LVL24:
+ 461               	.L53:
+ 462               	.LBB11:
+ 750:System.cpp    **** 	{
+ 751:System.cpp    **** 		if (LoopModePreset.Active_Loops & (1 << i))
+ 463               		.loc 1 751 3 is_stmt 1 view .LVU139
+ 464               		.loc 1 751 22 is_stmt 0 view .LVU140
+ 465 01a8 8091 0000 		lds r24,LoopModePreset
+ 466 01ac 90E0      		ldi r25,0
+ 467               		.loc 1 751 45 view .LVU141
+ 468 01ae 002E      		mov r0,r16
+ 469 01b0 00C0      		rjmp 2f
+ 470               		1:
+ 471 01b2 9595      		asr r25
+ 472 01b4 8795      		ror r24
+ 473               		2:
+ 474 01b6 0A94      		dec r0
+ 475 01b8 02F4      		brpl 1b
+ 476               		.loc 1 751 3 view .LVU142
+ 477 01ba 80FF      		sbrs r24,0
+ 478 01bc 00C0      		rjmp .L49
+ 752:System.cpp    **** 		{
+ 753:System.cpp    **** 			if (LoopLEDs[i].getState() != MCP_Output::SET)
+ 479               		.loc 1 753 4 is_stmt 1 view .LVU143
+ 480               		.loc 1 753 28 is_stmt 0 view .LVU144
+ 481 01be CE01      		movw r24,r28
+ 482 01c0 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 483               	.LVL25:
+ 484               		.loc 1 753 4 view .LVU145
+ 485 01c4 8130      		cpi r24,lo8(1)
+ 486 01c6 01F0      		breq .L51
+ 754:System.cpp    **** 			{
+ 755:System.cpp    **** 				LoopLEDs[i].Set();
+ 487               		.loc 1 755 5 is_stmt 1 view .LVU146
+ 488               		.loc 1 755 20 is_stmt 0 view .LVU147
+ 489 01c8 CE01      		movw r24,r28
+ 490 01ca 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 491               	.LVL26:
+ 492               	.L51:
+ 749:System.cpp    **** 	{
+ 493               		.loc 1 749 2 is_stmt 1 discriminator 2 view .LVU148
+ 749:System.cpp    **** 	{
+ 494               		.loc 1 749 24 discriminator 2 view .LVU149
+ 495 01ce 0F5F      		subi r16,-1
+ 496 01d0 1F4F      		sbci r17,-1
+ 497               	.LVL27:
+ 749:System.cpp    **** 	{
+ 498               		.loc 1 749 24 is_stmt 0 discriminator 2 view .LVU150
+ 499 01d2 2496      		adiw r28,4
+ 500 01d4 0830      		cpi r16,8
+ 501 01d6 1105      		cpc r17,__zero_reg__
+ 502 01d8 01F4      		brne .L53
+ 503 01da C0E0      		ldi r28,lo8(CtrlSwitchLEDs)
+ 504 01dc D0E0      		ldi r29,hi8(CtrlSwitchLEDs)
+ 749:System.cpp    **** 	{
+ 505               		.loc 1 749 24 view .LVU151
+ 506 01de 10E0      		ldi r17,0
+ 507 01e0 00E0      		ldi r16,0
+ 508               	.LVL28:
+ 509               	.L58:
+ 749:System.cpp    **** 	{
+ 510               		.loc 1 749 24 view .LVU152
+ 511               	.LBE11:
+ 512               	.LBB12:
+ 756:System.cpp    **** 			}
+ 757:System.cpp    **** 		}
+ 758:System.cpp    **** 		else
+ 759:System.cpp    **** 		{
+ 760:System.cpp    **** 			if (LoopLEDs[i].getState() != MCP_Output::CLEARED)
+ 761:System.cpp    **** 			{
+ 762:System.cpp    **** 				LoopLEDs[i].Clear();	
+ 763:System.cpp    **** 			}
+ 764:System.cpp    **** 		}
+ 765:System.cpp    **** 	}
+ 766:System.cpp    **** 				
+ 767:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_CTRL_SWITCHES; i++)
+ 768:System.cpp    **** 	{
+ 769:System.cpp    **** 		if (LoopModePreset.Active_CtrlSwitches & (1 << i))
+ 513               		.loc 1 769 3 is_stmt 1 view .LVU153
+ 514               		.loc 1 769 22 is_stmt 0 view .LVU154
+ 515 01e2 8091 0000 		lds r24,LoopModePreset+1
+ 516 01e6 90E0      		ldi r25,0
+ 517               		.loc 1 769 52 view .LVU155
+ 518 01e8 002E      		mov r0,r16
+ 519 01ea 00C0      		rjmp 2f
+ 520               		1:
+ 521 01ec 9595      		asr r25
+ 522 01ee 8795      		ror r24
+ 523               		2:
+ 524 01f0 0A94      		dec r0
+ 525 01f2 02F4      		brpl 1b
+ 526               		.loc 1 769 3 view .LVU156
+ 527 01f4 80FF      		sbrs r24,0
+ 528 01f6 00C0      		rjmp .L54
+ 770:System.cpp    **** 		{
+ 771:System.cpp    **** 			if (CtrlSwitchLEDs[i].getState() != MCP_Output::SET)
+ 529               		.loc 1 771 4 is_stmt 1 view .LVU157
+ 530               		.loc 1 771 34 is_stmt 0 view .LVU158
+ 531 01f8 CE01      		movw r24,r28
+ 532 01fa 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 533               	.LVL29:
+ 534               		.loc 1 771 4 view .LVU159
+ 535 01fe 8130      		cpi r24,lo8(1)
+ 536 0200 01F0      		breq .L56
+ 772:System.cpp    **** 			{
+ 773:System.cpp    **** 				CtrlSwitchLEDs[i].Set();
+ 537               		.loc 1 773 5 is_stmt 1 view .LVU160
+ 538               		.loc 1 773 26 is_stmt 0 view .LVU161
+ 539 0202 CE01      		movw r24,r28
+ 540 0204 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 541               	.LVL30:
+ 542               	.L56:
+ 767:System.cpp    **** 	{
+ 543               		.loc 1 767 2 is_stmt 1 discriminator 2 view .LVU162
+ 767:System.cpp    **** 	{
+ 544               		.loc 1 767 24 discriminator 2 view .LVU163
+ 545 0208 0F5F      		subi r16,-1
+ 546 020a 1F4F      		sbci r17,-1
+ 547               	.LVL31:
+ 767:System.cpp    **** 	{
+ 548               		.loc 1 767 24 is_stmt 0 discriminator 2 view .LVU164
+ 549 020c 2496      		adiw r28,4
+ 550 020e 0430      		cpi r16,4
+ 551 0210 1105      		cpc r17,__zero_reg__
+ 552 0212 01F4      		brne .L58
+ 553               	/* epilogue start */
+ 554               	.LBE12:
+ 774:System.cpp    **** 			}
+ 775:System.cpp    **** 		}
+ 776:System.cpp    **** 		else
+ 777:System.cpp    **** 		{
+ 778:System.cpp    **** 			if (CtrlSwitchLEDs[i].getState() != MCP_Output::CLEARED)
+ 779:System.cpp    **** 			{
+ 780:System.cpp    **** 				CtrlSwitchLEDs[i].Clear();
+ 781:System.cpp    **** 			}
+ 782:System.cpp    **** 		}
+ 783:System.cpp    **** 	}
+ 784:System.cpp    **** }
+ 555               		.loc 1 784 1 view .LVU165
+ 556 0214 DF91      		pop r29
+ 557 0216 CF91      		pop r28
+ 558 0218 1F91      		pop r17
+ 559 021a 0F91      		pop r16
+ 560               	.LVL32:
+ 561               		.loc 1 784 1 view .LVU166
+ 562 021c 0895      		ret
+ 563               	.LVL33:
+ 564               	.L49:
+ 565               	.LBB13:
+ 760:System.cpp    **** 			{
+ 566               		.loc 1 760 4 is_stmt 1 view .LVU167
+ 760:System.cpp    **** 			{
+ 567               		.loc 1 760 28 is_stmt 0 view .LVU168
+ 568 021e CE01      		movw r24,r28
+ 569 0220 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 570               	.LVL34:
+ 760:System.cpp    **** 			{
+ 571               		.loc 1 760 4 view .LVU169
+ 572 0224 8823      		tst r24
+ 573 0226 01F0      		breq .L51
+ 762:System.cpp    **** 			}
+ 574               		.loc 1 762 5 is_stmt 1 view .LVU170
+ 762:System.cpp    **** 			}
+ 575               		.loc 1 762 22 is_stmt 0 view .LVU171
+ 576 0228 CE01      		movw r24,r28
+ 577 022a 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 578               	.LVL35:
+ 579 022e 00C0      		rjmp .L51
+ 580               	.LVL36:
+ 581               	.L54:
+ 762:System.cpp    **** 			}
+ 582               		.loc 1 762 22 view .LVU172
+ 583               	.LBE13:
+ 584               	.LBB14:
+ 778:System.cpp    **** 			{
+ 585               		.loc 1 778 4 is_stmt 1 view .LVU173
+ 778:System.cpp    **** 			{
+ 586               		.loc 1 778 34 is_stmt 0 view .LVU174
+ 587 0230 CE01      		movw r24,r28
+ 588 0232 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 589               	.LVL37:
+ 778:System.cpp    **** 			{
+ 590               		.loc 1 778 4 view .LVU175
+ 591 0236 8823      		tst r24
+ 592 0238 01F0      		breq .L56
+ 780:System.cpp    **** 			}
+ 593               		.loc 1 780 5 is_stmt 1 view .LVU176
+ 780:System.cpp    **** 			}
+ 594               		.loc 1 780 28 is_stmt 0 view .LVU177
+ 595 023a CE01      		movw r24,r28
+ 596 023c 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 597               	.LVL38:
+ 598 0240 00C0      		rjmp .L56
+ 599               	.LBE14:
+ 600               		.cfi_endproc
+ 601               	.LFE8:
+ 603               	.global	_Z31System_HandleRotaryEncoderInputv
+ 605               	_Z31System_HandleRotaryEncoderInputv:
+ 606               	.LFB3:
+ 339:System.cpp    **** 	switch (SystemState)
+ 607               		.loc 1 339 1 is_stmt 1 view -0
+ 608               		.cfi_startproc
+ 609 0242 EF92      		push r14
+ 610               	.LCFI6:
+ 611               		.cfi_def_cfa_offset 3
+ 612               		.cfi_offset 14, -2
+ 613 0244 0F93      		push r16
+ 614               	.LCFI7:
+ 615               		.cfi_def_cfa_offset 4
+ 616               		.cfi_offset 16, -3
+ 617               	/* prologue: function */
+ 618               	/* frame size = 0 */
+ 619               	/* stack size = 2 */
+ 620               	.L__stack_usage = 2
+ 340:System.cpp    **** 	{
+ 621               		.loc 1 340 2 view .LVU179
+ 340:System.cpp    **** 	{
+ 622               		.loc 1 340 10 is_stmt 0 view .LVU180
+ 623 0246 E091 0000 		lds r30,SystemState
+ 624 024a E150      		subi r30,lo8(-(-1))
+ 625 024c E031      		cpi r30,lo8(16)
+ 626 024e 00F4      		brsh .L67
+ 627 0250 F0E0      		ldi r31,0
+ 628 0252 E050      		subi r30,lo8(-(gs(.L70)))
+ 629 0254 F040      		sbci r31,hi8(-(gs(.L70)))
+ 630 0256 0C94 0000 		jmp __tablejump2__
+ 631               		.section	.jumptables.gcc._Z31System_HandleRotaryEncoderInputv,"a",@progbits
+ 632               		.p2align	1
+ 633               	.L70:
+ 634 0000 0000      		.word gs(.L75)
+ 635 0002 0000      		.word gs(.L67)
+ 636 0004 0000      		.word gs(.L67)
+ 637 0006 0000      		.word gs(.L74)
+ 638 0008 0000      		.word gs(.L67)
+ 639 000a 0000      		.word gs(.L74)
+ 640 000c 0000      		.word gs(.L67)
+ 641 000e 0000      		.word gs(.L67)
+ 642 0010 0000      		.word gs(.L67)
+ 643 0012 0000      		.word gs(.L73)
+ 644 0014 0000      		.word gs(.L67)
+ 645 0016 0000      		.word gs(.L72)
+ 646 0018 0000      		.word gs(.L67)
+ 647 001a 0000      		.word gs(.L71)
+ 648 001c 0000      		.word gs(.L67)
+ 649 001e 0000      		.word gs(.L69)
+ 650               		.text
+ 651               	.L75:
+ 342:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 652               		.loc 1 342 3 is_stmt 1 view .LVU181
+ 343:System.cpp    **** 			{
+ 653               		.loc 1 343 4 view .LVU182
+ 343:System.cpp    **** 			{
+ 654               		.loc 1 343 21 is_stmt 0 view .LVU183
+ 655 025a 8091 0000 		lds r24,RotEnc_State
+ 343:System.cpp    **** 			{
+ 656               		.loc 1 343 4 view .LVU184
+ 657 025e 8330      		cpi r24,lo8(3)
+ 658 0260 01F4      		brne .L76
+ 345:System.cpp    **** 			}
+ 659               		.loc 1 345 5 is_stmt 1 view .LVU185
+ 345:System.cpp    **** 			}
+ 660               		.loc 1 345 24 is_stmt 0 view .LVU186
+ 661 0262 8091 0000 		lds r24,TempSelectMidiChannel
+ 662 0266 8093 0000 		sts System_MidiChannel,r24
+ 663               	.L67:
+ 664               	/* epilogue start */
+ 593:System.cpp    **** 
+ 665               		.loc 1 593 1 view .LVU187
+ 666 026a 0F91      		pop r16
+ 667 026c EF90      		pop r14
+ 668 026e 0895      		ret
+ 669               	.L76:
+ 347:System.cpp    **** 			{
+ 670               		.loc 1 347 9 is_stmt 1 view .LVU188
+ 347:System.cpp    **** 			{
+ 671               		.loc 1 347 26 is_stmt 0 view .LVU189
+ 672 0270 8091 0000 		lds r24,RotEnc_State
+ 347:System.cpp    **** 			{
+ 673               		.loc 1 347 9 view .LVU190
+ 674 0274 8530      		cpi r24,lo8(5)
+ 675 0276 01F4      		brne .L77
+ 350:System.cpp    **** 				eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, (uint8_t)System_MidiChannel);
+ 676               		.loc 1 350 5 is_stmt 1 view .LVU191
+ 350:System.cpp    **** 				eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, (uint8_t)System_MidiChannel);
+ 677               		.loc 1 350 24 is_stmt 0 view .LVU192
+ 678 0278 8091 0000 		lds r24,TempSelectMidiChannel
+ 679 027c 8093 0000 		sts System_MidiChannel,r24
+ 351:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+ 680               		.loc 1 351 5 is_stmt 1 view .LVU193
+ 351:System.cpp    **** 				SystemState = INITIALIZE_SYSTEM;
+ 681               		.loc 1 351 22 is_stmt 0 view .LVU194
+ 682 0280 6091 0000 		lds r22,System_MidiChannel
+ 683 0284 90E0      		ldi r25,0
+ 684 0286 80E0      		ldi r24,0
+ 685 0288 0E94 0000 		call eeprom_write_byte
+ 686               	.LVL39:
+ 352:System.cpp    **** 			}
+ 687               		.loc 1 352 5 is_stmt 1 view .LVU195
+ 688               	.L137:
+ 416:System.cpp    **** 				}
+ 689               		.loc 1 416 6 view .LVU196
+ 416:System.cpp    **** 				}
+ 690               		.loc 1 416 18 is_stmt 0 view .LVU197
+ 691 028c 82E0      		ldi r24,lo8(2)
+ 692 028e 00C0      		rjmp .L132
+ 693               	.L77:
+ 354:System.cpp    **** 			{
+ 694               		.loc 1 354 9 is_stmt 1 view .LVU198
+ 354:System.cpp    **** 			{
+ 695               		.loc 1 354 26 is_stmt 0 view .LVU199
+ 696 0290 8091 0000 		lds r24,RotEnc_State
+ 354:System.cpp    **** 			{
+ 697               		.loc 1 354 9 view .LVU200
+ 698 0294 8130      		cpi r24,lo8(1)
+ 699 0296 01F4      		brne .L78
+ 357:System.cpp    **** 				{
+ 700               		.loc 1 357 5 is_stmt 1 view .LVU201
+ 357:System.cpp    **** 				{
+ 701               		.loc 1 357 31 is_stmt 0 view .LVU202
+ 702 0298 8091 0000 		lds r24,TempSelectMidiChannel
+ 357:System.cpp    **** 				{
+ 703               		.loc 1 357 5 view .LVU203
+ 704 029c 8031      		cpi r24,lo8(16)
+ 705 029e 00F4      		brsh .L67
+ 359:System.cpp    **** 				}
+ 706               		.loc 1 359 6 is_stmt 1 view .LVU204
+ 359:System.cpp    **** 				}
+ 707               		.loc 1 359 30 is_stmt 0 view .LVU205
+ 708 02a0 8091 0000 		lds r24,TempSelectMidiChannel
+ 359:System.cpp    **** 				}
+ 709               		.loc 1 359 65 view .LVU206
+ 710 02a4 8F5F      		subi r24,lo8(-(1))
+ 711               	.L133:
+ 367:System.cpp    **** 				}
+ 712               		.loc 1 367 28 view .LVU207
+ 713 02a6 8093 0000 		sts TempSelectMidiChannel,r24
+ 714 02aa 00C0      		rjmp .L67
+ 715               	.L78:
+ 362:System.cpp    **** 			{
+ 716               		.loc 1 362 9 is_stmt 1 view .LVU208
+ 362:System.cpp    **** 			{
+ 717               		.loc 1 362 26 is_stmt 0 view .LVU209
+ 718 02ac 8091 0000 		lds r24,RotEnc_State
+ 362:System.cpp    **** 			{
+ 719               		.loc 1 362 9 view .LVU210
+ 720 02b0 8230      		cpi r24,lo8(2)
+ 721 02b2 01F4      		brne .L67
+ 365:System.cpp    **** 				{
+ 722               		.loc 1 365 5 is_stmt 1 view .LVU211
+ 365:System.cpp    **** 				{
+ 723               		.loc 1 365 31 is_stmt 0 view .LVU212
+ 724 02b4 8091 0000 		lds r24,TempSelectMidiChannel
+ 365:System.cpp    **** 				{
+ 725               		.loc 1 365 5 view .LVU213
+ 726 02b8 8823      		tst r24
+ 727 02ba 01F0      		breq .L67
+ 367:System.cpp    **** 				}
+ 728               		.loc 1 367 6 is_stmt 1 view .LVU214
+ 367:System.cpp    **** 				}
+ 729               		.loc 1 367 30 is_stmt 0 view .LVU215
+ 730 02bc 8091 0000 		lds r24,TempSelectMidiChannel
+ 367:System.cpp    **** 				}
+ 731               		.loc 1 367 65 view .LVU216
+ 732 02c0 8150      		subi r24,lo8(-(-1))
+ 733 02c2 00C0      		rjmp .L133
+ 734               	.L74:
+ 373:System.cpp    **** 		case RUN_LOOP_CTRL:
+ 735               		.loc 1 373 3 is_stmt 1 view .LVU217
+ 374:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 736               		.loc 1 374 3 view .LVU218
+ 375:System.cpp    **** 			{
+ 737               		.loc 1 375 4 view .LVU219
+ 375:System.cpp    **** 			{
+ 738               		.loc 1 375 21 is_stmt 0 view .LVU220
+ 739 02c4 8091 0000 		lds r24,RotEnc_State
+ 375:System.cpp    **** 			{
+ 740               		.loc 1 375 4 view .LVU221
+ 741 02c8 8330      		cpi r24,lo8(3)
+ 742 02ca 01F4      		brne .L79
+ 377:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+ 743               		.loc 1 377 5 is_stmt 1 view .LVU222
+ 377:System.cpp    **** 				SystemState = ENTER_RUN_PRESET_CTRL;
+ 744               		.loc 1 377 18 is_stmt 0 view .LVU223
+ 745 02cc 9091 0000 		lds r25,TempSelectPreset
+ 746 02d0 9093 0000 		sts ActivePreset,r25
+ 747               	.L132:
+ 378:System.cpp    **** 			}
+ 748               		.loc 1 378 5 is_stmt 1 view .LVU224
+ 378:System.cpp    **** 			}
+ 749               		.loc 1 378 17 is_stmt 0 view .LVU225
+ 750 02d4 8093 0000 		sts SystemState,r24
+ 751 02d8 00C0      		rjmp .L67
+ 752               	.L79:
+ 380:System.cpp    **** 			{
+ 753               		.loc 1 380 9 is_stmt 1 view .LVU226
+ 380:System.cpp    **** 			{
+ 754               		.loc 1 380 26 is_stmt 0 view .LVU227
+ 755 02da 8091 0000 		lds r24,RotEnc_State
+ 380:System.cpp    **** 			{
+ 756               		.loc 1 380 9 view .LVU228
+ 757 02de 8530      		cpi r24,lo8(5)
+ 758 02e0 01F4      		brne .L80
+ 382:System.cpp    **** 				
+ 759               		.loc 1 382 5 is_stmt 1 view .LVU229
+ 382:System.cpp    **** 				
+ 760               		.loc 1 382 18 is_stmt 0 view .LVU230
+ 761 02e2 8091 0000 		lds r24,TempSelectPreset
+ 762 02e6 8093 0000 		sts ActivePreset,r24
+ 384:System.cpp    **** 			}
+ 763               		.loc 1 384 5 is_stmt 1 view .LVU231
+ 764               	.L139:
+ 505:System.cpp    **** 			}
+ 765               		.loc 1 505 5 view .LVU232
+ 505:System.cpp    **** 			}
+ 766               		.loc 1 505 17 is_stmt 0 view .LVU233
+ 767 02ea 89E0      		ldi r24,lo8(9)
+ 768 02ec 00C0      		rjmp .L132
+ 769               	.L80:
+ 386:System.cpp    **** 			{
+ 770               		.loc 1 386 9 is_stmt 1 view .LVU234
+ 386:System.cpp    **** 			{
+ 771               		.loc 1 386 26 is_stmt 0 view .LVU235
+ 772 02ee 8091 0000 		lds r24,RotEnc_State
+ 386:System.cpp    **** 			{
+ 773               		.loc 1 386 9 view .LVU236
+ 774 02f2 8130      		cpi r24,lo8(1)
+ 775 02f4 01F4      		brne .L81
+ 389:System.cpp    **** 				{
+ 776               		.loc 1 389 5 is_stmt 1 view .LVU237
+ 389:System.cpp    **** 				{
+ 777               		.loc 1 389 26 is_stmt 0 view .LVU238
+ 778 02f6 8091 0000 		lds r24,TempSelectPreset
+ 389:System.cpp    **** 				{
+ 779               		.loc 1 389 5 view .LVU239
+ 780 02fa 8730      		cpi r24,lo8(7)
+ 781 02fc 00F4      		brsh .L108
+ 391:System.cpp    **** 				}
+ 782               		.loc 1 391 6 is_stmt 1 view .LVU240
+ 391:System.cpp    **** 				}
+ 783               		.loc 1 391 25 is_stmt 0 view .LVU241
+ 784 02fe 8091 0000 		lds r24,TempSelectPreset
+ 391:System.cpp    **** 				}
+ 785               		.loc 1 391 56 view .LVU242
+ 786 0302 8F5F      		subi r24,lo8(-(1))
+ 787               	.L141:
+ 402:System.cpp    **** 				}
+ 788               		.loc 1 402 23 view .LVU243
+ 789 0304 8093 0000 		sts TempSelectPreset,r24
+ 406:System.cpp    **** 			}
+ 790               		.loc 1 406 5 is_stmt 1 view .LVU244
+ 791               	.L108:
+ 585:System.cpp    **** 			}
+ 792               		.loc 1 585 5 view .LVU245
+ 585:System.cpp    **** 			}
+ 793               		.loc 1 585 29 is_stmt 0 view .LVU246
+ 794 0308 81E0      		ldi r24,lo8(1)
+ 795 030a 90E0      		ldi r25,0
+ 796 030c 9093 0000 		sts System_TempSelectOvfCnt+1,r25
+ 797 0310 8093 0000 		sts System_TempSelectOvfCnt,r24
+ 593:System.cpp    **** 
+ 798               		.loc 1 593 1 view .LVU247
+ 799 0314 00C0      		rjmp .L67
+ 800               	.L81:
+ 397:System.cpp    **** 			{
+ 801               		.loc 1 397 9 is_stmt 1 view .LVU248
+ 397:System.cpp    **** 			{
+ 802               		.loc 1 397 26 is_stmt 0 view .LVU249
+ 803 0316 8091 0000 		lds r24,RotEnc_State
+ 397:System.cpp    **** 			{
+ 804               		.loc 1 397 9 view .LVU250
+ 805 031a 8230      		cpi r24,lo8(2)
+ 806 031c 01F0      		breq .+2
+ 807 031e 00C0      		rjmp .L67
+ 400:System.cpp    **** 				{
+ 808               		.loc 1 400 5 is_stmt 1 view .LVU251
+ 400:System.cpp    **** 				{
+ 809               		.loc 1 400 26 is_stmt 0 view .LVU252
+ 810 0320 8091 0000 		lds r24,TempSelectPreset
+ 400:System.cpp    **** 				{
+ 811               		.loc 1 400 5 view .LVU253
+ 812 0324 8823      		tst r24
+ 813 0326 01F0      		breq .L108
+ 402:System.cpp    **** 				}
+ 814               		.loc 1 402 6 is_stmt 1 view .LVU254
+ 402:System.cpp    **** 				}
+ 815               		.loc 1 402 25 is_stmt 0 view .LVU255
+ 816 0328 8091 0000 		lds r24,TempSelectPreset
+ 402:System.cpp    **** 				}
+ 817               		.loc 1 402 56 view .LVU256
+ 818 032c 8150      		subi r24,lo8(-(-1))
+ 819 032e 00C0      		rjmp .L141
+ 820               	.L73:
+ 411:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 821               		.loc 1 411 3 is_stmt 1 view .LVU257
+ 412:System.cpp    **** 			{
+ 822               		.loc 1 412 4 view .LVU258
+ 412:System.cpp    **** 			{
+ 823               		.loc 1 412 21 is_stmt 0 view .LVU259
+ 824 0330 8091 0000 		lds r24,RotEnc_State
+ 412:System.cpp    **** 			{
+ 825               		.loc 1 412 4 view .LVU260
+ 826 0334 8330      		cpi r24,lo8(3)
+ 827 0336 01F4      		brne .L84
+ 414:System.cpp    **** 				{
+ 828               		.loc 1 414 5 is_stmt 1 view .LVU261
+ 414:System.cpp    **** 				{
+ 829               		.loc 1 414 22 is_stmt 0 view .LVU262
+ 830 0338 8091 0000 		lds r24,SystemUIMode
+ 414:System.cpp    **** 				{
+ 831               		.loc 1 414 5 view .LVU263
+ 832 033c 8823      		tst r24
+ 833 033e 01F4      		brne .+2
+ 834 0340 00C0      		rjmp .L137
+ 418:System.cpp    **** 				{
+ 835               		.loc 1 418 10 is_stmt 1 view .LVU264
+ 418:System.cpp    **** 				{
+ 836               		.loc 1 418 27 is_stmt 0 view .LVU265
+ 837 0342 8091 0000 		lds r24,SystemUIMode
+ 418:System.cpp    **** 				{
+ 838               		.loc 1 418 10 view .LVU266
+ 839 0346 8130      		cpi r24,lo8(1)
+ 840 0348 01F4      		brne .L86
+ 420:System.cpp    **** 				}
+ 841               		.loc 1 420 6 is_stmt 1 view .LVU267
+ 420:System.cpp    **** 				}
+ 842               		.loc 1 420 18 is_stmt 0 view .LVU268
+ 843 034a 8BE0      		ldi r24,lo8(11)
+ 844 034c 00C0      		rjmp .L132
+ 845               	.L86:
+ 422:System.cpp    **** 				{
+ 846               		.loc 1 422 10 is_stmt 1 view .LVU269
+ 422:System.cpp    **** 				{
+ 847               		.loc 1 422 27 is_stmt 0 view .LVU270
+ 848 034e 8091 0000 		lds r24,SystemUIMode
+ 422:System.cpp    **** 				{
+ 849               		.loc 1 422 10 view .LVU271
+ 850 0352 8230      		cpi r24,lo8(2)
+ 851 0354 01F0      		breq .+2
+ 852 0356 00C0      		rjmp .L67
+ 853               	.L138:
+ 541:System.cpp    **** 			}
+ 854               		.loc 1 541 5 is_stmt 1 view .LVU272
+ 541:System.cpp    **** 			}
+ 855               		.loc 1 541 17 is_stmt 0 view .LVU273
+ 856 0358 8DE0      		ldi r24,lo8(13)
+ 857 035a 00C0      		rjmp .L132
+ 858               	.L84:
+ 427:System.cpp    **** 			{
+ 859               		.loc 1 427 9 is_stmt 1 view .LVU274
+ 427:System.cpp    **** 			{
+ 860               		.loc 1 427 26 is_stmt 0 view .LVU275
+ 861 035c 8091 0000 		lds r24,RotEnc_State
+ 427:System.cpp    **** 			{
+ 862               		.loc 1 427 9 view .LVU276
+ 863 0360 8530      		cpi r24,lo8(5)
+ 864 0362 01F4      		brne .+2
+ 865 0364 00C0      		rjmp .L67
+ 430:System.cpp    **** 			{
+ 866               		.loc 1 430 9 is_stmt 1 view .LVU277
+ 430:System.cpp    **** 			{
+ 867               		.loc 1 430 26 is_stmt 0 view .LVU278
+ 868 0366 8091 0000 		lds r24,RotEnc_State
+ 430:System.cpp    **** 			{
+ 869               		.loc 1 430 9 view .LVU279
+ 870 036a 8130      		cpi r24,lo8(1)
+ 871 036c 01F4      		brne .L87
+ 433:System.cpp    **** 				{
+ 872               		.loc 1 433 5 is_stmt 1 view .LVU280
+ 433:System.cpp    **** 				{
+ 873               		.loc 1 433 22 is_stmt 0 view .LVU281
+ 874 036e 8091 0000 		lds r24,SystemUIMode
+ 433:System.cpp    **** 				{
+ 875               		.loc 1 433 5 view .LVU282
+ 876 0372 8230      		cpi r24,lo8(2)
+ 877 0374 00F0      		brlo .+2
+ 878 0376 00C0      		rjmp .L67
+ 435:System.cpp    **** 				}
+ 879               		.loc 1 435 6 is_stmt 1 view .LVU283
+ 435:System.cpp    **** 				}
+ 880               		.loc 1 435 21 is_stmt 0 view .LVU284
+ 881 0378 8091 0000 		lds r24,SystemUIMode
+ 435:System.cpp    **** 				}
+ 882               		.loc 1 435 49 view .LVU285
+ 883 037c 8F5F      		subi r24,lo8(-(1))
+ 884               	.L136:
+ 443:System.cpp    **** 				}
+ 885               		.loc 1 443 19 view .LVU286
+ 886 037e 8093 0000 		sts SystemUIMode,r24
+ 887 0382 00C0      		rjmp .L67
+ 888               	.L87:
+ 438:System.cpp    **** 			{
+ 889               		.loc 1 438 9 is_stmt 1 view .LVU287
+ 438:System.cpp    **** 			{
+ 890               		.loc 1 438 26 is_stmt 0 view .LVU288
+ 891 0384 8091 0000 		lds r24,RotEnc_State
+ 438:System.cpp    **** 			{
+ 892               		.loc 1 438 9 view .LVU289
+ 893 0388 8230      		cpi r24,lo8(2)
+ 894 038a 01F0      		breq .+2
+ 895 038c 00C0      		rjmp .L67
+ 441:System.cpp    **** 				{
+ 896               		.loc 1 441 5 is_stmt 1 view .LVU290
+ 441:System.cpp    **** 				{
+ 897               		.loc 1 441 22 is_stmt 0 view .LVU291
+ 898 038e 8091 0000 		lds r24,SystemUIMode
+ 441:System.cpp    **** 				{
+ 899               		.loc 1 441 5 view .LVU292
+ 900 0392 8823      		tst r24
+ 901 0394 01F4      		brne .+2
+ 902 0396 00C0      		rjmp .L67
+ 443:System.cpp    **** 				}
+ 903               		.loc 1 443 6 is_stmt 1 view .LVU293
+ 443:System.cpp    **** 				}
+ 904               		.loc 1 443 21 is_stmt 0 view .LVU294
+ 905 0398 8091 0000 		lds r24,SystemUIMode
+ 443:System.cpp    **** 				}
+ 906               		.loc 1 443 49 view .LVU295
+ 907 039c 8150      		subi r24,lo8(-(-1))
+ 908 039e 00C0      		rjmp .L136
+ 909               	.L72:
+ 449:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 910               		.loc 1 449 3 is_stmt 1 view .LVU296
+ 450:System.cpp    **** 			{
+ 911               		.loc 1 450 4 view .LVU297
+ 450:System.cpp    **** 			{
+ 912               		.loc 1 450 21 is_stmt 0 view .LVU298
+ 913 03a0 8091 0000 		lds r24,RotEnc_State
+ 450:System.cpp    **** 			{
+ 914               		.loc 1 450 4 view .LVU299
+ 915 03a4 8330      		cpi r24,lo8(3)
+ 916 03a6 01F4      		brne .L88
+ 453:System.cpp    **** 				{
+ 917               		.loc 1 453 5 is_stmt 1 view .LVU300
+ 453:System.cpp    **** 				{
+ 918               		.loc 1 453 27 is_stmt 0 view .LVU301
+ 919 03a8 8091 0000 		lds r24,UserEditSelection
+ 455:System.cpp    **** 				}
+ 920               		.loc 1 455 43 view .LVU302
+ 921 03ac 2091 0000 		lds r18,UserEditSelection
+ 453:System.cpp    **** 				{
+ 922               		.loc 1 453 5 view .LVU303
+ 923 03b0 8830      		cpi r24,lo8(8)
+ 924 03b2 00F4      		brsh .L89
+ 455:System.cpp    **** 				}
+ 925               		.loc 1 455 6 is_stmt 1 view .LVU304
+ 455:System.cpp    **** 				}
+ 926               		.loc 1 455 40 is_stmt 0 view .LVU305
+ 927 03b4 81E0      		ldi r24,lo8(1)
+ 928 03b6 90E0      		ldi r25,0
+ 929 03b8 AC01      		movw r20,r24
+ 930 03ba 00C0      		rjmp 2f
+ 931               		1:
+ 932 03bc 440F      		lsl r20
+ 933 03be 551F      		rol r21
+ 934               		2:
+ 935 03c0 2A95      		dec r18
+ 936 03c2 02F4      		brpl 1b
+ 455:System.cpp    **** 				}
+ 937               		.loc 1 455 34 view .LVU306
+ 938 03c4 8091 0000 		lds r24,LoopModePreset
+ 939 03c8 8427      		eor r24,r20
+ 940 03ca 8093 0000 		sts LoopModePreset,r24
+ 941               	.L90:
+ 466:System.cpp    **** 				
+ 942               		.loc 1 466 5 is_stmt 1 view .LVU307
+ 943               	/* epilogue start */
+ 593:System.cpp    **** 
+ 944               		.loc 1 593 1 is_stmt 0 view .LVU308
+ 945 03ce 0F91      		pop r16
+ 946 03d0 EF90      		pop r14
+ 466:System.cpp    **** 				
+ 947               		.loc 1 466 25 view .LVU309
+ 948 03d2 0C94 0000 		jmp _Z20System_UpdateUI_LEDsv
+ 949               	.LVL40:
+ 950               	.L89:
+ 459:System.cpp    **** 				}
+ 951               		.loc 1 459 6 is_stmt 1 view .LVU310
+ 459:System.cpp    **** 				}
+ 952               		.loc 1 459 69 is_stmt 0 view .LVU311
+ 953 03d6 2850      		subi r18,8
+ 954 03d8 330B      		sbc r19,r19
+ 459:System.cpp    **** 				}
+ 955               		.loc 1 459 47 view .LVU312
+ 956 03da 81E0      		ldi r24,lo8(1)
+ 957 03dc 90E0      		ldi r25,0
+ 958 03de AC01      		movw r20,r24
+ 959 03e0 00C0      		rjmp 2f
+ 960               		1:
+ 961 03e2 440F      		lsl r20
+ 962 03e4 551F      		rol r21
+ 963               		2:
+ 964 03e6 2A95      		dec r18
+ 965 03e8 02F4      		brpl 1b
+ 459:System.cpp    **** 				}
+ 966               		.loc 1 459 41 view .LVU313
+ 967 03ea 8091 0000 		lds r24,LoopModePreset+1
+ 968 03ee 8427      		eor r24,r20
+ 969 03f0 8093 0000 		sts LoopModePreset+1,r24
+ 970 03f4 00C0      		rjmp .L90
+ 971               	.L88:
+ 469:System.cpp    **** 			{
+ 972               		.loc 1 469 9 is_stmt 1 view .LVU314
+ 469:System.cpp    **** 			{
+ 973               		.loc 1 469 26 is_stmt 0 view .LVU315
+ 974 03f6 8091 0000 		lds r24,RotEnc_State
+ 469:System.cpp    **** 			{
+ 975               		.loc 1 469 9 view .LVU316
+ 976 03fa 8530      		cpi r24,lo8(5)
+ 977 03fc 01F4      		brne .L91
+ 472:System.cpp    **** 				
+ 978               		.loc 1 472 5 is_stmt 1 view .LVU317
+ 472:System.cpp    **** 				
+ 979               		.loc 1 472 82 is_stmt 0 view .LVU318
+ 980 03fe 6091 0000 		lds r22,ActivePreset
+ 981 0402 70E0      		ldi r23,0
+ 472:System.cpp    **** 				
+ 982               		.loc 1 472 80 view .LVU319
+ 983 0404 675E      		subi r22,-25
+ 984 0406 7F4F      		sbci r23,-1
+ 985 0408 660F      		lsl r22
+ 986 040a 771F      		rol r23
+ 987 040c 660F      		lsl r22
+ 988 040e 771F      		rol r23
+ 472:System.cpp    **** 				
+ 989               		.loc 1 472 23 view .LVU320
+ 990 0410 42E0      		ldi r20,lo8(2)
+ 991 0412 50E0      		ldi r21,0
+ 992 0414 80E0      		ldi r24,lo8(LoopModePreset)
+ 993 0416 90E0      		ldi r25,hi8(LoopModePreset)
+ 994 0418 0E94 0000 		call eeprom_write_block
+ 995               	.LVL41:
+ 475:System.cpp    **** 				PresetTable[ActivePreset].Active_CtrlSwitches = LoopModePreset.Active_CtrlSwitches;
+ 996               		.loc 1 475 5 is_stmt 1 view .LVU321
+ 475:System.cpp    **** 				PresetTable[ActivePreset].Active_CtrlSwitches = LoopModePreset.Active_CtrlSwitches;
+ 997               		.loc 1 475 17 is_stmt 0 view .LVU322
+ 998 041c E091 0000 		lds r30,ActivePreset
+ 475:System.cpp    **** 				PresetTable[ActivePreset].Active_CtrlSwitches = LoopModePreset.Active_CtrlSwitches;
+ 999               		.loc 1 475 44 view .LVU323
+ 1000 0420 54E0      		ldi r21,lo8(4)
+ 1001 0422 E59F      		mul r30,r21
+ 1002 0424 F001      		movw r30,r0
+ 1003 0426 1124      		clr __zero_reg__
+ 1004 0428 E050      		subi r30,lo8(-(PresetTable))
+ 1005 042a F040      		sbci r31,hi8(-(PresetTable))
+ 1006 042c 8091 0000 		lds r24,LoopModePreset
+ 1007 0430 8083      		st Z,r24
+ 476:System.cpp    **** 				
+ 1008               		.loc 1 476 5 is_stmt 1 view .LVU324
+ 476:System.cpp    **** 				
+ 1009               		.loc 1 476 17 is_stmt 0 view .LVU325
+ 1010 0432 E091 0000 		lds r30,ActivePreset
+ 476:System.cpp    **** 				
+ 1011               		.loc 1 476 51 view .LVU326
+ 1012 0436 84E0      		ldi r24,lo8(4)
+ 1013 0438 E89F      		mul r30,r24
+ 1014 043a F001      		movw r30,r0
+ 1015 043c 1124      		clr __zero_reg__
+ 1016 043e E050      		subi r30,lo8(-(PresetTable))
+ 1017 0440 F040      		sbci r31,hi8(-(PresetTable))
+ 1018 0442 8091 0000 		lds r24,LoopModePreset+1
+ 1019 0446 8183      		std Z+1,r24
+ 479:System.cpp    **** 			}
+ 1020               		.loc 1 479 5 is_stmt 1 view .LVU327
+ 1021 0448 00C0      		rjmp .L139
+ 1022               	.L91:
+ 481:System.cpp    **** 			{
+ 1023               		.loc 1 481 9 view .LVU328
+ 481:System.cpp    **** 			{
+ 1024               		.loc 1 481 26 is_stmt 0 view .LVU329
+ 1025 044a 8091 0000 		lds r24,RotEnc_State
+ 481:System.cpp    **** 			{
+ 1026               		.loc 1 481 9 view .LVU330
+ 1027 044e 8130      		cpi r24,lo8(1)
+ 1028 0450 01F4      		brne .L92
+ 483:System.cpp    **** 				{
+ 1029               		.loc 1 483 5 is_stmt 1 view .LVU331
+ 483:System.cpp    **** 				{
+ 1030               		.loc 1 483 27 is_stmt 0 view .LVU332
+ 1031 0452 8091 0000 		lds r24,UserEditSelection
+ 483:System.cpp    **** 				{
+ 1032               		.loc 1 483 5 view .LVU333
+ 1033 0456 8B30      		cpi r24,lo8(11)
+ 1034 0458 00F0      		brlo .+2
+ 1035 045a 00C0      		rjmp .L67
+ 485:System.cpp    **** 				}
+ 1036               		.loc 1 485 6 is_stmt 1 view .LVU334
+ 485:System.cpp    **** 				}
+ 1037               		.loc 1 485 23 is_stmt 0 view .LVU335
+ 1038 045c 8091 0000 		lds r24,UserEditSelection
+ 1039 0460 8F5F      		subi r24,lo8(-(1))
+ 1040               	.L135:
+ 492:System.cpp    **** 				}
+ 1041               		.loc 1 492 23 view .LVU336
+ 1042 0462 8093 0000 		sts UserEditSelection,r24
+ 1043 0466 00C0      		rjmp .L67
+ 1044               	.L92:
+ 488:System.cpp    **** 			{
+ 1045               		.loc 1 488 9 is_stmt 1 view .LVU337
+ 488:System.cpp    **** 			{
+ 1046               		.loc 1 488 26 is_stmt 0 view .LVU338
+ 1047 0468 8091 0000 		lds r24,RotEnc_State
+ 488:System.cpp    **** 			{
+ 1048               		.loc 1 488 9 view .LVU339
+ 1049 046c 8230      		cpi r24,lo8(2)
+ 1050 046e 01F0      		breq .+2
+ 1051 0470 00C0      		rjmp .L67
+ 490:System.cpp    **** 				{
+ 1052               		.loc 1 490 5 is_stmt 1 view .LVU340
+ 490:System.cpp    **** 				{
+ 1053               		.loc 1 490 27 is_stmt 0 view .LVU341
+ 1054 0472 8091 0000 		lds r24,UserEditSelection
+ 490:System.cpp    **** 				{
+ 1055               		.loc 1 490 5 view .LVU342
+ 1056 0476 8823      		tst r24
+ 1057 0478 01F4      		brne .+2
+ 1058 047a 00C0      		rjmp .L67
+ 492:System.cpp    **** 				}
+ 1059               		.loc 1 492 6 is_stmt 1 view .LVU343
+ 492:System.cpp    **** 				}
+ 1060               		.loc 1 492 23 is_stmt 0 view .LVU344
+ 1061 047c 8091 0000 		lds r24,UserEditSelection
+ 1062 0480 8150      		subi r24,lo8(-(-1))
+ 1063 0482 00C0      		rjmp .L135
+ 1064               	.L71:
+ 497:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 1065               		.loc 1 497 3 is_stmt 1 view .LVU345
+ 498:System.cpp    **** 			{
+ 1066               		.loc 1 498 4 view .LVU346
+ 498:System.cpp    **** 			{
+ 1067               		.loc 1 498 21 is_stmt 0 view .LVU347
+ 1068 0484 8091 0000 		lds r24,RotEnc_State
+ 498:System.cpp    **** 			{
+ 1069               		.loc 1 498 4 view .LVU348
+ 1070 0488 8330      		cpi r24,lo8(3)
+ 1071 048a 01F4      		brne .L93
+ 500:System.cpp    **** 			}
+ 1072               		.loc 1 500 5 is_stmt 1 view .LVU349
+ 500:System.cpp    **** 			}
+ 1073               		.loc 1 500 17 is_stmt 0 view .LVU350
+ 1074 048c 8FE0      		ldi r24,lo8(15)
+ 1075 048e 00C0      		rjmp .L132
+ 1076               	.L93:
+ 502:System.cpp    **** 			{
+ 1077               		.loc 1 502 9 is_stmt 1 view .LVU351
+ 502:System.cpp    **** 			{
+ 1078               		.loc 1 502 26 is_stmt 0 view .LVU352
+ 1079 0490 8091 0000 		lds r24,RotEnc_State
+ 502:System.cpp    **** 			{
+ 1080               		.loc 1 502 9 view .LVU353
+ 1081 0494 8530      		cpi r24,lo8(5)
+ 1082 0496 01F4      		brne .+2
+ 1083 0498 00C0      		rjmp .L139
+ 507:System.cpp    **** 			{
+ 1084               		.loc 1 507 9 is_stmt 1 view .LVU354
+ 507:System.cpp    **** 			{
+ 1085               		.loc 1 507 26 is_stmt 0 view .LVU355
+ 1086 049a 8091 0000 		lds r24,RotEnc_State
+ 507:System.cpp    **** 			{
+ 1087               		.loc 1 507 9 view .LVU356
+ 1088 049e 8130      		cpi r24,lo8(1)
+ 1089 04a0 01F4      		brne .L95
+ 509:System.cpp    **** 				SP10281_WriteAll('o', 'u', 't', 0, 0, 0);
+ 1090               		.loc 1 509 5 is_stmt 1 view .LVU357
+ 509:System.cpp    **** 				SP10281_WriteAll('o', 'u', 't', 0, 0, 0);
+ 1091               		.loc 1 509 17 is_stmt 0 view .LVU358
+ 1092 04a2 8093 0000 		sts SetMidiEdit,r24
+ 510:System.cpp    **** 			}
+ 1093               		.loc 1 510 5 is_stmt 1 view .LVU359
+ 510:System.cpp    **** 			}
+ 1094               		.loc 1 510 21 is_stmt 0 view .LVU360
+ 1095 04a6 E12C      		mov r14,__zero_reg__
+ 1096 04a8 00E0      		ldi r16,0
+ 1097 04aa 20E0      		ldi r18,0
+ 1098 04ac 44E7      		ldi r20,lo8(116)
+ 1099 04ae 65E7      		ldi r22,lo8(117)
+ 1100 04b0 8FE6      		ldi r24,lo8(111)
+ 1101               	.L134:
+ 515:System.cpp    **** 			}
+ 1102               		.loc 1 515 21 view .LVU361
+ 1103 04b2 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 1104               	.LVL42:
+ 1105 04b6 00C0      		rjmp .L67
+ 1106               	.L95:
+ 512:System.cpp    **** 			{
+ 1107               		.loc 1 512 9 is_stmt 1 view .LVU362
+ 512:System.cpp    **** 			{
+ 1108               		.loc 1 512 26 is_stmt 0 view .LVU363
+ 1109 04b8 8091 0000 		lds r24,RotEnc_State
+ 512:System.cpp    **** 			{
+ 1110               		.loc 1 512 9 view .LVU364
+ 1111 04bc 8230      		cpi r24,lo8(2)
+ 1112 04be 01F0      		breq .+2
+ 1113 04c0 00C0      		rjmp .L67
+ 514:System.cpp    **** 				SP10281_WriteAll('i', 'n', ' ', 0, 0, 0);
+ 1114               		.loc 1 514 5 is_stmt 1 view .LVU365
+ 514:System.cpp    **** 				SP10281_WriteAll('i', 'n', ' ', 0, 0, 0);
+ 1115               		.loc 1 514 17 is_stmt 0 view .LVU366
+ 1116 04c2 1092 0000 		sts SetMidiEdit,__zero_reg__
+ 515:System.cpp    **** 			}
+ 1117               		.loc 1 515 5 is_stmt 1 view .LVU367
+ 515:System.cpp    **** 			}
+ 1118               		.loc 1 515 21 is_stmt 0 view .LVU368
+ 1119 04c6 E12C      		mov r14,__zero_reg__
+ 1120 04c8 00E0      		ldi r16,0
+ 1121 04ca 20E0      		ldi r18,0
+ 1122 04cc 40E2      		ldi r20,lo8(32)
+ 1123 04ce 6EE6      		ldi r22,lo8(110)
+ 1124 04d0 89E6      		ldi r24,lo8(105)
+ 1125 04d2 00C0      		rjmp .L134
+ 1126               	.L69:
+ 520:System.cpp    **** 			if (RotEnc_State == SHORT_PRESS)
+ 1127               		.loc 1 520 3 is_stmt 1 view .LVU369
+ 521:System.cpp    **** 			{
+ 1128               		.loc 1 521 4 view .LVU370
+ 521:System.cpp    **** 			{
+ 1129               		.loc 1 521 21 is_stmt 0 view .LVU371
+ 1130 04d4 8091 0000 		lds r24,RotEnc_State
+ 521:System.cpp    **** 			{
+ 1131               		.loc 1 521 4 view .LVU372
+ 1132 04d8 8330      		cpi r24,lo8(3)
+ 1133 04da 01F4      		brne .L96
+ 524:System.cpp    **** 				
+ 1134               		.loc 1 524 5 is_stmt 1 view .LVU373
+ 524:System.cpp    **** 				
+ 1135               		.loc 1 524 29 is_stmt 0 view .LVU374
+ 1136 04dc 1092 0000 		sts System_TempSelectOvfCnt+1,__zero_reg__
+ 1137 04e0 1092 0000 		sts System_TempSelectOvfCnt,__zero_reg__
+ 526:System.cpp    **** 			}
+ 1138               		.loc 1 526 5 is_stmt 1 view .LVU375
+ 526:System.cpp    **** 			}
+ 1139               		.loc 1 526 26 is_stmt 0 view .LVU376
+ 1140 04e4 8091 0000 		lds r24,TempSelectMidiPC
+ 1141 04e8 8093 0000 		sts LastTempSelectMidiPC,r24
+ 1142 04ec 00C0      		rjmp .L67
+ 1143               	.L96:
+ 528:System.cpp    **** 			{
+ 1144               		.loc 1 528 9 is_stmt 1 view .LVU377
+ 528:System.cpp    **** 			{
+ 1145               		.loc 1 528 26 is_stmt 0 view .LVU378
+ 1146 04ee 8091 0000 		lds r24,RotEnc_State
+ 528:System.cpp    **** 			{
+ 1147               		.loc 1 528 9 view .LVU379
+ 1148 04f2 8530      		cpi r24,lo8(5)
+ 1149 04f4 01F4      		brne .L97
+ 530:System.cpp    **** 				{
+ 1150               		.loc 1 530 5 is_stmt 1 view .LVU380
+ 530:System.cpp    **** 				{
+ 1151               		.loc 1 530 21 is_stmt 0 view .LVU381
+ 1152 04f6 8091 0000 		lds r24,SetMidiEdit
+ 532:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 2), Te
+ 1153               		.loc 1 532 18 view .LVU382
+ 1154 04fa E091 0000 		lds r30,ActivePreset
+ 530:System.cpp    **** 				{
+ 1155               		.loc 1 530 5 view .LVU383
+ 1156 04fe 8111      		cpse r24,__zero_reg__
+ 1157 0500 00C0      		rjmp .L98
+ 532:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 2), Te
+ 1158               		.loc 1 532 6 is_stmt 1 view .LVU384
+ 532:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 2), Te
+ 1159               		.loc 1 532 43 is_stmt 0 view .LVU385
+ 1160 0502 8091 0000 		lds r24,TempSelectMidiPC
+ 1161 0506 94E0      		ldi r25,lo8(4)
+ 1162 0508 E99F      		mul r30,r25
+ 1163 050a F001      		movw r30,r0
+ 1164 050c 1124      		clr __zero_reg__
+ 1165 050e E050      		subi r30,lo8(-(PresetTable))
+ 1166 0510 F040      		sbci r31,hi8(-(PresetTable))
+ 1167 0512 8283      		std Z+2,r24
+ 533:System.cpp    **** 				}
+ 1168               		.loc 1 533 6 is_stmt 1 view .LVU386
+ 533:System.cpp    **** 				}
+ 1169               		.loc 1 533 23 is_stmt 0 view .LVU387
+ 1170 0514 6091 0000 		lds r22,TempSelectMidiPC
+ 533:System.cpp    **** 				}
+ 1171               		.loc 1 533 61 view .LVU388
+ 1172 0518 8091 0000 		lds r24,ActivePreset
+ 533:System.cpp    **** 				}
+ 1173               		.loc 1 533 59 view .LVU389
+ 1174 051c 24E0      		ldi r18,lo8(4)
+ 1175 051e 829F      		mul r24,r18
+ 1176 0520 C001      		movw r24,r0
+ 1177 0522 1124      		clr __zero_reg__
+ 533:System.cpp    **** 				}
+ 1178               		.loc 1 533 23 view .LVU390
+ 1179 0524 8A59      		subi r24,-102
+ 1180 0526 9F4F      		sbci r25,-1
+ 1181               	.L130:
+ 538:System.cpp    **** 				}
+ 1182               		.loc 1 538 23 view .LVU391
+ 1183 0528 0E94 0000 		call eeprom_write_byte
+ 1184               	.LVL43:
+ 1185 052c 00C0      		rjmp .L138
+ 1186               	.L98:
+ 537:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 3), Te
+ 1187               		.loc 1 537 6 is_stmt 1 view .LVU392
+ 537:System.cpp    **** 					eeprom_write_byte((uint8_t*)(EEPROM_PRESETS_BASE_ADDR+(ActivePreset * sizeof(Preset)) + 3), Te
+ 1188               		.loc 1 537 44 is_stmt 0 view .LVU393
+ 1189 052e 8091 0000 		lds r24,TempSelectMidiPC
+ 1190 0532 44E0      		ldi r20,lo8(4)
+ 1191 0534 E49F      		mul r30,r20
+ 1192 0536 F001      		movw r30,r0
+ 1193 0538 1124      		clr __zero_reg__
+ 1194 053a E050      		subi r30,lo8(-(PresetTable))
+ 1195 053c F040      		sbci r31,hi8(-(PresetTable))
+ 1196 053e 8383      		std Z+3,r24
+ 538:System.cpp    **** 				}
+ 1197               		.loc 1 538 6 is_stmt 1 view .LVU394
+ 538:System.cpp    **** 				}
+ 1198               		.loc 1 538 23 is_stmt 0 view .LVU395
+ 1199 0540 6091 0000 		lds r22,TempSelectMidiPC
+ 538:System.cpp    **** 				}
+ 1200               		.loc 1 538 61 view .LVU396
+ 1201 0544 8091 0000 		lds r24,ActivePreset
+ 538:System.cpp    **** 				}
+ 1202               		.loc 1 538 59 view .LVU397
+ 1203 0548 54E0      		ldi r21,lo8(4)
+ 1204 054a 859F      		mul r24,r21
+ 1205 054c C001      		movw r24,r0
+ 1206 054e 1124      		clr __zero_reg__
+ 538:System.cpp    **** 				}
+ 1207               		.loc 1 538 23 view .LVU398
+ 1208 0550 8959      		subi r24,-103
+ 1209 0552 9F4F      		sbci r25,-1
+ 1210 0554 00C0      		rjmp .L130
+ 1211               	.L97:
+ 543:System.cpp    **** 			{
+ 1212               		.loc 1 543 9 is_stmt 1 view .LVU399
+ 543:System.cpp    **** 			{
+ 1213               		.loc 1 543 26 is_stmt 0 view .LVU400
+ 1214 0556 8091 0000 		lds r24,RotEnc_State
+ 543:System.cpp    **** 			{
+ 1215               		.loc 1 543 9 view .LVU401
+ 1216 055a 8130      		cpi r24,lo8(1)
+ 1217 055c 01F4      		brne .L100
+ 545:System.cpp    **** 				{
+ 1218               		.loc 1 545 5 is_stmt 1 view .LVU402
+ 545:System.cpp    **** 				{
+ 1219               		.loc 1 545 26 is_stmt 0 view .LVU403
+ 1220 055e 8091 0000 		lds r24,TempSelectMidiPC
+ 545:System.cpp    **** 				{
+ 1221               		.loc 1 545 5 view .LVU404
+ 1222 0562 8F37      		cpi r24,lo8(127)
+ 1223 0564 01F0      		breq .L106
+ 547:System.cpp    **** 				}
+ 1224               		.loc 1 547 6 is_stmt 1 view .LVU405
+ 547:System.cpp    **** 				}
+ 1225               		.loc 1 547 22 is_stmt 0 view .LVU406
+ 1226 0566 8091 0000 		lds r24,TempSelectMidiPC
+ 1227 056a 8F5F      		subi r24,lo8(-(1))
+ 1228               	.L131:
+ 571:System.cpp    **** 				}
+ 1229               		.loc 1 571 22 view .LVU407
+ 1230 056c 8093 0000 		sts TempSelectMidiPC,r24
+ 1231 0570 00C0      		rjmp .L106
+ 1232               	.L100:
+ 563:System.cpp    **** 			{
+ 1233               		.loc 1 563 9 is_stmt 1 view .LVU408
+ 563:System.cpp    **** 			{
+ 1234               		.loc 1 563 26 is_stmt 0 view .LVU409
+ 1235 0572 8091 0000 		lds r24,RotEnc_State
+ 563:System.cpp    **** 			{
+ 1236               		.loc 1 563 9 view .LVU410
+ 1237 0576 8230      		cpi r24,lo8(2)
+ 1238 0578 01F0      		breq .+2
+ 1239 057a 00C0      		rjmp .L67
+ 565:System.cpp    **** 				{
+ 1240               		.loc 1 565 5 is_stmt 1 view .LVU411
+ 565:System.cpp    **** 				{
+ 1241               		.loc 1 565 26 is_stmt 0 view .LVU412
+ 1242 057c 8091 0000 		lds r24,TempSelectMidiPC
+ 565:System.cpp    **** 				{
+ 1243               		.loc 1 565 40 view .LVU413
+ 1244 0580 87FD      		sbrc r24,7
+ 1245 0582 00C0      		rjmp .L104
+ 565:System.cpp    **** 				{
+ 1246               		.loc 1 565 60 discriminator 2 view .LVU414
+ 1247 0584 8091 0000 		lds r24,TempSelectMidiPC
+ 565:System.cpp    **** 				{
+ 1248               		.loc 1 565 40 discriminator 2 view .LVU415
+ 1249 0588 8823      		tst r24
+ 1250 058a 01F0      		breq .L104
+ 569:System.cpp    **** 				{
+ 1251               		.loc 1 569 10 is_stmt 1 view .LVU416
+ 569:System.cpp    **** 				{
+ 1252               		.loc 1 569 31 is_stmt 0 view .LVU417
+ 1253 058c 8091 0000 		lds r24,TempSelectMidiPC
+ 569:System.cpp    **** 				{
+ 1254               		.loc 1 569 10 view .LVU418
+ 1255 0590 8111      		cpse r24,__zero_reg__
+ 1256 0592 00C0      		rjmp .L105
+ 1257               	.L106:
+ 575:System.cpp    **** 				{
+ 1258               		.loc 1 575 5 is_stmt 1 view .LVU419
+ 575:System.cpp    **** 				{
+ 1259               		.loc 1 575 26 is_stmt 0 view .LVU420
+ 1260 0594 8091 0000 		lds r24,TempSelectMidiPC
+ 575:System.cpp    **** 				{
+ 1261               		.loc 1 575 5 view .LVU421
+ 1262 0598 8F3F      		cpi r24,lo8(-1)
+ 1263 059a 01F4      		brne .L107
+ 577:System.cpp    **** 				}
+ 1264               		.loc 1 577 6 is_stmt 1 view .LVU422
+ 577:System.cpp    **** 				}
+ 1265               		.loc 1 577 22 is_stmt 0 view .LVU423
+ 1266 059c E12C      		mov r14,__zero_reg__
+ 1267 059e 00E0      		ldi r16,0
+ 1268 05a0 20E0      		ldi r18,0
+ 1269 05a2 46E6      		ldi r20,lo8(102)
+ 1270 05a4 66E6      		ldi r22,lo8(102)
+ 1271 05a6 8FE6      		ldi r24,lo8(111)
+ 1272 05a8 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 1273               	.LVL44:
+ 1274 05ac 00C0      		rjmp .L108
+ 1275               	.L104:
+ 567:System.cpp    **** 				}
+ 1276               		.loc 1 567 6 is_stmt 1 view .LVU424
+ 567:System.cpp    **** 				}
+ 1277               		.loc 1 567 23 is_stmt 0 view .LVU425
+ 1278 05ae 8FEF      		ldi r24,lo8(-1)
+ 1279 05b0 00C0      		rjmp .L131
+ 1280               	.L105:
+ 571:System.cpp    **** 				}
+ 1281               		.loc 1 571 6 is_stmt 1 view .LVU426
+ 571:System.cpp    **** 				}
+ 1282               		.loc 1 571 22 is_stmt 0 view .LVU427
+ 1283 05b2 8091 0000 		lds r24,TempSelectMidiPC
+ 1284 05b6 8150      		subi r24,lo8(-(-1))
+ 1285 05b8 00C0      		rjmp .L131
+ 1286               	.L107:
+ 581:System.cpp    **** 				}
+ 1287               		.loc 1 581 6 is_stmt 1 view .LVU428
+ 581:System.cpp    **** 				}
+ 1288               		.loc 1 581 25 is_stmt 0 view .LVU429
+ 1289 05ba 8091 0000 		lds r24,TempSelectMidiPC
+ 1290 05be 90E0      		ldi r25,0
+ 1291 05c0 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 1292               	.LVL45:
+ 1293 05c4 00C0      		rjmp .L108
+ 1294               		.cfi_endproc
+ 1295               	.LFE3:
+ 1297               	.global	_Z22System_UpdateUI_Relaysv
+ 1299               	_Z22System_UpdateUI_Relaysv:
+ 1300               	.LFB9:
+ 785:System.cpp    **** 
+ 786:System.cpp    **** void System_UpdateUI_Relays()
+ 787:System.cpp    **** {
+ 1301               		.loc 1 787 1 is_stmt 1 view -0
+ 1302               		.cfi_startproc
+ 1303 05c6 0F93      		push r16
+ 1304               	.LCFI8:
+ 1305               		.cfi_def_cfa_offset 3
+ 1306               		.cfi_offset 16, -2
+ 1307 05c8 1F93      		push r17
+ 1308               	.LCFI9:
+ 1309               		.cfi_def_cfa_offset 4
+ 1310               		.cfi_offset 17, -3
+ 1311 05ca CF93      		push r28
+ 1312               	.LCFI10:
+ 1313               		.cfi_def_cfa_offset 5
+ 1314               		.cfi_offset 28, -4
+ 1315 05cc DF93      		push r29
+ 1316               	.LCFI11:
+ 1317               		.cfi_def_cfa_offset 6
+ 1318               		.cfi_offset 29, -5
+ 1319               	/* prologue: function */
+ 1320               	/* frame size = 0 */
+ 1321               	/* stack size = 4 */
+ 1322               	.L__stack_usage = 4
+ 788:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_LOOPS; i++)
+ 1323               		.loc 1 788 2 view .LVU431
+ 1324               	.LVL46:
+ 1325               	.LBB15:
+ 1326               		.loc 1 788 24 view .LVU432
+ 1327 05ce C0E0      		ldi r28,lo8(LoopRelays)
+ 1328 05d0 D0E0      		ldi r29,hi8(LoopRelays)
+ 1329               	.LBE15:
+ 787:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_LOOPS; i++)
+ 1330               		.loc 1 787 1 is_stmt 0 view .LVU433
+ 1331 05d2 10E0      		ldi r17,0
+ 1332 05d4 00E0      		ldi r16,0
+ 1333               	.LVL47:
+ 1334               	.L148:
+ 1335               	.LBB16:
+ 789:System.cpp    **** 	{
+ 790:System.cpp    **** 		if (LoopModePreset.Active_Loops & (1 << i))
+ 1336               		.loc 1 790 3 is_stmt 1 view .LVU434
+ 1337               		.loc 1 790 22 is_stmt 0 view .LVU435
+ 1338 05d6 8091 0000 		lds r24,LoopModePreset
+ 1339 05da 90E0      		ldi r25,0
+ 1340               		.loc 1 790 45 view .LVU436
+ 1341 05dc 002E      		mov r0,r16
+ 1342 05de 00C0      		rjmp 2f
+ 1343               		1:
+ 1344 05e0 9595      		asr r25
+ 1345 05e2 8795      		ror r24
+ 1346               		2:
+ 1347 05e4 0A94      		dec r0
+ 1348 05e6 02F4      		brpl 1b
+ 1349               		.loc 1 790 3 view .LVU437
+ 1350 05e8 80FF      		sbrs r24,0
+ 1351 05ea 00C0      		rjmp .L144
+ 791:System.cpp    **** 		{
+ 792:System.cpp    **** 			if (LoopRelays[i].getState() != MCP_Output::SET)
+ 1352               		.loc 1 792 4 is_stmt 1 view .LVU438
+ 1353               		.loc 1 792 30 is_stmt 0 view .LVU439
+ 1354 05ec CE01      		movw r24,r28
+ 1355 05ee 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 1356               	.LVL48:
+ 1357               		.loc 1 792 4 view .LVU440
+ 1358 05f2 8130      		cpi r24,lo8(1)
+ 1359 05f4 01F0      		breq .L146
+ 793:System.cpp    **** 			{
+ 794:System.cpp    **** 				LoopRelays[i].Set();
+ 1360               		.loc 1 794 5 is_stmt 1 view .LVU441
+ 1361               		.loc 1 794 22 is_stmt 0 view .LVU442
+ 1362 05f6 CE01      		movw r24,r28
+ 1363 05f8 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 1364               	.LVL49:
+ 1365               	.L146:
+ 788:System.cpp    **** 	{
+ 1366               		.loc 1 788 2 is_stmt 1 discriminator 2 view .LVU443
+ 788:System.cpp    **** 	{
+ 1367               		.loc 1 788 24 discriminator 2 view .LVU444
+ 1368 05fc 0F5F      		subi r16,-1
+ 1369 05fe 1F4F      		sbci r17,-1
+ 1370               	.LVL50:
+ 788:System.cpp    **** 	{
+ 1371               		.loc 1 788 24 is_stmt 0 discriminator 2 view .LVU445
+ 1372 0600 2496      		adiw r28,4
+ 1373 0602 0830      		cpi r16,8
+ 1374 0604 1105      		cpc r17,__zero_reg__
+ 1375 0606 01F4      		brne .L148
+ 1376 0608 C0E0      		ldi r28,lo8(CtrlSwitchRelays)
+ 1377 060a D0E0      		ldi r29,hi8(CtrlSwitchRelays)
+ 788:System.cpp    **** 	{
+ 1378               		.loc 1 788 24 view .LVU446
+ 1379 060c 10E0      		ldi r17,0
+ 1380 060e 00E0      		ldi r16,0
+ 1381               	.LVL51:
+ 1382               	.L153:
+ 788:System.cpp    **** 	{
+ 1383               		.loc 1 788 24 view .LVU447
+ 1384               	.LBE16:
+ 1385               	.LBB17:
+ 795:System.cpp    **** 			}
+ 796:System.cpp    **** 		}
+ 797:System.cpp    **** 		else
+ 798:System.cpp    **** 		{
+ 799:System.cpp    **** 			if (LoopRelays[i].getState() != MCP_Output::CLEARED)
+ 800:System.cpp    **** 			{
+ 801:System.cpp    **** 				LoopRelays[i].Clear();
+ 802:System.cpp    **** 			}
+ 803:System.cpp    **** 		}
+ 804:System.cpp    **** 	}
+ 805:System.cpp    **** 	
+ 806:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_CTRL_SWITCHES; i++)
+ 807:System.cpp    **** 	{
+ 808:System.cpp    **** 		if (LoopModePreset.Active_CtrlSwitches & (1 << i))
+ 1386               		.loc 1 808 3 is_stmt 1 view .LVU448
+ 1387               		.loc 1 808 22 is_stmt 0 view .LVU449
+ 1388 0610 8091 0000 		lds r24,LoopModePreset+1
+ 1389 0614 90E0      		ldi r25,0
+ 1390               		.loc 1 808 52 view .LVU450
+ 1391 0616 002E      		mov r0,r16
+ 1392 0618 00C0      		rjmp 2f
+ 1393               		1:
+ 1394 061a 9595      		asr r25
+ 1395 061c 8795      		ror r24
+ 1396               		2:
+ 1397 061e 0A94      		dec r0
+ 1398 0620 02F4      		brpl 1b
+ 1399               		.loc 1 808 3 view .LVU451
+ 1400 0622 80FF      		sbrs r24,0
+ 1401 0624 00C0      		rjmp .L149
+ 809:System.cpp    **** 		{
+ 810:System.cpp    **** 			if (CtrlSwitchRelays[i].getState() != MCP_Output::SET)
+ 1402               		.loc 1 810 4 is_stmt 1 view .LVU452
+ 1403               		.loc 1 810 36 is_stmt 0 view .LVU453
+ 1404 0626 CE01      		movw r24,r28
+ 1405 0628 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 1406               	.LVL52:
+ 1407               		.loc 1 810 4 view .LVU454
+ 1408 062c 8130      		cpi r24,lo8(1)
+ 1409 062e 01F0      		breq .L151
+ 811:System.cpp    **** 			{
+ 812:System.cpp    **** 				CtrlSwitchRelays[i].Set();
+ 1410               		.loc 1 812 5 is_stmt 1 view .LVU455
+ 1411               		.loc 1 812 28 is_stmt 0 view .LVU456
+ 1412 0630 CE01      		movw r24,r28
+ 1413 0632 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 1414               	.LVL53:
+ 1415               	.L151:
+ 806:System.cpp    **** 	{
+ 1416               		.loc 1 806 2 is_stmt 1 discriminator 2 view .LVU457
+ 806:System.cpp    **** 	{
+ 1417               		.loc 1 806 24 discriminator 2 view .LVU458
+ 1418 0636 0F5F      		subi r16,-1
+ 1419 0638 1F4F      		sbci r17,-1
+ 1420               	.LVL54:
+ 806:System.cpp    **** 	{
+ 1421               		.loc 1 806 24 is_stmt 0 discriminator 2 view .LVU459
+ 1422 063a 2496      		adiw r28,4
+ 1423 063c 0430      		cpi r16,4
+ 1424 063e 1105      		cpc r17,__zero_reg__
+ 1425 0640 01F4      		brne .L153
+ 1426               	/* epilogue start */
+ 1427               	.LBE17:
+ 813:System.cpp    **** 			}
+ 814:System.cpp    **** 		}
+ 815:System.cpp    **** 		else
+ 816:System.cpp    **** 		{
+ 817:System.cpp    **** 			if (CtrlSwitchRelays[i].getState() != MCP_Output::CLEARED)
+ 818:System.cpp    **** 			{
+ 819:System.cpp    **** 				CtrlSwitchRelays[i].Clear();
+ 820:System.cpp    **** 			}
+ 821:System.cpp    **** 		}
+ 822:System.cpp    **** 	}
+ 823:System.cpp    **** }
+ 1428               		.loc 1 823 1 view .LVU460
+ 1429 0642 DF91      		pop r29
+ 1430 0644 CF91      		pop r28
+ 1431 0646 1F91      		pop r17
+ 1432 0648 0F91      		pop r16
+ 1433               	.LVL55:
+ 1434               		.loc 1 823 1 view .LVU461
+ 1435 064a 0895      		ret
+ 1436               	.LVL56:
+ 1437               	.L144:
+ 1438               	.LBB18:
+ 799:System.cpp    **** 			{
+ 1439               		.loc 1 799 4 is_stmt 1 view .LVU462
+ 799:System.cpp    **** 			{
+ 1440               		.loc 1 799 30 is_stmt 0 view .LVU463
+ 1441 064c CE01      		movw r24,r28
+ 1442 064e 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 1443               	.LVL57:
+ 799:System.cpp    **** 			{
+ 1444               		.loc 1 799 4 view .LVU464
+ 1445 0652 8823      		tst r24
+ 1446 0654 01F0      		breq .L146
+ 801:System.cpp    **** 			}
+ 1447               		.loc 1 801 5 is_stmt 1 view .LVU465
+ 801:System.cpp    **** 			}
+ 1448               		.loc 1 801 24 is_stmt 0 view .LVU466
+ 1449 0656 CE01      		movw r24,r28
+ 1450 0658 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 1451               	.LVL58:
+ 1452 065c 00C0      		rjmp .L146
+ 1453               	.LVL59:
+ 1454               	.L149:
+ 801:System.cpp    **** 			}
+ 1455               		.loc 1 801 24 view .LVU467
+ 1456               	.LBE18:
+ 1457               	.LBB19:
+ 817:System.cpp    **** 			{
+ 1458               		.loc 1 817 4 is_stmt 1 view .LVU468
+ 817:System.cpp    **** 			{
+ 1459               		.loc 1 817 36 is_stmt 0 view .LVU469
+ 1460 065e CE01      		movw r24,r28
+ 1461 0660 0E94 0000 		call _ZN10MCP_Output8getStateEv
+ 1462               	.LVL60:
+ 817:System.cpp    **** 			{
+ 1463               		.loc 1 817 4 view .LVU470
+ 1464 0664 8823      		tst r24
+ 1465 0666 01F0      		breq .L151
+ 819:System.cpp    **** 			}
+ 1466               		.loc 1 819 5 is_stmt 1 view .LVU471
+ 819:System.cpp    **** 			}
+ 1467               		.loc 1 819 30 is_stmt 0 view .LVU472
+ 1468 0668 CE01      		movw r24,r28
+ 1469 066a 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 1470               	.LVL61:
+ 1471 066e 00C0      		rjmp .L151
+ 1472               	.LBE19:
+ 1473               		.cfi_endproc
+ 1474               	.LFE9:
+ 1476               		.section	.rodata.str1.1,"aMS",@progbits,1
+ 1477               	.LC0:
+ 1478 0000 5072 6520 		.string	"Pre "
+ 1478      00
+ 1479               		.text
+ 1480               	.global	_Z19System_ChangePresetv
+ 1482               	_Z19System_ChangePresetv:
+ 1483               	.LFB10:
+ 824:System.cpp    **** 
+ 825:System.cpp    **** void System_ChangePreset()
+ 826:System.cpp    **** {
+ 1484               		.loc 1 826 1 is_stmt 1 view -0
+ 1485               		.cfi_startproc
+ 1486 0670 CF93      		push r28
+ 1487               	.LCFI12:
+ 1488               		.cfi_def_cfa_offset 3
+ 1489               		.cfi_offset 28, -2
+ 1490 0672 DF93      		push r29
+ 1491               	.LCFI13:
+ 1492               		.cfi_def_cfa_offset 4
+ 1493               		.cfi_offset 29, -3
+ 1494 0674 00D0      		rcall .
+ 1495               	.LCFI14:
+ 1496               		.cfi_def_cfa_offset 6
+ 1497 0676 CDB7      		in r28,__SP_L__
+ 1498 0678 DEB7      		in r29,__SP_H__
+ 1499               	.LCFI15:
+ 1500               		.cfi_def_cfa_register 28
+ 1501               	/* prologue: function */
+ 1502               	/* frame size = 2 */
+ 1503               	/* stack size = 4 */
+ 1504               	.L__stack_usage = 4
+ 827:System.cpp    **** 	LoopModePreset = PresetTable[ActivePreset];
+ 1505               		.loc 1 827 2 view .LVU474
+ 1506               		.loc 1 827 31 is_stmt 0 view .LVU475
+ 1507 067a E091 0000 		lds r30,ActivePreset
+ 1508               		.loc 1 827 17 view .LVU476
+ 1509 067e 84E0      		ldi r24,lo8(4)
+ 1510 0680 E89F      		mul r30,r24
+ 1511 0682 F001      		movw r30,r0
+ 1512 0684 1124      		clr __zero_reg__
+ 1513 0686 E050      		subi r30,lo8(-(PresetTable))
+ 1514 0688 F040      		sbci r31,hi8(-(PresetTable))
+ 1515 068a 8081      		ld r24,Z
+ 1516 068c 9181      		ldd r25,Z+1
+ 1517 068e A281      		ldd r26,Z+2
+ 1518 0690 B381      		ldd r27,Z+3
+ 1519 0692 8093 0000 		sts LoopModePreset,r24
+ 1520 0696 9093 0000 		sts LoopModePreset+1,r25
+ 1521 069a A093 0000 		sts LoopModePreset+2,r26
+ 1522 069e B093 0000 		sts LoopModePreset+3,r27
+ 828:System.cpp    **** 	
+ 829:System.cpp    **** 	/* Update relays */
+ 830:System.cpp    **** 	//System_UpdateUI_Relays();
+ 831:System.cpp    **** 				
+ 832:System.cpp    **** 	/* Send MIDI PC message if MIDI Out is set for preset */
+ 833:System.cpp    **** 	if (PresetTable[ActivePreset].MIDI_PC_Out != MIDI_PC_OFF)
+ 1523               		.loc 1 833 2 is_stmt 1 view .LVU477
+ 1524               		.loc 1 833 18 is_stmt 0 view .LVU478
+ 1525 06a2 E091 0000 		lds r30,ActivePreset
+ 1526               		.loc 1 833 32 view .LVU479
+ 1527 06a6 84E0      		ldi r24,lo8(4)
+ 1528 06a8 E89F      		mul r30,r24
+ 1529 06aa F001      		movw r30,r0
+ 1530 06ac 1124      		clr __zero_reg__
+ 1531 06ae E050      		subi r30,lo8(-(PresetTable))
+ 1532 06b0 F040      		sbci r31,hi8(-(PresetTable))
+ 1533               		.loc 1 833 2 view .LVU480
+ 1534 06b2 8381      		ldd r24,Z+3
+ 1535 06b4 8F3F      		cpi r24,lo8(-1)
+ 1536 06b6 01F0      		breq .L163
+ 834:System.cpp    **** 	{
+ 835:System.cpp    **** 		MIDI_TransmitProgramChange(PresetTable[ActivePreset].MIDI_PC_Out);
+ 1537               		.loc 1 835 3 is_stmt 1 view .LVU481
+ 1538               		.loc 1 835 42 is_stmt 0 view .LVU482
+ 1539 06b8 E091 0000 		lds r30,ActivePreset
+ 1540               		.loc 1 835 29 view .LVU483
+ 1541 06bc 84E0      		ldi r24,lo8(4)
+ 1542 06be E89F      		mul r30,r24
+ 1543 06c0 F001      		movw r30,r0
+ 1544 06c2 1124      		clr __zero_reg__
+ 1545 06c4 E050      		subi r30,lo8(-(PresetTable))
+ 1546 06c6 F040      		sbci r31,hi8(-(PresetTable))
+ 1547 06c8 8381      		ldd r24,Z+3
+ 1548 06ca 0E94 0000 		call _Z26MIDI_TransmitProgramChangeh
+ 1549               	.LVL62:
+ 1550               	.L163:
+ 836:System.cpp    **** 	}
+ 837:System.cpp    **** 				
+ 838:System.cpp    **** 	/* Update Pedal display */
+ 839:System.cpp    **** 	uint8_t tmp[2] = {0};
+ 1551               		.loc 1 839 2 is_stmt 1 view .LVU484
+ 1552               		.loc 1 839 10 is_stmt 0 view .LVU485
+ 1553 06ce 1A82      		std Y+2,__zero_reg__
+ 1554 06d0 1982      		std Y+1,__zero_reg__
+ 840:System.cpp    **** 	PedalCom_QueueCommand(UpdateTunerLEDs, 2, (uint8_t*)tmp);
+ 1555               		.loc 1 840 2 is_stmt 1 view .LVU486
+ 1556               		.loc 1 840 23 is_stmt 0 view .LVU487
+ 1557 06d2 AE01      		movw r20,r28
+ 1558 06d4 4F5F      		subi r20,-1
+ 1559 06d6 5F4F      		sbci r21,-1
+ 1560 06d8 62E0      		ldi r22,lo8(2)
+ 1561 06da 83ED      		ldi r24,lo8(-45)
+ 1562 06dc 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 1563               	.LVL63:
+ 841:System.cpp    **** 	PedalCom_QueueCommand(Update7segments, 4, (uint8_t*)"Pre ");
+ 1564               		.loc 1 841 2 is_stmt 1 view .LVU488
+ 1565               		.loc 1 841 23 is_stmt 0 view .LVU489
+ 1566 06e0 40E0      		ldi r20,lo8(.LC0)
+ 1567 06e2 50E0      		ldi r21,hi8(.LC0)
+ 1568 06e4 64E0      		ldi r22,lo8(4)
+ 1569 06e6 87ED      		ldi r24,lo8(-41)
+ 1570 06e8 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 1571               	.LVL64:
+ 842:System.cpp    **** 	
+ 843:System.cpp    **** 	tmp[0] = (1 << ActivePreset);
+ 1572               		.loc 1 843 2 is_stmt 1 view .LVU490
+ 1573               		.loc 1 843 17 is_stmt 0 view .LVU491
+ 1574 06ec 9091 0000 		lds r25,ActivePreset
+ 1575               		.loc 1 843 9 view .LVU492
+ 1576 06f0 81E0      		ldi r24,lo8(1)
+ 1577 06f2 00C0      		rjmp 2f
+ 1578               		1:
+ 1579 06f4 880F      		lsl r24
+ 1580               		2:
+ 1581 06f6 9A95      		dec r25
+ 1582 06f8 02F4      		brpl 1b
+ 1583 06fa 8983      		std Y+1,r24
+ 844:System.cpp    **** 	PedalCom_QueueCommand(UpdatePresetLoopLEDs, 1, (uint8_t*)tmp);
+ 1584               		.loc 1 844 2 is_stmt 1 view .LVU493
+ 1585               		.loc 1 844 23 is_stmt 0 view .LVU494
+ 1586 06fc AE01      		movw r20,r28
+ 1587 06fe 4F5F      		subi r20,-1
+ 1588 0700 5F4F      		sbci r21,-1
+ 1589 0702 61E0      		ldi r22,lo8(1)
+ 1590 0704 80ED      		ldi r24,lo8(-48)
+ 1591 0706 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 1592               	.LVL65:
+ 845:System.cpp    **** 				
+ 846:System.cpp    **** 	/* Update 7-segment display */
+ 847:System.cpp    **** 	SP10281_WriteNumber(ActivePreset + 1);
+ 1593               		.loc 1 847 2 is_stmt 1 view .LVU495
+ 1594               		.loc 1 847 22 is_stmt 0 view .LVU496
+ 1595 070a 8091 0000 		lds r24,ActivePreset
+ 1596 070e 90E0      		ldi r25,0
+ 1597               		.loc 1 847 21 view .LVU497
+ 1598 0710 0196      		adiw r24,1
+ 1599 0712 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 1600               	.LVL66:
+ 848:System.cpp    **** 				
+ 849:System.cpp    **** 	/* Update UI LEDs */
+ 850:System.cpp    **** 	System_UpdateUI_LEDs();
+ 1601               		.loc 1 850 2 is_stmt 1 view .LVU498
+ 1602               		.loc 1 850 22 is_stmt 0 view .LVU499
+ 1603 0716 0E94 0000 		call _Z20System_UpdateUI_LEDsv
+ 1604               	.LVL67:
+ 1605               	/* epilogue start */
+ 851:System.cpp    **** }
+ 1606               		.loc 1 851 1 view .LVU500
+ 1607 071a 0F90      		pop __tmp_reg__
+ 1608 071c 0F90      		pop __tmp_reg__
+ 1609 071e DF91      		pop r29
+ 1610 0720 CF91      		pop r28
+ 1611 0722 0895      		ret
+ 1612               		.cfi_endproc
+ 1613               	.LFE10:
+ 1615               	.global	_Z21System_UpdateLoopCtrlv
+ 1617               	_Z21System_UpdateLoopCtrlv:
+ 1618               	.LFB11:
+ 852:System.cpp    **** 
+ 853:System.cpp    **** void System_UpdateLoopCtrl()
+ 854:System.cpp    **** {
+ 1619               		.loc 1 854 1 is_stmt 1 view -0
+ 1620               		.cfi_startproc
+ 1621 0724 CF93      		push r28
+ 1622               	.LCFI16:
+ 1623               		.cfi_def_cfa_offset 3
+ 1624               		.cfi_offset 28, -2
+ 1625 0726 DF93      		push r29
+ 1626               	.LCFI17:
+ 1627               		.cfi_def_cfa_offset 4
+ 1628               		.cfi_offset 29, -3
+ 1629 0728 00D0      		rcall .
+ 1630 072a 00D0      		rcall .
+ 1631               	.LCFI18:
+ 1632               		.cfi_def_cfa_offset 8
+ 1633 072c CDB7      		in r28,__SP_L__
+ 1634 072e DEB7      		in r29,__SP_H__
+ 1635               	.LCFI19:
+ 1636               		.cfi_def_cfa_register 28
+ 1637               	/* prologue: function */
+ 1638               	/* frame size = 4 */
+ 1639               	/* stack size = 6 */
+ 1640               	.L__stack_usage = 6
+ 855:System.cpp    **** 	/* Update relays */
+ 856:System.cpp    **** 	//System_UpdateUI_Relays();
+ 857:System.cpp    **** 	
+ 858:System.cpp    **** 	/* Update Pedal display */
+ 859:System.cpp    **** 	uint8_t tmp[NUMBER_OF_CTRL_SWITCHES] = {0};
+ 1641               		.loc 1 859 2 view .LVU502
+ 1642               		.loc 1 859 10 is_stmt 0 view .LVU503
+ 1643 0730 1A82      		std Y+2,__zero_reg__
+ 1644 0732 1982      		std Y+1,__zero_reg__
+ 1645 0734 1C82      		std Y+4,__zero_reg__
+ 1646 0736 1B82      		std Y+3,__zero_reg__
+ 860:System.cpp    **** 	PedalCom_QueueCommand(UpdateTunerLEDs, 2, (uint8_t*)&tmp);
+ 1647               		.loc 1 860 2 is_stmt 1 view .LVU504
+ 1648               		.loc 1 860 23 is_stmt 0 view .LVU505
+ 1649 0738 AE01      		movw r20,r28
+ 1650 073a 4F5F      		subi r20,-1
+ 1651 073c 5F4F      		sbci r21,-1
+ 1652 073e 62E0      		ldi r22,lo8(2)
+ 1653 0740 83ED      		ldi r24,lo8(-45)
+ 1654 0742 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 1655               	.LVL68:
+ 861:System.cpp    **** 	PedalCom_QueueCommand(UpdatePresetLoopLEDs, 1, (uint8_t*)&LoopModePreset.Active_Loops);
+ 1656               		.loc 1 861 2 is_stmt 1 view .LVU506
+ 1657               		.loc 1 861 23 is_stmt 0 view .LVU507
+ 1658 0746 40E0      		ldi r20,lo8(LoopModePreset)
+ 1659 0748 50E0      		ldi r21,hi8(LoopModePreset)
+ 1660 074a 61E0      		ldi r22,lo8(1)
+ 1661 074c 80ED      		ldi r24,lo8(-48)
+ 1662 074e 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 1663               	.LVL69:
+ 862:System.cpp    **** 	
+ 863:System.cpp    **** 	for (uint8_t i = 0; i < NUMBER_OF_CTRL_SWITCHES; i++)
+ 1664               		.loc 1 863 2 is_stmt 1 view .LVU508
+ 1665               	.LBB20:
+ 1666               		.loc 1 863 24 view .LVU509
+ 864:System.cpp    **** 	{
+ 865:System.cpp    **** 		if (LoopModePreset.Active_CtrlSwitches & (1 << i))
+ 1667               		.loc 1 865 22 is_stmt 0 view .LVU510
+ 1668 0752 2091 0000 		lds r18,LoopModePreset+1
+ 1669 0756 30E0      		ldi r19,0
+ 1670 0758 90E0      		ldi r25,0
+ 1671 075a 80E0      		ldi r24,0
+ 866:System.cpp    **** 		{
+ 867:System.cpp    **** 			tmp[i] = '/';
+ 868:System.cpp    **** 		}
+ 869:System.cpp    **** 		else
+ 870:System.cpp    **** 		{
+ 871:System.cpp    **** 			tmp[i] = '_';
+ 1672               		.loc 1 871 11 view .LVU511
+ 1673 075c 4FE5      		ldi r20,lo8(95)
+ 867:System.cpp    **** 		}
+ 1674               		.loc 1 867 11 view .LVU512
+ 1675 075e 5FE2      		ldi r21,lo8(47)
+ 1676               	.LVL70:
+ 1677               	.L170:
+ 865:System.cpp    **** 		{
+ 1678               		.loc 1 865 3 is_stmt 1 view .LVU513
+ 865:System.cpp    **** 		{
+ 1679               		.loc 1 865 52 is_stmt 0 view .LVU514
+ 1680 0760 B901      		movw r22,r18
+ 1681 0762 082E      		mov r0,r24
+ 1682 0764 00C0      		rjmp 2f
+ 1683               		1:
+ 1684 0766 7595      		asr r23
+ 1685 0768 6795      		ror r22
+ 1686               		2:
+ 1687 076a 0A94      		dec r0
+ 1688 076c 02F4      		brpl 1b
+ 867:System.cpp    **** 		}
+ 1689               		.loc 1 867 11 view .LVU515
+ 1690 076e E1E0      		ldi r30,lo8(1)
+ 1691 0770 F0E0      		ldi r31,0
+ 1692 0772 EC0F      		add r30,r28
+ 1693 0774 FD1F      		adc r31,r29
+ 1694 0776 E80F      		add r30,r24
+ 1695 0778 F91F      		adc r31,r25
+ 865:System.cpp    **** 		{
+ 1696               		.loc 1 865 3 view .LVU516
+ 1697 077a 60FF      		sbrs r22,0
+ 1698 077c 00C0      		rjmp .L168
+ 867:System.cpp    **** 		}
+ 1699               		.loc 1 867 4 is_stmt 1 view .LVU517
+ 867:System.cpp    **** 		}
+ 1700               		.loc 1 867 11 is_stmt 0 view .LVU518
+ 1701 077e 5083      		st Z,r21
+ 1702               	.L169:
+ 863:System.cpp    **** 	{
+ 1703               		.loc 1 863 2 is_stmt 1 discriminator 2 view .LVU519
+ 1704               	.LVL71:
+ 863:System.cpp    **** 	{
+ 1705               		.loc 1 863 24 discriminator 2 view .LVU520
+ 1706 0780 0196      		adiw r24,1
+ 1707               	.LVL72:
+ 863:System.cpp    **** 	{
+ 1708               		.loc 1 863 24 is_stmt 0 discriminator 2 view .LVU521
+ 1709 0782 8430      		cpi r24,4
+ 1710 0784 9105      		cpc r25,__zero_reg__
+ 1711 0786 01F4      		brne .L170
+ 1712               	.LBE20:
+ 872:System.cpp    **** 		}
+ 873:System.cpp    **** 	}
+ 874:System.cpp    **** 	
+ 875:System.cpp    **** 	PedalCom_QueueCommand(Update7segments, 4, (uint8_t*)tmp);
+ 1713               		.loc 1 875 2 is_stmt 1 view .LVU522
+ 1714               		.loc 1 875 23 is_stmt 0 view .LVU523
+ 1715 0788 AE01      		movw r20,r28
+ 1716 078a 4F5F      		subi r20,-1
+ 1717 078c 5F4F      		sbci r21,-1
+ 1718 078e 64E0      		ldi r22,lo8(4)
+ 1719 0790 87ED      		ldi r24,lo8(-41)
+ 1720               	.LVL73:
+ 1721               		.loc 1 875 23 view .LVU524
+ 1722 0792 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 1723               	.LVL74:
+ 876:System.cpp    **** 	
+ 877:System.cpp    **** 	/* Update UI LEDs */
+ 878:System.cpp    **** 	System_UpdateUI_LEDs();
+ 1724               		.loc 1 878 2 is_stmt 1 view .LVU525
+ 1725               		.loc 1 878 22 is_stmt 0 view .LVU526
+ 1726 0796 0E94 0000 		call _Z20System_UpdateUI_LEDsv
+ 1727               	.LVL75:
+ 1728               	/* epilogue start */
+ 879:System.cpp    **** }
+ 1729               		.loc 1 879 1 view .LVU527
+ 1730 079a 0F90      		pop __tmp_reg__
+ 1731 079c 0F90      		pop __tmp_reg__
+ 1732 079e 0F90      		pop __tmp_reg__
+ 1733 07a0 0F90      		pop __tmp_reg__
+ 1734 07a2 DF91      		pop r29
+ 1735 07a4 CF91      		pop r28
+ 1736 07a6 0895      		ret
+ 1737               	.LVL76:
+ 1738               	.L168:
+ 1739               	.LBB21:
+ 871:System.cpp    **** 		}
+ 1740               		.loc 1 871 4 is_stmt 1 view .LVU528
+ 871:System.cpp    **** 		}
+ 1741               		.loc 1 871 11 is_stmt 0 view .LVU529
+ 1742 07a8 4083      		st Z,r20
+ 1743 07aa 00C0      		rjmp .L169
+ 1744               	.LBE21:
+ 1745               		.cfi_endproc
+ 1746               	.LFE11:
+ 1748               	.global	_Z10System_Runv
+ 1750               	_Z10System_Runv:
+ 1751               	.LFB2:
+  51:System.cpp    **** 	switch (SystemState)
+ 1752               		.loc 1 51 1 is_stmt 1 view -0
+ 1753               		.cfi_startproc
+ 1754 07ac EF92      		push r14
+ 1755               	.LCFI20:
+ 1756               		.cfi_def_cfa_offset 3
+ 1757               		.cfi_offset 14, -2
+ 1758 07ae 0F93      		push r16
+ 1759               	.LCFI21:
+ 1760               		.cfi_def_cfa_offset 4
+ 1761               		.cfi_offset 16, -3
+ 1762               	/* prologue: function */
+ 1763               	/* frame size = 0 */
+ 1764               	/* stack size = 2 */
+ 1765               	.L__stack_usage = 2
+  52:System.cpp    **** 	{
+ 1766               		.loc 1 52 2 view .LVU531
+  52:System.cpp    **** 	{
+ 1767               		.loc 1 52 10 is_stmt 0 view .LVU532
+ 1768 07b0 E091 0000 		lds r30,SystemState
+ 1769 07b4 E031      		cpi r30,lo8(16)
+ 1770 07b6 00F0      		brlo .+2
+ 1771 07b8 00C0      		rjmp .L173
+ 1772 07ba F0E0      		ldi r31,0
+ 1773 07bc E050      		subi r30,lo8(-(gs(.L175)))
+ 1774 07be F040      		sbci r31,hi8(-(gs(.L175)))
+ 1775 07c0 0C94 0000 		jmp __tablejump2__
+ 1776               		.section	.jumptables.gcc._Z10System_Runv,"a",@progbits
+ 1777               		.p2align	1
+ 1778               	.L175:
+ 1779 0000 0000      		.word gs(.L187)
+ 1780 0002 0000      		.word gs(.L186)
+ 1781 0004 0000      		.word gs(.L185)
+ 1782 0006 0000      		.word gs(.L184)
+ 1783 0008 0000      		.word gs(.L183)
+ 1784 000a 0000      		.word gs(.L182)
+ 1785 000c 0000      		.word gs(.L181)
+ 1786 000e 0000      		.word gs(.L173)
+ 1787 0010 0000      		.word gs(.L173)
+ 1788 0012 0000      		.word gs(.L180)
+ 1789 0014 0000      		.word gs(.L179)
+ 1790 0016 0000      		.word gs(.L178)
+ 1791 0018 0000      		.word gs(.L177)
+ 1792 001a 0000      		.word gs(.L176)
+ 1793 001c 0000      		.word gs(.L173)
+ 1794 001e 0000      		.word gs(.L174)
+ 1795               		.text
+ 1796               	.L187:
+  54:System.cpp    **** 			/* Fill preset table from EEPROM */
+ 1797               		.loc 1 54 3 is_stmt 1 view .LVU533
+  56:System.cpp    **** 			
+ 1798               		.loc 1 56 4 view .LVU534
+  56:System.cpp    **** 			
+ 1799               		.loc 1 56 21 is_stmt 0 view .LVU535
+ 1800 07c4 40E2      		ldi r20,lo8(32)
+ 1801 07c6 50E0      		ldi r21,0
+ 1802 07c8 64E6      		ldi r22,lo8(100)
+ 1803 07ca 70E0      		ldi r23,0
+ 1804 07cc 80E0      		ldi r24,lo8(PresetTable)
+ 1805 07ce 90E0      		ldi r25,hi8(PresetTable)
+ 1806 07d0 0E94 0000 		call eeprom_read_block
+ 1807               	.LVL77:
+  59:System.cpp    **** 			
+ 1808               		.loc 1 59 4 is_stmt 1 view .LVU536
+  59:System.cpp    **** 			
+ 1809               		.loc 1 59 55 is_stmt 0 view .LVU537
+ 1810 07d4 90E0      		ldi r25,0
+ 1811 07d6 80E0      		ldi r24,0
+ 1812 07d8 0E94 0000 		call eeprom_read_byte
+ 1813               	.LVL78:
+  59:System.cpp    **** 			
+ 1814               		.loc 1 59 23 view .LVU538
+ 1815 07dc 8093 0000 		sts System_MidiChannel,r24
+  61:System.cpp    **** 			{
+ 1816               		.loc 1 61 4 is_stmt 1 view .LVU539
+  61:System.cpp    **** 			{
+ 1817               		.loc 1 61 27 is_stmt 0 view .LVU540
+ 1818 07e0 8091 0000 		lds r24,System_MidiChannel
+  61:System.cpp    **** 			{
+ 1819               		.loc 1 61 4 view .LVU541
+ 1820 07e4 8131      		cpi r24,lo8(17)
+ 1821 07e6 00F0      		brlo .L188
+  63:System.cpp    **** 				eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, System_MidiChannel);
+ 1822               		.loc 1 63 5 is_stmt 1 view .LVU542
+  63:System.cpp    **** 				eeprom_write_byte((uint8_t*)EEPROM_MIDI_CH_ADDR, System_MidiChannel);
+ 1823               		.loc 1 63 24 is_stmt 0 view .LVU543
+ 1824 07e8 1092 0000 		sts System_MidiChannel,__zero_reg__
+  64:System.cpp    **** 			}
+ 1825               		.loc 1 64 5 is_stmt 1 view .LVU544
+  64:System.cpp    **** 			}
+ 1826               		.loc 1 64 22 is_stmt 0 view .LVU545
+ 1827 07ec 6091 0000 		lds r22,System_MidiChannel
+ 1828 07f0 90E0      		ldi r25,0
+ 1829 07f2 80E0      		ldi r24,0
+ 1830 07f4 0E94 0000 		call eeprom_write_byte
+ 1831               	.LVL79:
+ 1832               	.L188:
+  68:System.cpp    **** 			{
+ 1833               		.loc 1 68 4 is_stmt 1 view .LVU546
+  68:System.cpp    **** 			{
+ 1834               		.loc 1 68 31 is_stmt 0 view .LVU547
+ 1835 07f8 0E94 0000 		call _Z23RotaryEncoder_IsPressedv
+ 1836               	.LVL80:
+  68:System.cpp    **** 			{
+ 1837               		.loc 1 68 4 view .LVU548
+ 1838 07fc 8823      		tst r24
+ 1839 07fe 01F0      		breq .L189
+  71:System.cpp    **** 				ModeEditPresetLED.Clear();
+ 1840               		.loc 1 71 5 is_stmt 1 view .LVU549
+  71:System.cpp    **** 				ModeEditPresetLED.Clear();
+ 1841               		.loc 1 71 21 is_stmt 0 view .LVU550
+ 1842 0800 80E0      		ldi r24,lo8(ModeRunLED)
+ 1843 0802 90E0      		ldi r25,hi8(ModeRunLED)
+ 1844 0804 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 1845               	.LVL81:
+  72:System.cpp    **** 				ModeEditMidiLED.Set();
+ 1846               		.loc 1 72 5 is_stmt 1 view .LVU551
+  72:System.cpp    **** 				ModeEditMidiLED.Set();
+ 1847               		.loc 1 72 28 is_stmt 0 view .LVU552
+ 1848 0808 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 1849 080a 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 1850 080c 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 1851               	.LVL82:
+  73:System.cpp    **** 				
+ 1852               		.loc 1 73 5 is_stmt 1 view .LVU553
+  73:System.cpp    **** 				
+ 1853               		.loc 1 73 24 is_stmt 0 view .LVU554
+ 1854 0810 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 1855 0812 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 1856 0814 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 1857               	.LVL83:
+  75:System.cpp    **** 				{
+ 1858               		.loc 1 75 5 is_stmt 1 view .LVU555
+  75:System.cpp    **** 				{
+ 1859               		.loc 1 75 28 is_stmt 0 view .LVU556
+ 1860 0818 8091 0000 		lds r24,System_MidiChannel
+  75:System.cpp    **** 				{
+ 1861               		.loc 1 75 5 view .LVU557
+ 1862 081c 8111      		cpse r24,__zero_reg__
+ 1863 081e 00C0      		rjmp .L190
+  77:System.cpp    **** 				} 
+ 1864               		.loc 1 77 6 is_stmt 1 view .LVU558
+  77:System.cpp    **** 				} 
+ 1865               		.loc 1 77 22 is_stmt 0 view .LVU559
+ 1866 0820 E12C      		mov r14,__zero_reg__
+ 1867 0822 00E0      		ldi r16,0
+ 1868 0824 20E0      		ldi r18,0
+ 1869 0826 4EE6      		ldi r20,lo8(110)
+ 1870 0828 6DE6      		ldi r22,lo8(109)
+ 1871 082a 8FE6      		ldi r24,lo8(111)
+ 1872 082c 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 1873               	.LVL84:
+ 1874               	.L191:
+  84:System.cpp    **** 			} 
+ 1875               		.loc 1 84 5 is_stmt 1 view .LVU560
+  84:System.cpp    **** 			} 
+ 1876               		.loc 1 84 17 is_stmt 0 view .LVU561
+ 1877 0830 81E0      		ldi r24,lo8(1)
+ 1878               	.L217:
+ 322:System.cpp    **** 			
+ 1879               		.loc 1 322 16 view .LVU562
+ 1880 0832 8093 0000 		sts SystemState,r24
+ 1881 0836 00C0      		rjmp .L173
+ 1882               	.L190:
+  81:System.cpp    **** 				}
+ 1883               		.loc 1 81 6 is_stmt 1 view .LVU563
+  81:System.cpp    **** 				}
+ 1884               		.loc 1 81 25 is_stmt 0 view .LVU564
+ 1885 0838 8091 0000 		lds r24,System_MidiChannel
+ 1886 083c 90E0      		ldi r25,0
+ 1887 083e 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 1888               	.LVL85:
+ 1889 0842 00C0      		rjmp .L191
+ 1890               	.L189:
+  88:System.cpp    **** 			}
+ 1891               		.loc 1 88 5 is_stmt 1 view .LVU565
+  88:System.cpp    **** 			}
+ 1892               		.loc 1 88 17 is_stmt 0 view .LVU566
+ 1893 0844 82E0      		ldi r24,lo8(2)
+ 1894 0846 00C0      		rjmp .L217
+ 1895               	.L186:
+  93:System.cpp    **** 			/* If user is selecting new MIDI channel */
+ 1896               		.loc 1 93 3 is_stmt 1 view .LVU567
+  95:System.cpp    **** 			{
+ 1897               		.loc 1 95 4 view .LVU568
+  95:System.cpp    **** 			{
+ 1898               		.loc 1 95 30 is_stmt 0 view .LVU569
+ 1899 0848 9091 0000 		lds r25,TempSelectMidiChannel
+ 1900 084c 8091 0000 		lds r24,LastTempSelectMidiChannel
+  95:System.cpp    **** 			{
+ 1901               		.loc 1 95 4 view .LVU570
+ 1902 0850 9817      		cp r25,r24
+ 1903 0852 01F0      		breq .L192
+  98:System.cpp    **** 				{
+ 1904               		.loc 1 98 5 is_stmt 1 view .LVU571
+  98:System.cpp    **** 				{
+ 1905               		.loc 1 98 31 is_stmt 0 view .LVU572
+ 1906 0854 8091 0000 		lds r24,TempSelectMidiChannel
+  98:System.cpp    **** 				{
+ 1907               		.loc 1 98 5 view .LVU573
+ 1908 0858 8111      		cpse r24,__zero_reg__
+ 1909 085a 00C0      		rjmp .L193
+ 100:System.cpp    **** 				}
+ 1910               		.loc 1 100 6 is_stmt 1 view .LVU574
+ 100:System.cpp    **** 				}
+ 1911               		.loc 1 100 22 is_stmt 0 view .LVU575
+ 1912 085c E12C      		mov r14,__zero_reg__
+ 1913 085e 00E0      		ldi r16,0
+ 1914 0860 20E0      		ldi r18,0
+ 1915 0862 4EE6      		ldi r20,lo8(110)
+ 1916 0864 6DE6      		ldi r22,lo8(109)
+ 1917 0866 8FE6      		ldi r24,lo8(111)
+ 1918 0868 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 1919               	.LVL86:
+ 1920               	.L194:
+ 108:System.cpp    **** 			}
+ 1921               		.loc 1 108 5 is_stmt 1 view .LVU576
+ 108:System.cpp    **** 			}
+ 1922               		.loc 1 108 29 is_stmt 0 view .LVU577
+ 1923 086c 81E0      		ldi r24,lo8(1)
+ 1924 086e 90E0      		ldi r25,0
+ 1925 0870 9093 0000 		sts System_TempSelectOvfCnt+1,r25
+ 1926 0874 8093 0000 		sts System_TempSelectOvfCnt,r24
+ 1927               	.L192:
+ 111:System.cpp    **** 			
+ 1928               		.loc 1 111 4 is_stmt 1 view .LVU578
+ 111:System.cpp    **** 			
+ 1929               		.loc 1 111 30 is_stmt 0 view .LVU579
+ 1930 0878 8091 0000 		lds r24,TempSelectMidiChannel
+ 1931 087c 8093 0000 		sts LastTempSelectMidiChannel,r24
+ 113:System.cpp    **** 		
+ 1932               		.loc 1 113 4 is_stmt 1 view .LVU580
+ 1933               	.L173:
+ 332:System.cpp    **** 	LastSystemState = SystemState;
+ 1934               		.loc 1 332 2 view .LVU581
+ 332:System.cpp    **** 	LastSystemState = SystemState;
+ 1935               		.loc 1 332 19 is_stmt 0 view .LVU582
+ 1936 0880 8091 0000 		lds r24,ActivePreset
+ 1937 0884 8093 0000 		sts LastActivePreset,r24
+ 333:System.cpp    **** 	LastLoopModePreset = LoopModePreset;
+ 1938               		.loc 1 333 2 is_stmt 1 view .LVU583
+ 333:System.cpp    **** 	LastLoopModePreset = LoopModePreset;
+ 1939               		.loc 1 333 18 is_stmt 0 view .LVU584
+ 1940 0888 8091 0000 		lds r24,SystemState
+ 1941 088c 8093 0000 		sts LastSystemState,r24
+ 334:System.cpp    **** 	LastTempSelectPreset = TempSelectPreset;
+ 1942               		.loc 1 334 2 is_stmt 1 view .LVU585
+ 334:System.cpp    **** 	LastTempSelectPreset = TempSelectPreset;
+ 1943               		.loc 1 334 21 is_stmt 0 view .LVU586
+ 1944 0890 8091 0000 		lds r24,LoopModePreset
+ 1945 0894 9091 0000 		lds r25,LoopModePreset+1
+ 1946 0898 A091 0000 		lds r26,LoopModePreset+2
+ 1947 089c B091 0000 		lds r27,LoopModePreset+3
+ 1948 08a0 8093 0000 		sts LastLoopModePreset,r24
+ 1949 08a4 9093 0000 		sts LastLoopModePreset+1,r25
+ 1950 08a8 A093 0000 		sts LastLoopModePreset+2,r26
+ 1951 08ac B093 0000 		sts LastLoopModePreset+3,r27
+ 335:System.cpp    **** }
+ 1952               		.loc 1 335 2 is_stmt 1 view .LVU587
+ 335:System.cpp    **** }
+ 1953               		.loc 1 335 23 is_stmt 0 view .LVU588
+ 1954 08b0 8091 0000 		lds r24,TempSelectPreset
+ 1955 08b4 8093 0000 		sts LastTempSelectPreset,r24
+ 1956               	/* epilogue start */
+ 336:System.cpp    **** 
+ 1957               		.loc 1 336 1 view .LVU589
+ 1958 08b8 0F91      		pop r16
+ 1959 08ba EF90      		pop r14
+ 1960 08bc 0895      		ret
+ 1961               	.L193:
+ 104:System.cpp    **** 				}
+ 1962               		.loc 1 104 6 is_stmt 1 view .LVU590
+ 104:System.cpp    **** 				}
+ 1963               		.loc 1 104 25 is_stmt 0 view .LVU591
+ 1964 08be 8091 0000 		lds r24,TempSelectMidiChannel
+ 1965 08c2 90E0      		ldi r25,0
+ 1966 08c4 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 1967               	.LVL87:
+ 1968 08c8 00C0      		rjmp .L194
+ 1969               	.L185:
+ 115:System.cpp    **** 			/* Write active preset to 7-segment display */
+ 1970               		.loc 1 115 3 is_stmt 1 view .LVU592
+ 117:System.cpp    **** 			
+ 1971               		.loc 1 117 4 view .LVU593
+ 117:System.cpp    **** 			
+ 1972               		.loc 1 117 24 is_stmt 0 view .LVU594
+ 1973 08ca 8091 0000 		lds r24,ActivePreset
+ 1974 08ce 90E0      		ldi r25,0
+ 117:System.cpp    **** 			
+ 1975               		.loc 1 117 23 view .LVU595
+ 1976 08d0 0196      		adiw r24,1
+ 1977 08d2 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 1978               	.LVL88:
+ 120:System.cpp    **** 			ModeEditPresetLED.Clear();
+ 1979               		.loc 1 120 4 is_stmt 1 view .LVU596
+ 120:System.cpp    **** 			ModeEditPresetLED.Clear();
+ 1980               		.loc 1 120 18 is_stmt 0 view .LVU597
+ 1981 08d6 80E0      		ldi r24,lo8(ModeRunLED)
+ 1982 08d8 90E0      		ldi r25,hi8(ModeRunLED)
+ 1983 08da 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 1984               	.LVL89:
+ 121:System.cpp    **** 			ModeEditMidiLED.Clear();
+ 1985               		.loc 1 121 4 is_stmt 1 view .LVU598
+ 121:System.cpp    **** 			ModeEditMidiLED.Clear();
+ 1986               		.loc 1 121 27 is_stmt 0 view .LVU599
+ 1987 08de 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 1988 08e0 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 1989 08e2 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 1990               	.LVL90:
+ 122:System.cpp    **** 			
+ 1991               		.loc 1 122 4 is_stmt 1 view .LVU600
+ 122:System.cpp    **** 			
+ 1992               		.loc 1 122 25 is_stmt 0 view .LVU601
+ 1993 08e6 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 1994 08e8 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 1995 08ea 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 1996               	.LVL91:
+ 125:System.cpp    **** 			{
+ 1997               		.loc 1 125 4 is_stmt 1 view .LVU602
+ 125:System.cpp    **** 			{
+ 1998               		.loc 1 125 22 is_stmt 0 view .LVU603
+ 1999 08ee 8091 0000 		lds r24,SystemRunMode
+ 125:System.cpp    **** 			{
+ 2000               		.loc 1 125 4 view .LVU604
+ 2001 08f2 8111      		cpse r24,__zero_reg__
+ 2002 08f4 00C0      		rjmp .L195
+ 127:System.cpp    **** 			}
+ 2003               		.loc 1 127 5 is_stmt 1 view .LVU605
+ 127:System.cpp    **** 			}
+ 2004               		.loc 1 127 17 is_stmt 0 view .LVU606
+ 2005 08f6 83E0      		ldi r24,lo8(3)
+ 2006 08f8 00C0      		rjmp .L217
+ 2007               	.L195:
+ 129:System.cpp    **** 			{
+ 2008               		.loc 1 129 9 is_stmt 1 view .LVU607
+ 129:System.cpp    **** 			{
+ 2009               		.loc 1 129 27 is_stmt 0 view .LVU608
+ 2010 08fa 8091 0000 		lds r24,SystemRunMode
+ 129:System.cpp    **** 			{
+ 2011               		.loc 1 129 9 view .LVU609
+ 2012 08fe 8130      		cpi r24,lo8(1)
+ 2013 0900 01F0      		breq .+2
+ 2014 0902 00C0      		rjmp .L173
+ 131:System.cpp    **** 			}
+ 2015               		.loc 1 131 5 is_stmt 1 view .LVU610
+ 131:System.cpp    **** 			}
+ 2016               		.loc 1 131 17 is_stmt 0 view .LVU611
+ 2017 0904 85E0      		ldi r24,lo8(5)
+ 2018 0906 00C0      		rjmp .L217
+ 2019               	.L184:
+ 136:System.cpp    **** 			/* Update state variables */
+ 2020               		.loc 1 136 3 is_stmt 1 view .LVU612
+ 138:System.cpp    **** 			SystemState = RUN_PRESET_CTRL;
+ 2021               		.loc 1 138 4 view .LVU613
+ 138:System.cpp    **** 			SystemState = RUN_PRESET_CTRL;
+ 2022               		.loc 1 138 18 is_stmt 0 view .LVU614
+ 2023 0908 1092 0000 		sts SystemRunMode,__zero_reg__
+ 139:System.cpp    **** 			
+ 2024               		.loc 1 139 4 is_stmt 1 view .LVU615
+ 139:System.cpp    **** 			
+ 2025               		.loc 1 139 16 is_stmt 0 view .LVU616
+ 2026 090c 84E0      		ldi r24,lo8(4)
+ 2027 090e 8093 0000 		sts SystemState,r24
+ 142:System.cpp    **** 			
+ 2028               		.loc 1 142 4 is_stmt 1 view .LVU617
+ 142:System.cpp    **** 			
+ 2029               		.loc 1 142 28 is_stmt 0 view .LVU618
+ 2030 0912 1092 0000 		sts System_TempSelectOvfCnt+1,__zero_reg__
+ 2031 0916 1092 0000 		sts System_TempSelectOvfCnt,__zero_reg__
+ 145:System.cpp    **** 			
+ 2032               		.loc 1 145 4 is_stmt 1 view .LVU619
+ 145:System.cpp    **** 			
+ 2033               		.loc 1 145 23 is_stmt 0 view .LVU620
+ 2034 091a 8091 0000 		lds r24,ActivePreset
+ 145:System.cpp    **** 			
+ 2035               		.loc 1 145 50 view .LVU621
+ 2036 091e 91E0      		ldi r25,lo8(1)
+ 2037 0920 8927      		eor r24,r25
+ 145:System.cpp    **** 			
+ 2038               		.loc 1 145 21 view .LVU622
+ 2039 0922 8093 0000 		sts LastActivePreset,r24
+ 2040               	.L183:
+ 147:System.cpp    **** 			/* If active preset has changed since last cycle then update system */
+ 2041               		.loc 1 147 3 is_stmt 1 view .LVU623
+ 149:System.cpp    **** 			{
+ 2042               		.loc 1 149 4 view .LVU624
+ 149:System.cpp    **** 			{
+ 2043               		.loc 1 149 21 is_stmt 0 view .LVU625
+ 2044 0926 9091 0000 		lds r25,ActivePreset
+ 2045 092a 8091 0000 		lds r24,LastActivePreset
+ 149:System.cpp    **** 			{
+ 2046               		.loc 1 149 4 view .LVU626
+ 2047 092e 9813      		cpse r25,r24
+ 151:System.cpp    **** 			}
+ 2048               		.loc 1 151 5 is_stmt 1 view .LVU627
+ 151:System.cpp    **** 			}
+ 2049               		.loc 1 151 24 is_stmt 0 view .LVU628
+ 2050 0930 0E94 0000 		call _Z19System_ChangePresetv
+ 2051               	.LVL92:
+ 155:System.cpp    **** 			{
+ 2052               		.loc 1 155 4 is_stmt 1 view .LVU629
+ 2053               	.L200:
+ 189:System.cpp    **** 			{
+ 2054               		.loc 1 189 4 view .LVU630
+ 189:System.cpp    **** 			{
+ 2055               		.loc 1 189 25 is_stmt 0 view .LVU631
+ 2056 0934 9091 0000 		lds r25,TempSelectPreset
+ 2057 0938 8091 0000 		lds r24,LastTempSelectPreset
+ 189:System.cpp    **** 			{
+ 2058               		.loc 1 189 4 view .LVU632
+ 2059 093c 9817      		cp r25,r24
+ 2060 093e 01F4      		brne .+2
+ 2061 0940 00C0      		rjmp .L173
+ 192:System.cpp    **** 							
+ 2062               		.loc 1 192 5 is_stmt 1 view .LVU633
+ 192:System.cpp    **** 							
+ 2063               		.loc 1 192 25 is_stmt 0 view .LVU634
+ 2064 0942 8091 0000 		lds r24,TempSelectPreset
+ 2065 0946 90E0      		ldi r25,0
+ 192:System.cpp    **** 							
+ 2066               		.loc 1 192 24 view .LVU635
+ 2067 0948 0196      		adiw r24,1
+ 2068 094a 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 2069               	.LVL93:
+ 195:System.cpp    **** 				System_UpdateUI_LEDs();
+ 2070               		.loc 1 195 5 is_stmt 1 view .LVU636
+ 195:System.cpp    **** 				System_UpdateUI_LEDs();
+ 2071               		.loc 1 195 34 is_stmt 0 view .LVU637
+ 2072 094e E091 0000 		lds r30,TempSelectPreset
+ 195:System.cpp    **** 				System_UpdateUI_LEDs();
+ 2073               		.loc 1 195 20 view .LVU638
+ 2074 0952 84E0      		ldi r24,lo8(4)
+ 2075 0954 E89F      		mul r30,r24
+ 2076 0956 F001      		movw r30,r0
+ 2077 0958 1124      		clr __zero_reg__
+ 2078 095a E050      		subi r30,lo8(-(PresetTable))
+ 2079 095c F040      		sbci r31,hi8(-(PresetTable))
+ 2080 095e 8081      		ld r24,Z
+ 2081 0960 9181      		ldd r25,Z+1
+ 2082 0962 A281      		ldd r26,Z+2
+ 2083 0964 B381      		ldd r27,Z+3
+ 2084 0966 8093 0000 		sts LoopModePreset,r24
+ 2085 096a 9093 0000 		sts LoopModePreset+1,r25
+ 2086 096e A093 0000 		sts LoopModePreset+2,r26
+ 2087 0972 B093 0000 		sts LoopModePreset+3,r27
+ 196:System.cpp    **** 			}
+ 2088               		.loc 1 196 5 is_stmt 1 view .LVU639
+ 196:System.cpp    **** 			}
+ 2089               		.loc 1 196 25 is_stmt 0 view .LVU640
+ 2090 0976 0E94 0000 		call _Z20System_UpdateUI_LEDsv
+ 2091               	.LVL94:
+ 2092 097a 00C0      		rjmp .L173
+ 2093               	.L182:
+ 167:System.cpp    **** 			/* Update 7-segment display */
+ 2094               		.loc 1 167 3 is_stmt 1 view .LVU641
+ 169:System.cpp    **** 			
+ 2095               		.loc 1 169 4 view .LVU642
+ 169:System.cpp    **** 			
+ 2096               		.loc 1 169 20 is_stmt 0 view .LVU643
+ 2097 097c E12C      		mov r14,__zero_reg__
+ 2098 097e 00E0      		ldi r16,0
+ 2099 0980 20E0      		ldi r18,0
+ 2100 0982 43E4      		ldi r20,lo8(67)
+ 2101 0984 6CE4      		ldi r22,lo8(76)
+ 2102 0986 8DE4      		ldi r24,lo8(77)
+ 2103 0988 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 2104               	.LVL95:
+ 172:System.cpp    **** 			SystemState = RUN_LOOP_CTRL;
+ 2105               		.loc 1 172 4 is_stmt 1 view .LVU644
+ 172:System.cpp    **** 			SystemState = RUN_LOOP_CTRL;
+ 2106               		.loc 1 172 18 is_stmt 0 view .LVU645
+ 2107 098c 91E0      		ldi r25,lo8(1)
+ 2108 098e 9093 0000 		sts SystemRunMode,r25
+ 173:System.cpp    **** 			
+ 2109               		.loc 1 173 4 is_stmt 1 view .LVU646
+ 173:System.cpp    **** 			
+ 2110               		.loc 1 173 16 is_stmt 0 view .LVU647
+ 2111 0992 86E0      		ldi r24,lo8(6)
+ 2112 0994 8093 0000 		sts SystemState,r24
+ 176:System.cpp    **** 			
+ 2113               		.loc 1 176 4 is_stmt 1 view .LVU648
+ 176:System.cpp    **** 			
+ 2114               		.loc 1 176 28 is_stmt 0 view .LVU649
+ 2115 0998 1092 0000 		sts System_TempSelectOvfCnt+1,__zero_reg__
+ 2116 099c 1092 0000 		sts System_TempSelectOvfCnt,__zero_reg__
+ 179:System.cpp    **** 			
+ 2117               		.loc 1 179 4 is_stmt 1 view .LVU650
+ 179:System.cpp    **** 			
+ 2118               		.loc 1 179 66 is_stmt 0 view .LVU651
+ 2119 09a0 8091 0000 		lds r24,LoopModePreset
+ 2120 09a4 8927      		eor r24,r25
+ 179:System.cpp    **** 			
+ 2121               		.loc 1 179 36 view .LVU652
+ 2122 09a6 8093 0000 		sts LastLoopModePreset,r24
+ 2123               	.L181:
+ 181:System.cpp    **** 			/* If active loops or ctrl switches has changed since last cycle */
+ 2124               		.loc 1 181 3 is_stmt 1 view .LVU653
+ 183:System.cpp    **** 			{
+ 2125               		.loc 1 183 4 view .LVU654
+ 2126               	.LVL96:
+ 2127               	.LBB26:
+ 2128               	.LBI26:
+ 2129               		.file 2 "System.h"
+   1:System.h      **** /*
+   2:System.h      ****  * System.h
+   3:System.h      ****  *
+   4:System.h      ****  * Created: 03-02-2020 20:56:21
+   5:System.h      ****  *  Author: Esben
+   6:System.h      ****  */ 
+   7:System.h      **** 
+   8:System.h      **** #ifndef SYSTEM_H_
+   9:System.h      **** #define SYSTEM_H_
+  10:System.h      **** 
+  11:System.h      **** /* Includes */
+  12:System.h      **** #include "PedalCom.h"
+  13:System.h      **** #include "MIDI.h"
+  14:System.h      **** 
+  15:System.h      **** /* Defines */
+  16:System.h      **** #define SYSTEM_TEMP_SELECT_TIMEOUT	1500	// 1500*2ms = 3 seconds
+  17:System.h      **** #define SYSTEM_MARK_SELECTION_TIMEOUT	150	// 150*2ms = 300ms
+  18:System.h      **** 
+  19:System.h      **** #define EEPROM_MIDI_CH_ADDR			  0
+  20:System.h      **** #define EEPROM_PRESETS_BASE_ADDR	100
+  21:System.h      **** 
+  22:System.h      **** #define NUMBER_OF_PRESETS			8
+  23:System.h      **** #define NUMBER_OF_LOOPS				8
+  24:System.h      **** #define NUMBER_OF_CTRL_SWITCHES		4
+  25:System.h      **** 
+  26:System.h      **** /* Enumerations */
+  27:System.h      **** typedef enum System_State
+  28:System.h      **** {
+  29:System.h      **** 	BOOT_UP = 0,
+  30:System.h      **** 	EDIT_MIDI_CHANNEL,
+  31:System.h      **** 	INITIALIZE_SYSTEM,
+  32:System.h      **** 	ENTER_RUN_PRESET_CTRL,
+  33:System.h      **** 	RUN_PRESET_CTRL,
+  34:System.h      **** 	ENTER_RUN_LOOP_CTRL,
+  35:System.h      **** 	RUN_LOOP_CTRL,
+  36:System.h      **** 	ENTER_TUNER,
+  37:System.h      **** 	TUNER,
+  38:System.h      **** 	ENTER_EDIT_UI_MODE,
+  39:System.h      **** 	EDIT_UI_MODE,
+  40:System.h      **** 	ENTER_EDIT_PRESET,
+  41:System.h      **** 	EDIT_PRESET,
+  42:System.h      **** 	ENTER_EDIT_MIDI_IN_OUT,
+  43:System.h      **** 	EDIT_MIDI_IN_OUT,
+  44:System.h      **** 	ENTER_EDIT_MIDI_PC,
+  45:System.h      **** 	EDIT_MIDI_PC
+  46:System.h      **** } System_State;
+  47:System.h      **** 
+  48:System.h      **** typedef enum System_UI_Mode
+  49:System.h      **** {
+  50:System.h      **** 	MODE_RUN			= 0,
+  51:System.h      **** 	MODE_EDIT_PRESET	= 1,
+  52:System.h      **** 	MODE_EDIT_MIDI		= 2
+  53:System.h      **** } System_UI_Mode;
+  54:System.h      **** 
+  55:System.h      **** typedef enum System_RunMode
+  56:System.h      **** {
+  57:System.h      **** 	RUN_PRESET_MODE,
+  58:System.h      **** 	RUN_LOOP_MODE
+  59:System.h      **** } System_RunMode;
+  60:System.h      **** 
+  61:System.h      **** typedef enum System_SetMidiEdit
+  62:System.h      **** {
+  63:System.h      **** 	MIDI_IN,
+  64:System.h      **** 	MIDI_OUT
+  65:System.h      **** } System_SetMidiEdit;
+  66:System.h      **** 
+  67:System.h      **** typedef enum System_Preset
+  68:System.h      **** {
+  69:System.h      **** 	PRESET_1 = 0,
+  70:System.h      **** 	PRESET_2 = 1,
+  71:System.h      **** 	PRESET_3 = 2,
+  72:System.h      **** 	PRESET_4 = 3,
+  73:System.h      **** 	PRESET_5 = 4,
+  74:System.h      **** 	PRESET_6 = 5,
+  75:System.h      **** 	PRESET_7 = 6,
+  76:System.h      **** 	PRESET_8 = 7
+  77:System.h      **** } System_Preset;
+  78:System.h      **** 
+  79:System.h      **** /* Structures */
+  80:System.h      **** typedef struct Preset
+  81:System.h      **** {
+  82:System.h      **** 	uint8_t Active_Loops;
+  83:System.h      **** 	uint8_t Active_CtrlSwitches;
+  84:System.h      **** 	uint8_t MIDI_PC_In;
+  85:System.h      **** 	uint8_t MIDI_PC_Out;
+  86:System.h      **** } Preset;
+  87:System.h      **** 
+  88:System.h      **** inline bool operator==(const Preset& lhs, const Preset& rhs)
+  89:System.h      **** {
+  90:System.h      **** 	return	(	lhs.Active_Loops == rhs.Active_Loops
+  91:System.h      **** 			&&	lhs.Active_CtrlSwitches == rhs.Active_CtrlSwitches
+  92:System.h      **** 			&&	lhs.MIDI_PC_In == rhs.MIDI_PC_In
+  93:System.h      **** 			&&	lhs.MIDI_PC_Out == rhs.MIDI_PC_Out);
+  94:System.h      **** }
+  95:System.h      **** 
+  96:System.h      **** inline bool operator!=(const Preset& lhs, const Preset& rhs)
+ 2130               		.loc 2 96 13 view .LVU655
+ 2131               	.LBB27:
+  97:System.h      **** {
+  98:System.h      **** 	return	(	lhs.Active_Loops != rhs.Active_Loops
+ 2132               		.loc 2 98 2 view .LVU656
+  99:System.h      **** 			||	lhs.Active_CtrlSwitches != rhs.Active_CtrlSwitches
+ 100:System.h      **** 			||	lhs.MIDI_PC_In != rhs.MIDI_PC_In
+ 101:System.h      **** 			||	lhs.MIDI_PC_Out != rhs.MIDI_PC_Out);
+ 2133               		.loc 2 101 4 is_stmt 0 view .LVU657
+ 2134 09aa 9091 0000 		lds r25,LoopModePreset
+ 2135 09ae 8091 0000 		lds r24,LastLoopModePreset
+ 2136 09b2 9813      		cpse r25,r24
+ 2137 09b4 00C0      		rjmp .L199
+  99:System.h      **** 			||	lhs.Active_CtrlSwitches != rhs.Active_CtrlSwitches
+ 2138               		.loc 2 99 4 view .LVU658
+ 2139 09b6 9091 0000 		lds r25,LoopModePreset+1
+ 2140 09ba 8091 0000 		lds r24,LastLoopModePreset+1
+ 2141 09be 9813      		cpse r25,r24
+ 2142 09c0 00C0      		rjmp .L199
+ 2143               	.LVL97:
+ 2144               	.LBB28:
+ 2145               	.LBI28:
+  96:System.h      **** {
+ 2146               		.loc 2 96 13 is_stmt 1 view .LVU659
+ 2147               	.LBB29:
+ 100:System.h      **** 			||	lhs.MIDI_PC_Out != rhs.MIDI_PC_Out);
+ 2148               		.loc 2 100 4 is_stmt 0 view .LVU660
+ 2149 09c2 9091 0000 		lds r25,LoopModePreset+2
+ 2150 09c6 8091 0000 		lds r24,LastLoopModePreset+2
+ 2151 09ca 9813      		cpse r25,r24
+ 2152 09cc 00C0      		rjmp .L199
+ 2153               		.loc 2 101 4 view .LVU661
+ 2154 09ce 9091 0000 		lds r25,LoopModePreset+3
+ 2155 09d2 8091 0000 		lds r24,LastLoopModePreset+3
+ 2156 09d6 9817      		cp r25,r24
+ 2157 09d8 01F4      		brne .+2
+ 2158 09da 00C0      		rjmp .L200
+ 2159               	.LVL98:
+ 2160               	.L199:
+ 2161               		.loc 2 101 4 view .LVU662
+ 2162               	.LBE29:
+ 2163               	.LBE28:
+ 2164               	.LBE27:
+ 2165               	.LBE26:
+ 185:System.cpp    **** 			}
+ 2166               		.loc 1 185 5 is_stmt 1 view .LVU663
+ 185:System.cpp    **** 			}
+ 2167               		.loc 1 185 26 is_stmt 0 view .LVU664
+ 2168 09dc 0E94 0000 		call _Z21System_UpdateLoopCtrlv
+ 2169               	.LVL99:
+ 2170 09e0 00C0      		rjmp .L200
+ 2171               	.L180:
+ 206:System.cpp    **** 			/* Change LastSystemUIMode to force update */
+ 2172               		.loc 1 206 3 is_stmt 1 view .LVU665
+ 208:System.cpp    **** 			
+ 2173               		.loc 1 208 4 view .LVU666
+ 208:System.cpp    **** 			
+ 2174               		.loc 1 208 23 is_stmt 0 view .LVU667
+ 2175 09e2 8091 0000 		lds r24,SystemUIMode
+ 208:System.cpp    **** 			
+ 2176               		.loc 1 208 51 view .LVU668
+ 2177 09e6 91E0      		ldi r25,lo8(1)
+ 2178 09e8 8927      		eor r24,r25
+ 208:System.cpp    **** 			
+ 2179               		.loc 1 208 21 view .LVU669
+ 2180 09ea 8093 0000 		sts LastSystemUIMode,r24
+ 210:System.cpp    **** 			
+ 2181               		.loc 1 210 4 is_stmt 1 view .LVU670
+ 210:System.cpp    **** 			
+ 2182               		.loc 1 210 23 is_stmt 0 view .LVU671
+ 2183 09ee 0E94 0000 		call _Z19System_ChangePresetv
+ 2184               	.LVL100:
+ 212:System.cpp    **** 			
+ 2185               		.loc 1 212 4 is_stmt 1 view .LVU672
+ 212:System.cpp    **** 			
+ 2186               		.loc 1 212 16 is_stmt 0 view .LVU673
+ 2187 09f2 8AE0      		ldi r24,lo8(10)
+ 2188 09f4 8093 0000 		sts SystemState,r24
+ 2189               	.L179:
+ 214:System.cpp    **** 			/* If user is changing the UI mode then update mode LEDs*/
+ 2190               		.loc 1 214 3 is_stmt 1 view .LVU674
+ 216:System.cpp    **** 			{
+ 2191               		.loc 1 216 4 view .LVU675
+ 216:System.cpp    **** 			{
+ 2192               		.loc 1 216 21 is_stmt 0 view .LVU676
+ 2193 09f8 9091 0000 		lds r25,SystemUIMode
+ 2194 09fc 8091 0000 		lds r24,LastSystemUIMode
+ 216:System.cpp    **** 			{
+ 2195               		.loc 1 216 4 view .LVU677
+ 2196 0a00 9817      		cp r25,r24
+ 2197 0a02 01F0      		breq .L201
+ 218:System.cpp    **** 				{
+ 2198               		.loc 1 218 5 is_stmt 1 view .LVU678
+ 218:System.cpp    **** 				{
+ 2199               		.loc 1 218 22 is_stmt 0 view .LVU679
+ 2200 0a04 8091 0000 		lds r24,SystemUIMode
+ 218:System.cpp    **** 				{
+ 2201               		.loc 1 218 5 view .LVU680
+ 2202 0a08 8111      		cpse r24,__zero_reg__
+ 2203 0a0a 00C0      		rjmp .L202
+ 220:System.cpp    **** 					ModeEditPresetLED.Clear();
+ 2204               		.loc 1 220 6 is_stmt 1 view .LVU681
+ 220:System.cpp    **** 					ModeEditPresetLED.Clear();
+ 2205               		.loc 1 220 27 is_stmt 0 view .LVU682
+ 2206 0a0c 80E0      		ldi r24,lo8(ModeRunLED)
+ 2207 0a0e 90E0      		ldi r25,hi8(ModeRunLED)
+ 2208 0a10 0E94 0000 		call _ZN10MCP_Output10AutoToggleEv
+ 2209               	.LVL101:
+ 221:System.cpp    **** 					ModeEditMidiLED.Clear();
+ 2210               		.loc 1 221 6 is_stmt 1 view .LVU683
+ 221:System.cpp    **** 					ModeEditMidiLED.Clear();
+ 2211               		.loc 1 221 29 is_stmt 0 view .LVU684
+ 2212 0a14 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 2213 0a16 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 2214 0a18 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2215               	.LVL102:
+ 222:System.cpp    **** 				}
+ 2216               		.loc 1 222 6 is_stmt 1 view .LVU685
+ 2217               	.L213:
+ 228:System.cpp    **** 				}
+ 2218               		.loc 1 228 6 view .LVU686
+ 228:System.cpp    **** 				}
+ 2219               		.loc 1 228 27 is_stmt 0 view .LVU687
+ 2220 0a1c 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 2221 0a1e 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 2222 0a20 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2223               	.LVL103:
+ 2224               	.L201:
+ 238:System.cpp    **** 			
+ 2225               		.loc 1 238 4 is_stmt 1 view .LVU688
+ 238:System.cpp    **** 			
+ 2226               		.loc 1 238 21 is_stmt 0 view .LVU689
+ 2227 0a24 8091 0000 		lds r24,SystemUIMode
+ 2228 0a28 8093 0000 		sts LastSystemUIMode,r24
+ 240:System.cpp    **** 		
+ 2229               		.loc 1 240 4 is_stmt 1 view .LVU690
+ 2230 0a2c 00C0      		rjmp .L173
+ 2231               	.L202:
+ 224:System.cpp    **** 				{
+ 2232               		.loc 1 224 10 view .LVU691
+ 224:System.cpp    **** 				{
+ 2233               		.loc 1 224 27 is_stmt 0 view .LVU692
+ 2234 0a2e 8091 0000 		lds r24,SystemUIMode
+ 224:System.cpp    **** 				{
+ 2235               		.loc 1 224 10 view .LVU693
+ 2236 0a32 8130      		cpi r24,lo8(1)
+ 2237 0a34 01F4      		brne .L203
+ 226:System.cpp    **** 					ModeEditPresetLED.AutoToggle();
+ 2238               		.loc 1 226 6 is_stmt 1 view .LVU694
+ 226:System.cpp    **** 					ModeEditPresetLED.AutoToggle();
+ 2239               		.loc 1 226 22 is_stmt 0 view .LVU695
+ 2240 0a36 80E0      		ldi r24,lo8(ModeRunLED)
+ 2241 0a38 90E0      		ldi r25,hi8(ModeRunLED)
+ 2242 0a3a 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2243               	.LVL104:
+ 227:System.cpp    **** 					ModeEditMidiLED.Clear();
+ 2244               		.loc 1 227 6 is_stmt 1 view .LVU696
+ 227:System.cpp    **** 					ModeEditMidiLED.Clear();
+ 2245               		.loc 1 227 34 is_stmt 0 view .LVU697
+ 2246 0a3e 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 2247 0a40 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 2248 0a42 0E94 0000 		call _ZN10MCP_Output10AutoToggleEv
+ 2249               	.LVL105:
+ 2250 0a46 00C0      		rjmp .L213
+ 2251               	.L203:
+ 230:System.cpp    **** 				{
+ 2252               		.loc 1 230 10 is_stmt 1 view .LVU698
+ 230:System.cpp    **** 				{
+ 2253               		.loc 1 230 27 is_stmt 0 view .LVU699
+ 2254 0a48 8091 0000 		lds r24,SystemUIMode
+ 230:System.cpp    **** 				{
+ 2255               		.loc 1 230 10 view .LVU700
+ 2256 0a4c 8230      		cpi r24,lo8(2)
+ 2257 0a4e 01F4      		brne .L201
+ 232:System.cpp    **** 					ModeEditPresetLED.Clear();
+ 2258               		.loc 1 232 6 is_stmt 1 view .LVU701
+ 232:System.cpp    **** 					ModeEditPresetLED.Clear();
+ 2259               		.loc 1 232 22 is_stmt 0 view .LVU702
+ 2260 0a50 80E0      		ldi r24,lo8(ModeRunLED)
+ 2261 0a52 90E0      		ldi r25,hi8(ModeRunLED)
+ 2262 0a54 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2263               	.LVL106:
+ 233:System.cpp    **** 					ModeEditMidiLED.AutoToggle();
+ 2264               		.loc 1 233 6 is_stmt 1 view .LVU703
+ 233:System.cpp    **** 					ModeEditMidiLED.AutoToggle();
+ 2265               		.loc 1 233 29 is_stmt 0 view .LVU704
+ 2266 0a58 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 2267 0a5a 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 2268 0a5c 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2269               	.LVL107:
+ 234:System.cpp    **** 				}
+ 2270               		.loc 1 234 6 is_stmt 1 view .LVU705
+ 234:System.cpp    **** 				}
+ 2271               		.loc 1 234 32 is_stmt 0 view .LVU706
+ 2272 0a60 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 2273 0a62 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 2274 0a64 0E94 0000 		call _ZN10MCP_Output10AutoToggleEv
+ 2275               	.LVL108:
+ 2276 0a68 00C0      		rjmp .L201
+ 2277               	.L178:
+ 242:System.cpp    **** 			/* Disable Auto toggle */
+ 2278               		.loc 1 242 3 is_stmt 1 view .LVU707
+ 244:System.cpp    **** 			ModeEditPresetLED.Set();
+ 2279               		.loc 1 244 4 view .LVU708
+ 244:System.cpp    **** 			ModeEditPresetLED.Set();
+ 2280               		.loc 1 244 20 is_stmt 0 view .LVU709
+ 2281 0a6a 80E0      		ldi r24,lo8(ModeRunLED)
+ 2282 0a6c 90E0      		ldi r25,hi8(ModeRunLED)
+ 2283 0a6e 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2284               	.LVL109:
+ 245:System.cpp    **** 			ModeEditMidiLED.Clear();
+ 2285               		.loc 1 245 4 is_stmt 1 view .LVU710
+ 245:System.cpp    **** 			ModeEditMidiLED.Clear();
+ 2286               		.loc 1 245 25 is_stmt 0 view .LVU711
+ 2287 0a72 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 2288 0a74 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 2289 0a76 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 2290               	.LVL110:
+ 246:System.cpp    **** 			
+ 2291               		.loc 1 246 4 is_stmt 1 view .LVU712
+ 246:System.cpp    **** 			
+ 2292               		.loc 1 246 25 is_stmt 0 view .LVU713
+ 2293 0a7a 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 2294 0a7c 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 2295 0a7e 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2296               	.LVL111:
+ 248:System.cpp    **** 			
+ 2297               		.loc 1 248 4 is_stmt 1 view .LVU714
+ 248:System.cpp    **** 			
+ 2298               		.loc 1 248 33 is_stmt 0 view .LVU715
+ 2299 0a82 E091 0000 		lds r30,ActivePreset
+ 248:System.cpp    **** 			
+ 2300               		.loc 1 248 19 view .LVU716
+ 2301 0a86 84E0      		ldi r24,lo8(4)
+ 2302 0a88 E89F      		mul r30,r24
+ 2303 0a8a F001      		movw r30,r0
+ 2304 0a8c 1124      		clr __zero_reg__
+ 2305 0a8e E050      		subi r30,lo8(-(PresetTable))
+ 2306 0a90 F040      		sbci r31,hi8(-(PresetTable))
+ 2307 0a92 8081      		ld r24,Z
+ 2308 0a94 9181      		ldd r25,Z+1
+ 2309 0a96 A281      		ldd r26,Z+2
+ 2310 0a98 B381      		ldd r27,Z+3
+ 2311 0a9a 8093 0000 		sts LoopModePreset,r24
+ 2312 0a9e 9093 0000 		sts LoopModePreset+1,r25
+ 2313 0aa2 A093 0000 		sts LoopModePreset+2,r26
+ 2314 0aa6 B093 0000 		sts LoopModePreset+3,r27
+ 250:System.cpp    **** 			LastUserEditSelection = 1;
+ 2315               		.loc 1 250 4 is_stmt 1 view .LVU717
+ 250:System.cpp    **** 			LastUserEditSelection = 1;
+ 2316               		.loc 1 250 22 is_stmt 0 view .LVU718
+ 2317 0aaa 1092 0000 		sts UserEditSelection,__zero_reg__
+ 251:System.cpp    **** 			
+ 2318               		.loc 1 251 4 is_stmt 1 view .LVU719
+ 251:System.cpp    **** 			
+ 2319               		.loc 1 251 26 is_stmt 0 view .LVU720
+ 2320 0aae 81E0      		ldi r24,lo8(1)
+ 2321 0ab0 8093 0000 		sts LastUserEditSelection,r24
+ 253:System.cpp    **** 			
+ 2322               		.loc 1 253 4 is_stmt 1 view .LVU721
+ 253:System.cpp    **** 			
+ 2323               		.loc 1 253 16 is_stmt 0 view .LVU722
+ 2324 0ab4 8CE0      		ldi r24,lo8(12)
+ 2325 0ab6 8093 0000 		sts SystemState,r24
+ 2326               	.L177:
+ 255:System.cpp    **** 			/* If user is selecting */
+ 2327               		.loc 1 255 3 is_stmt 1 view .LVU723
+ 257:System.cpp    **** 			{
+ 2328               		.loc 1 257 4 view .LVU724
+ 257:System.cpp    **** 			{
+ 2329               		.loc 1 257 26 is_stmt 0 view .LVU725
+ 2330 0aba 9091 0000 		lds r25,UserEditSelection
+ 2331 0abe 8091 0000 		lds r24,LastUserEditSelection
+ 257:System.cpp    **** 			{
+ 2332               		.loc 1 257 4 view .LVU726
+ 2333 0ac2 9817      		cp r25,r24
+ 2334 0ac4 01F0      		breq .L204
+ 260:System.cpp    **** 				{
+ 2335               		.loc 1 260 5 is_stmt 1 view .LVU727
+ 260:System.cpp    **** 				{
+ 2336               		.loc 1 260 27 is_stmt 0 view .LVU728
+ 2337 0ac6 8091 0000 		lds r24,UserEditSelection
+ 260:System.cpp    **** 				{
+ 2338               		.loc 1 260 5 view .LVU729
+ 2339 0aca 8830      		cpi r24,lo8(8)
+ 2340 0acc 00F4      		brsh .L205
+ 262:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, (1 << UI_MODE_PRESET_LED_PIN));
+ 2341               		.loc 1 262 6 is_stmt 1 view .LVU730
+ 262:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, (1 << UI_MODE_PRESET_LED_PIN));
+ 2342               		.loc 1 262 60 is_stmt 0 view .LVU731
+ 2343 0ace 8091 0000 		lds r24,UserEditSelection
+ 262:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, (1 << UI_MODE_PRESET_LED_PIN));
+ 2344               		.loc 1 262 57 view .LVU732
+ 2345 0ad2 41E0      		ldi r20,lo8(1)
+ 2346 0ad4 50E0      		ldi r21,0
+ 2347 0ad6 00C0      		rjmp 2f
+ 2348               		1:
+ 2349 0ad8 440F      		lsl r20
+ 2350               		2:
+ 2351 0ada 8A95      		dec r24
+ 2352 0adc 02F4      		brpl 1b
+ 262:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, (1 << UI_MODE_PRESET_LED_PIN));
+ 2353               		.loc 1 262 23 view .LVU733
+ 2354 0ade 64E1      		ldi r22,lo8(20)
+ 2355 0ae0 80E0      		ldi r24,0
+ 2356 0ae2 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 2357               	.LVL112:
+ 263:System.cpp    **** 				}
+ 2358               		.loc 1 263 6 is_stmt 1 view .LVU734
+ 263:System.cpp    **** 				}
+ 2359               		.loc 1 263 23 is_stmt 0 view .LVU735
+ 2360 0ae6 40E4      		ldi r20,lo8(64)
+ 2361               	.L214:
+ 268:System.cpp    **** 				}
+ 2362               		.loc 1 268 23 view .LVU736
+ 2363 0ae8 65E1      		ldi r22,lo8(21)
+ 2364 0aea 80E0      		ldi r24,0
+ 2365 0aec 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 2366               	.LVL113:
+ 272:System.cpp    **** 			}
+ 2367               		.loc 1 272 5 is_stmt 1 view .LVU737
+ 272:System.cpp    **** 			}
+ 2368               		.loc 1 272 32 is_stmt 0 view .LVU738
+ 2369 0af0 81E0      		ldi r24,lo8(1)
+ 2370 0af2 90E0      		ldi r25,0
+ 2371 0af4 9093 0000 		sts System_MarkSelectionOvfCnt+1,r25
+ 2372 0af8 8093 0000 		sts System_MarkSelectionOvfCnt,r24
+ 2373               	.L204:
+ 275:System.cpp    **** 			break;
+ 2374               		.loc 1 275 4 is_stmt 1 view .LVU739
+ 275:System.cpp    **** 			break;
+ 2375               		.loc 1 275 26 is_stmt 0 view .LVU740
+ 2376 0afc 8091 0000 		lds r24,UserEditSelection
+ 2377 0b00 8093 0000 		sts LastUserEditSelection,r24
+ 276:System.cpp    **** 			
+ 2378               		.loc 1 276 4 is_stmt 1 view .LVU741
+ 2379 0b04 00C0      		rjmp .L173
+ 2380               	.L205:
+ 267:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, ((1 << UI_MODE_PRESET_LED_PIN) | (1 << (UserEd
+ 2381               		.loc 1 267 6 view .LVU742
+ 267:System.cpp    **** 					MCP23017_WriteReg(MCP23017_UI_LEDS_ADDR, OLATB, ((1 << UI_MODE_PRESET_LED_PIN) | (1 << (UserEd
+ 2382               		.loc 1 267 23 is_stmt 0 view .LVU743
+ 2383 0b06 40E0      		ldi r20,0
+ 2384 0b08 64E1      		ldi r22,lo8(20)
+ 2385 0b0a 80E0      		ldi r24,0
+ 2386 0b0c 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 2387               	.LVL114:
+ 268:System.cpp    **** 				}
+ 2388               		.loc 1 268 6 is_stmt 1 view .LVU744
+ 268:System.cpp    **** 				}
+ 2389               		.loc 1 268 94 is_stmt 0 view .LVU745
+ 2390 0b10 8091 0000 		lds r24,UserEditSelection
+ 268:System.cpp    **** 				}
+ 2391               		.loc 1 268 112 view .LVU746
+ 2392 0b14 8850      		subi r24,8
+ 2393 0b16 990B      		sbc r25,r25
+ 268:System.cpp    **** 				}
+ 2394               		.loc 1 268 90 view .LVU747
+ 2395 0b18 41E0      		ldi r20,lo8(1)
+ 2396 0b1a 50E0      		ldi r21,0
+ 2397 0b1c 00C0      		rjmp 2f
+ 2398               		1:
+ 2399 0b1e 440F      		lsl r20
+ 2400               		2:
+ 2401 0b20 8A95      		dec r24
+ 2402 0b22 02F4      		brpl 1b
+ 268:System.cpp    **** 				}
+ 2403               		.loc 1 268 85 view .LVU748
+ 2404 0b24 4064      		ori r20,lo8(64)
+ 2405 0b26 00C0      		rjmp .L214
+ 2406               	.L176:
+ 278:System.cpp    **** 			/* Disable Auto toggle */
+ 2407               		.loc 1 278 3 is_stmt 1 view .LVU749
+ 280:System.cpp    **** 			ModeEditPresetLED.Clear();
+ 2408               		.loc 1 280 4 view .LVU750
+ 280:System.cpp    **** 			ModeEditPresetLED.Clear();
+ 2409               		.loc 1 280 20 is_stmt 0 view .LVU751
+ 2410 0b28 80E0      		ldi r24,lo8(ModeRunLED)
+ 2411 0b2a 90E0      		ldi r25,hi8(ModeRunLED)
+ 2412 0b2c 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2413               	.LVL115:
+ 281:System.cpp    **** 			ModeEditMidiLED.Set();
+ 2414               		.loc 1 281 4 is_stmt 1 view .LVU752
+ 281:System.cpp    **** 			ModeEditMidiLED.Set();
+ 2415               		.loc 1 281 27 is_stmt 0 view .LVU753
+ 2416 0b30 80E0      		ldi r24,lo8(ModeEditPresetLED)
+ 2417 0b32 90E0      		ldi r25,hi8(ModeEditPresetLED)
+ 2418 0b34 0E94 0000 		call _ZN10MCP_Output5ClearEv
+ 2419               	.LVL116:
+ 282:System.cpp    **** 			
+ 2420               		.loc 1 282 4 is_stmt 1 view .LVU754
+ 282:System.cpp    **** 			
+ 2421               		.loc 1 282 23 is_stmt 0 view .LVU755
+ 2422 0b38 80E0      		ldi r24,lo8(ModeEditMidiLED)
+ 2423 0b3a 90E0      		ldi r25,hi8(ModeEditMidiLED)
+ 2424 0b3c 0E94 0000 		call _ZN10MCP_Output3SetEv
+ 2425               	.LVL117:
+ 285:System.cpp    **** 			{
+ 2426               		.loc 1 285 4 is_stmt 1 view .LVU756
+ 285:System.cpp    **** 			{
+ 2427               		.loc 1 285 20 is_stmt 0 view .LVU757
+ 2428 0b40 8091 0000 		lds r24,SetMidiEdit
+ 287:System.cpp    **** 			}
+ 2429               		.loc 1 287 21 view .LVU758
+ 2430 0b44 E12C      		mov r14,__zero_reg__
+ 2431 0b46 00E0      		ldi r16,0
+ 2432 0b48 20E0      		ldi r18,0
+ 285:System.cpp    **** 			{
+ 2433               		.loc 1 285 4 view .LVU759
+ 2434 0b4a 8111      		cpse r24,__zero_reg__
+ 2435 0b4c 00C0      		rjmp .L207
+ 287:System.cpp    **** 			}
+ 2436               		.loc 1 287 5 is_stmt 1 view .LVU760
+ 287:System.cpp    **** 			}
+ 2437               		.loc 1 287 21 is_stmt 0 view .LVU761
+ 2438 0b4e 40E2      		ldi r20,lo8(32)
+ 2439 0b50 6EE6      		ldi r22,lo8(110)
+ 2440 0b52 89E6      		ldi r24,lo8(105)
+ 2441               	.L215:
+ 291:System.cpp    **** 			}
+ 2442               		.loc 1 291 21 view .LVU762
+ 2443 0b54 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 2444               	.LVL118:
+ 294:System.cpp    **** 			
+ 2445               		.loc 1 294 4 is_stmt 1 view .LVU763
+ 294:System.cpp    **** 			
+ 2446               		.loc 1 294 16 is_stmt 0 view .LVU764
+ 2447 0b58 8EE0      		ldi r24,lo8(14)
+ 2448 0b5a 00C0      		rjmp .L217
+ 2449               	.L207:
+ 291:System.cpp    **** 			}
+ 2450               		.loc 1 291 5 is_stmt 1 view .LVU765
+ 291:System.cpp    **** 			}
+ 2451               		.loc 1 291 21 is_stmt 0 view .LVU766
+ 2452 0b5c 44E7      		ldi r20,lo8(116)
+ 2453 0b5e 65E7      		ldi r22,lo8(117)
+ 2454 0b60 8FE6      		ldi r24,lo8(111)
+ 2455 0b62 00C0      		rjmp .L215
+ 2456               	.L174:
+ 299:System.cpp    **** 			/* Get setup for active preset */
+ 2457               		.loc 1 299 3 is_stmt 1 view .LVU767
+ 301:System.cpp    **** 			{
+ 2458               		.loc 1 301 4 view .LVU768
+ 301:System.cpp    **** 			{
+ 2459               		.loc 1 301 20 is_stmt 0 view .LVU769
+ 2460 0b64 8091 0000 		lds r24,SetMidiEdit
+ 303:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_In;
+ 2461               		.loc 1 303 36 view .LVU770
+ 2462 0b68 E091 0000 		lds r30,ActivePreset
+ 301:System.cpp    **** 			{
+ 2463               		.loc 1 301 4 view .LVU771
+ 2464 0b6c 8111      		cpse r24,__zero_reg__
+ 2465 0b6e 00C0      		rjmp .L209
+ 303:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_In;
+ 2466               		.loc 1 303 5 is_stmt 1 view .LVU772
+ 303:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_In;
+ 2467               		.loc 1 303 50 is_stmt 0 view .LVU773
+ 2468 0b70 84E0      		ldi r24,lo8(4)
+ 2469 0b72 E89F      		mul r30,r24
+ 2470 0b74 F001      		movw r30,r0
+ 2471 0b76 1124      		clr __zero_reg__
+ 2472 0b78 E050      		subi r30,lo8(-(PresetTable))
+ 2473 0b7a F040      		sbci r31,hi8(-(PresetTable))
+ 2474 0b7c 8281      		ldd r24,Z+2
+ 303:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_In;
+ 2475               		.loc 1 303 22 view .LVU774
+ 2476 0b7e 8093 0000 		sts TempSelectMidiPC,r24
+ 304:System.cpp    **** 			}
+ 2477               		.loc 1 304 5 is_stmt 1 view .LVU775
+ 304:System.cpp    **** 			}
+ 2478               		.loc 1 304 40 is_stmt 0 view .LVU776
+ 2479 0b82 E091 0000 		lds r30,ActivePreset
+ 304:System.cpp    **** 			}
+ 2480               		.loc 1 304 54 view .LVU777
+ 2481 0b86 84E0      		ldi r24,lo8(4)
+ 2482 0b88 E89F      		mul r30,r24
+ 2483 0b8a F001      		movw r30,r0
+ 2484 0b8c 1124      		clr __zero_reg__
+ 2485 0b8e E050      		subi r30,lo8(-(PresetTable))
+ 2486 0b90 F040      		sbci r31,hi8(-(PresetTable))
+ 2487 0b92 8281      		ldd r24,Z+2
+ 2488               	.L216:
+ 309:System.cpp    **** 			}
+ 2489               		.loc 1 309 26 view .LVU778
+ 2490 0b94 8093 0000 		sts LastTempSelectMidiPC,r24
+ 313:System.cpp    **** 			{
+ 2491               		.loc 1 313 4 is_stmt 1 view .LVU779
+ 313:System.cpp    **** 			{
+ 2492               		.loc 1 313 25 is_stmt 0 view .LVU780
+ 2493 0b98 8091 0000 		lds r24,TempSelectMidiPC
+ 313:System.cpp    **** 			{
+ 2494               		.loc 1 313 4 view .LVU781
+ 2495 0b9c 8F3F      		cpi r24,lo8(-1)
+ 2496 0b9e 01F4      		brne .L211
+ 315:System.cpp    **** 			}
+ 2497               		.loc 1 315 5 is_stmt 1 view .LVU782
+ 315:System.cpp    **** 			}
+ 2498               		.loc 1 315 21 is_stmt 0 view .LVU783
+ 2499 0ba0 E12C      		mov r14,__zero_reg__
+ 2500 0ba2 00E0      		ldi r16,0
+ 2501 0ba4 20E0      		ldi r18,0
+ 2502 0ba6 46E6      		ldi r20,lo8(102)
+ 2503 0ba8 66E6      		ldi r22,lo8(102)
+ 2504 0baa 8FE6      		ldi r24,lo8(111)
+ 2505 0bac 0E94 0000 		call _Z16SP10281_WriteAllccchhh
+ 2506               	.LVL119:
+ 2507               	.L212:
+ 322:System.cpp    **** 			
+ 2508               		.loc 1 322 4 is_stmt 1 view .LVU784
+ 322:System.cpp    **** 			
+ 2509               		.loc 1 322 16 is_stmt 0 view .LVU785
+ 2510 0bb0 80E1      		ldi r24,lo8(16)
+ 2511 0bb2 00C0      		rjmp .L217
+ 2512               	.L209:
+ 308:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_Out;
+ 2513               		.loc 1 308 5 is_stmt 1 view .LVU786
+ 308:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_Out;
+ 2514               		.loc 1 308 50 is_stmt 0 view .LVU787
+ 2515 0bb4 84E0      		ldi r24,lo8(4)
+ 2516 0bb6 E89F      		mul r30,r24
+ 2517 0bb8 F001      		movw r30,r0
+ 2518 0bba 1124      		clr __zero_reg__
+ 2519 0bbc E050      		subi r30,lo8(-(PresetTable))
+ 2520 0bbe F040      		sbci r31,hi8(-(PresetTable))
+ 2521 0bc0 8381      		ldd r24,Z+3
+ 308:System.cpp    **** 				LastTempSelectMidiPC = PresetTable[ActivePreset].MIDI_PC_Out;
+ 2522               		.loc 1 308 22 view .LVU788
+ 2523 0bc2 8093 0000 		sts TempSelectMidiPC,r24
+ 309:System.cpp    **** 			}
+ 2524               		.loc 1 309 5 is_stmt 1 view .LVU789
+ 309:System.cpp    **** 			}
+ 2525               		.loc 1 309 40 is_stmt 0 view .LVU790
+ 2526 0bc6 E091 0000 		lds r30,ActivePreset
+ 309:System.cpp    **** 			}
+ 2527               		.loc 1 309 54 view .LVU791
+ 2528 0bca 84E0      		ldi r24,lo8(4)
+ 2529 0bcc E89F      		mul r30,r24
+ 2530 0bce F001      		movw r30,r0
+ 2531 0bd0 1124      		clr __zero_reg__
+ 2532 0bd2 E050      		subi r30,lo8(-(PresetTable))
+ 2533 0bd4 F040      		sbci r31,hi8(-(PresetTable))
+ 2534 0bd6 8381      		ldd r24,Z+3
+ 2535 0bd8 00C0      		rjmp .L216
+ 2536               	.L211:
+ 319:System.cpp    **** 			}
+ 2537               		.loc 1 319 5 is_stmt 1 view .LVU792
+ 319:System.cpp    **** 			}
+ 2538               		.loc 1 319 24 is_stmt 0 view .LVU793
+ 2539 0bda 8091 0000 		lds r24,TempSelectMidiPC
+ 2540 0bde 90E0      		ldi r25,0
+ 2541 0be0 0E94 0000 		call _Z19SP10281_WriteNumbers
+ 2542               	.LVL120:
+ 2543 0be4 00C0      		rjmp .L212
+ 2544               		.cfi_endproc
+ 2545               	.LFE2:
+ 2547               	.global	LastUserEditSelection
+ 2548               		.section .bss
+ 2551               	LastUserEditSelection:
+ 2552 0000 00        		.zero	1
+ 2553               	.global	UserEditSelection
+ 2556               	UserEditSelection:
+ 2557 0001 00        		.zero	1
+ 2558               	.global	LastLoopModePreset
+ 2559               		.data
+ 2562               	LastLoopModePreset:
+ 2563 0000 00        		.byte	0
+ 2564 0001 00        		.byte	0
+ 2565 0002 FF        		.byte	-1
+ 2566 0003 FF        		.byte	-1
+ 2567               	.global	LoopModePreset
+ 2570               	LoopModePreset:
+ 2571 0004 00        		.byte	0
+ 2572 0005 00        		.byte	0
+ 2573 0006 FF        		.byte	-1
+ 2574 0007 FF        		.byte	-1
+ 2575               	.global	PresetTable
+ 2576               		.section .bss
+ 2579               	PresetTable:
+ 2580 0002 0000 0000 		.zero	32
+ 2580      0000 0000 
+ 2580      0000 0000 
+ 2580      0000 0000 
+ 2580      0000 0000 
+ 2581               	.global	LastTempSelectMidiPC
+ 2584               	LastTempSelectMidiPC:
+ 2585 0022 00        		.zero	1
+ 2586               	.global	TempSelectMidiPC
+ 2589               	TempSelectMidiPC:
+ 2590 0023 00        		.zero	1
+ 2591               	.global	SetMidiEdit
+ 2594               	SetMidiEdit:
+ 2595 0024 00        		.zero	1
+ 2596               	.global	LastSystemUIMode
+ 2599               	LastSystemUIMode:
+ 2600 0025 00        		.zero	1
+ 2601               	.global	SystemUIMode
+ 2604               	SystemUIMode:
+ 2605 0026 00        		.zero	1
+ 2606               	.global	System_MidiChannel
+ 2609               	System_MidiChannel:
+ 2610 0027 00        		.zero	1
+ 2611               	.global	LastTempSelectMidiChannel
+ 2614               	LastTempSelectMidiChannel:
+ 2615 0028 00        		.zero	1
+ 2616               	.global	TempSelectMidiChannel
+ 2619               	TempSelectMidiChannel:
+ 2620 0029 00        		.zero	1
+ 2621               	.global	SystemRunMode
+ 2624               	SystemRunMode:
+ 2625 002a 00        		.zero	1
+ 2626               	.global	LastTempSelectPreset
+ 2629               	LastTempSelectPreset:
+ 2630 002b 00        		.zero	1
+ 2631               	.global	TempSelectPreset
+ 2634               	TempSelectPreset:
+ 2635 002c 00        		.zero	1
+ 2636               	.global	LastActivePreset
+ 2639               	LastActivePreset:
+ 2640 002d 00        		.zero	1
+ 2641               	.global	ActivePreset
+ 2644               	ActivePreset:
+ 2645 002e 00        		.zero	1
+ 2646               	.global	LastSystemState
+ 2649               	LastSystemState:
+ 2650 002f 00        		.zero	1
+ 2651               	.global	SystemState
+ 2654               	SystemState:
+ 2655 0030 00        		.zero	1
+ 2656               	.global	System_MarkSelectionFlag
+ 2659               	System_MarkSelectionFlag:
+ 2660 0031 00        		.zero	1
+ 2661               	.global	System_MarkSelectionOvfCnt
+ 2664               	System_MarkSelectionOvfCnt:
+ 2665 0032 0000      		.zero	2
+ 2666               	.global	System_TempSelectFlag
+ 2669               	System_TempSelectFlag:
+ 2670 0034 00        		.zero	1
+ 2671               	.global	System_TempSelectOvfCnt
+ 2674               	System_TempSelectOvfCnt:
+ 2675 0035 0000      		.zero	2
+ 2676               		.text
+ 2677               	.Letext0:
+ 2678               		.file 3 "/usr/avr/include/stdint.h"
+ 2679               		.file 4 "PedalCom.h"
+ 2680               		.file 5 "MIDI.h"
+ 2681               		.file 6 "MCP23017.h"
+ 2682               		.file 7 "SP10281_3x7segment.h"
+ 2683               		.file 8 "RotaryEncoder.h"
+ 2684               		.file 9 "UI.h"
+ 2685               		.file 10 "util.h"
+ 2686               		.file 11 "/usr/avr/include/avr/eeprom.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 System.cpp
+     /tmp/cc88HKUq.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cc88HKUq.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cc88HKUq.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cc88HKUq.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cc88HKUq.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cc88HKUq.s:12     .text:0000000000000000 _Z30System_HandleTempSelectTimeoutv
+     /tmp/cc88HKUq.s:2654   .bss:0000000000000030 SystemState
+     /tmp/cc88HKUq.s:2584   .bss:0000000000000022 LastTempSelectMidiPC
+     /tmp/cc88HKUq.s:2589   .bss:0000000000000023 TempSelectMidiPC
+     /tmp/cc88HKUq.s:2609   .bss:0000000000000027 System_MidiChannel
+     /tmp/cc88HKUq.s:2619   .bss:0000000000000029 TempSelectMidiChannel
+     /tmp/cc88HKUq.s:2634   .bss:000000000000002c TempSelectPreset
+     /tmp/cc88HKUq.s:2644   .bss:000000000000002e ActivePreset
+     /tmp/cc88HKUq.s:2629   .bss:000000000000002b LastTempSelectPreset
+     /tmp/cc88HKUq.s:151    .text:00000000000000a0 _Z26System_HandleMarkSelectionv
+     /tmp/cc88HKUq.s:2570   .data:0000000000000004 LoopModePreset
+     /tmp/cc88HKUq.s:192    .text:00000000000000c6 _Z25System_HandlePedalCommand3CMDhPh
+     /tmp/cc88HKUq.s:2639   .bss:000000000000002d LastActivePreset
+     /tmp/cc88HKUq.s:2624   .bss:000000000000002a SystemRunMode
+     /tmp/cc88HKUq.s:381    .text:000000000000017a _Z30System_HandleMIDIProgramChangev
+     /tmp/cc88HKUq.s:2579   .bss:0000000000000002 PresetTable
+     /tmp/cc88HKUq.s:426    .text:0000000000000198 _Z20System_UpdateUI_LEDsv
+     /tmp/cc88HKUq.s:605    .text:0000000000000242 _Z31System_HandleRotaryEncoderInputv
+     /tmp/cc88HKUq.s:2674   .bss:0000000000000035 System_TempSelectOvfCnt
+     /tmp/cc88HKUq.s:2604   .bss:0000000000000026 SystemUIMode
+     /tmp/cc88HKUq.s:2556   .bss:0000000000000001 UserEditSelection
+     /tmp/cc88HKUq.s:2594   .bss:0000000000000024 SetMidiEdit
+     /tmp/cc88HKUq.s:1299   .text:00000000000005c6 _Z22System_UpdateUI_Relaysv
+     /tmp/cc88HKUq.s:1482   .text:0000000000000670 _Z19System_ChangePresetv
+     /tmp/cc88HKUq.s:1617   .text:0000000000000724 _Z21System_UpdateLoopCtrlv
+     /tmp/cc88HKUq.s:1750   .text:00000000000007ac _Z10System_Runv
+     /tmp/cc88HKUq.s:2614   .bss:0000000000000028 LastTempSelectMidiChannel
+     /tmp/cc88HKUq.s:2649   .bss:000000000000002f LastSystemState
+     /tmp/cc88HKUq.s:2562   .data:0000000000000000 LastLoopModePreset
+     /tmp/cc88HKUq.s:2599   .bss:0000000000000025 LastSystemUIMode
+     /tmp/cc88HKUq.s:2551   .bss:0000000000000000 LastUserEditSelection
+     /tmp/cc88HKUq.s:2664   .bss:0000000000000032 System_MarkSelectionOvfCnt
+     /tmp/cc88HKUq.s:2659   .bss:0000000000000031 System_MarkSelectionFlag
+     /tmp/cc88HKUq.s:2669   .bss:0000000000000034 System_TempSelectFlag
+
+UNDEFINED SYMBOLS
+_Z16SP10281_WriteAllccchhh
+_Z23RotaryEncoder_IsPressedv
+_Z19SP10281_WriteNumbers
+_Z17MCP23017_WriteReghhh
+_Z12Util_Bit2Inth
+MIDI_ReceivedProgram
+LoopLEDs
+_ZN10MCP_Output8getStateEv
+_ZN10MCP_Output3SetEv
+CtrlSwitchLEDs
+_ZN10MCP_Output5ClearEv
+__tablejump2__
+RotEnc_State
+eeprom_write_byte
+eeprom_write_block
+LoopRelays
+CtrlSwitchRelays
+_Z26MIDI_TransmitProgramChangeh
+_Z21PedalCom_QueueCommand3CMDhPh
+eeprom_read_block
+eeprom_read_byte
+ModeRunLED
+ModeEditPresetLED
+ModeEditMidiLED
+_ZN10MCP_Output10AutoToggleEv
+__do_copy_data
+__do_clear_bss

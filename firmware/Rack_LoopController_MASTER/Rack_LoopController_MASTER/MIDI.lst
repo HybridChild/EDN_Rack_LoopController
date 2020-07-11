@@ -1,0 +1,245 @@
+   1               		.file	"MIDI.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z20MIDI_ReceiveIncomingv
+  12               	_Z20MIDI_ReceiveIncomingv:
+  13               	.LFB2:
+  14               		.file 1 "MIDI.cpp"
+   1:MIDI.cpp      **** /*
+   2:MIDI.cpp      ****  * MIDI.cpp
+   3:MIDI.cpp      ****  *
+   4:MIDI.cpp      ****  * Created: 03-02-2020 18:20:33
+   5:MIDI.cpp      ****  *  Author: Esben
+   6:MIDI.cpp      ****  */ 
+   7:MIDI.cpp      **** 
+   8:MIDI.cpp      **** #include <avr/eeprom.h>
+   9:MIDI.cpp      **** #include "MIDI.h"
+  10:MIDI.cpp      **** #include "UART.h"
+  11:MIDI.cpp      **** #include "System.h"
+  12:MIDI.cpp      **** 
+  13:MIDI.cpp      **** volatile char MIDI_RxBuffer[MIDI_BUF_SIZE] = {0};
+  14:MIDI.cpp      **** volatile char MIDI_TxBuffer[MIDI_BUF_SIZE] = {0};
+  15:MIDI.cpp      **** volatile uint8_t MIDI_ReceivedProgram = 0;
+  16:MIDI.cpp      **** volatile bool MIDI_ProgramChangeFlag = false;
+  17:MIDI.cpp      **** 
+  18:MIDI.cpp      **** void MIDI_ReceiveIncoming()
+  19:MIDI.cpp      **** {
+  15               		.loc 1 19 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  20:MIDI.cpp      **** 	static uint8_t RX_ByteCnt = 0;
+  21               		.loc 1 20 2 view .LVU1
+  21:MIDI.cpp      **** 	
+  22:MIDI.cpp      **** 	MIDI_RxBuffer[RX_ByteCnt] = UART1_GetChar();
+  22               		.loc 1 22 2 view .LVU2
+  23               		.loc 1 22 43 is_stmt 0 view .LVU3
+  24 0000 0E94 0000 		call _Z13UART1_GetCharv
+  25               	.LVL0:
+  26               		.loc 1 22 16 view .LVU4
+  27 0004 9091 0000 		lds r25,_ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt
+  28 0008 E92F      		mov r30,r25
+  29 000a F0E0      		ldi r31,0
+  30               		.loc 1 22 28 view .LVU5
+  31 000c E050      		subi r30,lo8(-(MIDI_RxBuffer))
+  32 000e F040      		sbci r31,hi8(-(MIDI_RxBuffer))
+  33 0010 8083      		st Z,r24
+  23:MIDI.cpp      **** 	
+  24:MIDI.cpp      **** 	if (RX_ByteCnt == 0)
+  34               		.loc 1 24 2 is_stmt 1 view .LVU6
+  35 0012 9111      		cpse r25,__zero_reg__
+  36 0014 00C0      		rjmp .L2
+  25:MIDI.cpp      **** 	{
+  26:MIDI.cpp      **** 		/* Check if command is a Program Change */
+  27:MIDI.cpp      **** 		if ( (MIDI_RxBuffer[RX_ByteCnt] & 0xF0) == 0xC0 )
+  37               		.loc 1 27 3 view .LVU7
+  38               		.loc 1 27 33 is_stmt 0 view .LVU8
+  39 0016 8091 0000 		lds r24,MIDI_RxBuffer
+  40               		.loc 1 27 3 view .LVU9
+  41 001a 807F      		andi r24,lo8(-16)
+  42 001c 803C      		cpi r24,lo8(-64)
+  43 001e 01F4      		brne .L1
+  28:MIDI.cpp      **** 		{
+  29:MIDI.cpp      **** 			/* Check if command is relevant to this device */
+  30:MIDI.cpp      **** 			if ( (System_MidiChannel == MIDI_CH_OMNI) || ( (MIDI_RxBuffer[RX_ByteCnt] & 0x0F) != (System_Mid
+  44               		.loc 1 30 4 is_stmt 1 view .LVU10
+  45               		.loc 1 30 29 is_stmt 0 view .LVU11
+  46 0020 8091 0000 		lds r24,System_MidiChannel
+  47               		.loc 1 30 46 view .LVU12
+  48 0024 8823      		tst r24
+  49 0026 01F0      		breq .L4
+  50               		.loc 1 30 76 discriminator 2 view .LVU13
+  51 0028 2091 0000 		lds r18,MIDI_RxBuffer
+  52               		.loc 1 30 90 discriminator 2 view .LVU14
+  53 002c 8091 0000 		lds r24,System_MidiChannel
+  54               		.loc 1 30 78 discriminator 2 view .LVU15
+  55 0030 2F70      		andi r18,lo8(15)
+  56               		.loc 1 30 108 discriminator 2 view .LVU16
+  57 0032 8150      		subi r24,1
+  58 0034 990B      		sbc r25,r25
+  59               		.loc 1 30 46 discriminator 2 view .LVU17
+  60 0036 2817      		cp r18,r24
+  61 0038 1906      		cpc __zero_reg__,r25
+  62 003a 01F0      		breq .L1
+  63               	.L4:
+  31:MIDI.cpp      **** 			{
+  32:MIDI.cpp      **** 				RX_ByteCnt++;
+  64               		.loc 1 32 5 is_stmt 1 view .LVU18
+  65               		.loc 1 32 15 is_stmt 0 view .LVU19
+  66 003c 81E0      		ldi r24,lo8(1)
+  67 003e 8093 0000 		sts _ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt,r24
+  68 0042 0895      		ret
+  69               	.L2:
+  33:MIDI.cpp      **** 			}
+  34:MIDI.cpp      **** 		}
+  35:MIDI.cpp      **** 	}
+  36:MIDI.cpp      **** 	else if (RX_ByteCnt > 0)
+  70               		.loc 1 36 7 is_stmt 1 view .LVU20
+  37:MIDI.cpp      **** 	{
+  38:MIDI.cpp      **** 		/* Check if data byte contains a valid MIDI program (is between 0 and 127) */
+  39:MIDI.cpp      **** 		if (MIDI_RxBuffer[RX_ByteCnt] <= MIDI_PC_MAX)
+  71               		.loc 1 39 3 view .LVU21
+  72               		.loc 1 39 31 is_stmt 0 view .LVU22
+  73 0044 8081      		ld r24,Z
+  74               		.loc 1 39 3 view .LVU23
+  75 0046 87FD      		sbrc r24,7
+  76 0048 00C0      		rjmp .L5
+  40:MIDI.cpp      **** 		{
+  41:MIDI.cpp      **** 			MIDI_ReceivedProgram = MIDI_RxBuffer[RX_ByteCnt];
+  77               		.loc 1 41 4 is_stmt 1 view .LVU24
+  78               		.loc 1 41 51 is_stmt 0 view .LVU25
+  79 004a 8081      		ld r24,Z
+  80               		.loc 1 41 25 view .LVU26
+  81 004c 8093 0000 		sts MIDI_ReceivedProgram,r24
+  42:MIDI.cpp      **** 			MIDI_ProgramChangeFlag = true;
+  82               		.loc 1 42 4 is_stmt 1 view .LVU27
+  83               		.loc 1 42 27 is_stmt 0 view .LVU28
+  84 0050 81E0      		ldi r24,lo8(1)
+  85 0052 8093 0000 		sts MIDI_ProgramChangeFlag,r24
+  86               	.L5:
+  43:MIDI.cpp      **** 		}
+  44:MIDI.cpp      **** 		
+  45:MIDI.cpp      **** 		RX_ByteCnt = 0;
+  87               		.loc 1 45 3 is_stmt 1 view .LVU29
+  88               		.loc 1 45 14 is_stmt 0 view .LVU30
+  89 0056 1092 0000 		sts _ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt,__zero_reg__
+  90               	.L1:
+  91               	/* epilogue start */
+  46:MIDI.cpp      **** 	}
+  47:MIDI.cpp      **** }
+  92               		.loc 1 47 1 view .LVU31
+  93 005a 0895      		ret
+  94               		.cfi_endproc
+  95               	.LFE2:
+  97               	.global	_Z26MIDI_TransmitProgramChangeh
+  99               	_Z26MIDI_TransmitProgramChangeh:
+ 100               	.LVL1:
+ 101               	.LFB3:
+  48:MIDI.cpp      **** 
+  49:MIDI.cpp      **** void MIDI_TransmitProgramChange(uint8_t prg)
+  50:MIDI.cpp      **** {
+ 102               		.loc 1 50 1 is_stmt 1 view -0
+ 103               		.cfi_startproc
+ 104               	/* prologue: function */
+ 105               	/* frame size = 0 */
+ 106               	/* stack size = 0 */
+ 107               	.L__stack_usage = 0
+  51:MIDI.cpp      **** 	MIDI_TxBuffer[0] = 0xC0;
+ 108               		.loc 1 51 2 view .LVU33
+ 109               		.loc 1 51 19 is_stmt 0 view .LVU34
+ 110 005c 90EC      		ldi r25,lo8(-64)
+ 111 005e 9093 0000 		sts MIDI_TxBuffer,r25
+  52:MIDI.cpp      **** 	
+  53:MIDI.cpp      **** 	if (System_MidiChannel != MIDI_CH_OMNI)
+ 112               		.loc 1 53 2 is_stmt 1 view .LVU35
+ 113               		.loc 1 53 25 is_stmt 0 view .LVU36
+ 114 0062 9091 0000 		lds r25,System_MidiChannel
+ 115               		.loc 1 53 2 view .LVU37
+ 116 0066 9923      		tst r25
+ 117 0068 01F0      		breq .L10
+  54:MIDI.cpp      **** 	{
+  55:MIDI.cpp      **** 		MIDI_TxBuffer[0] |= (System_MidiChannel - 1);
+ 118               		.loc 1 55 3 is_stmt 1 view .LVU38
+ 119               		.loc 1 55 24 is_stmt 0 view .LVU39
+ 120 006a 2091 0000 		lds r18,System_MidiChannel
+ 121               		.loc 1 55 20 view .LVU40
+ 122 006e 9091 0000 		lds r25,MIDI_TxBuffer
+ 123               		.loc 1 55 43 view .LVU41
+ 124 0072 2150      		subi r18,1
+ 125 0074 330B      		sbc r19,r19
+ 126               		.loc 1 55 20 view .LVU42
+ 127 0076 922B      		or r25,r18
+ 128 0078 9093 0000 		sts MIDI_TxBuffer,r25
+ 129               	.L10:
+  56:MIDI.cpp      **** 	}
+  57:MIDI.cpp      **** 	
+  58:MIDI.cpp      **** 	MIDI_TxBuffer[1] = (char)prg;
+ 130               		.loc 1 58 2 is_stmt 1 view .LVU43
+ 131               		.loc 1 58 19 is_stmt 0 view .LVU44
+ 132 007c 8093 0000 		sts MIDI_TxBuffer+1,r24
+  59:MIDI.cpp      **** 	MIDI_TxBuffer[2] = 0;
+ 133               		.loc 1 59 2 is_stmt 1 view .LVU45
+ 134               		.loc 1 59 19 is_stmt 0 view .LVU46
+ 135 0080 1092 0000 		sts MIDI_TxBuffer+2,__zero_reg__
+  60:MIDI.cpp      **** 	
+  61:MIDI.cpp      **** 	UART1_PutString((char*)MIDI_TxBuffer);
+ 136               		.loc 1 61 2 is_stmt 1 view .LVU47
+ 137               		.loc 1 61 17 is_stmt 0 view .LVU48
+ 138 0084 80E0      		ldi r24,lo8(MIDI_TxBuffer)
+ 139 0086 90E0      		ldi r25,hi8(MIDI_TxBuffer)
+ 140               	.LVL2:
+ 141               		.loc 1 61 17 view .LVU49
+ 142 0088 0C94 0000 		jmp _Z15UART1_PutStringPKc
+ 143               	.LVL3:
+ 144               		.cfi_endproc
+ 145               	.LFE3:
+ 147               		.local	_ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt
+ 148               		.comm	_ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt,1,1
+ 149               	.global	MIDI_ProgramChangeFlag
+ 150               		.section .bss
+ 153               	MIDI_ProgramChangeFlag:
+ 154 0000 00        		.zero	1
+ 155               	.global	MIDI_ReceivedProgram
+ 158               	MIDI_ReceivedProgram:
+ 159 0001 00        		.zero	1
+ 160               	.global	MIDI_TxBuffer
+ 163               	MIDI_TxBuffer:
+ 164 0002 0000 00   		.zero	3
+ 165               	.global	MIDI_RxBuffer
+ 168               	MIDI_RxBuffer:
+ 169 0005 0000 00   		.zero	3
+ 170               		.text
+ 171               	.Letext0:
+ 172               		.file 2 "/usr/avr/include/stdint.h"
+ 173               		.file 3 "MIDI.h"
+ 174               		.file 4 "PedalCom.h"
+ 175               		.file 5 "System.h"
+ 176               		.file 6 "UART.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 MIDI.cpp
+     /tmp/ccWtCLAw.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccWtCLAw.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccWtCLAw.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccWtCLAw.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccWtCLAw.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccWtCLAw.s:12     .text:0000000000000000 _Z20MIDI_ReceiveIncomingv
+                             .bss:0000000000000008 _ZZ20MIDI_ReceiveIncomingvE10RX_ByteCnt
+     /tmp/ccWtCLAw.s:168    .bss:0000000000000005 MIDI_RxBuffer
+     /tmp/ccWtCLAw.s:158    .bss:0000000000000001 MIDI_ReceivedProgram
+     /tmp/ccWtCLAw.s:153    .bss:0000000000000000 MIDI_ProgramChangeFlag
+     /tmp/ccWtCLAw.s:99     .text:000000000000005c _Z26MIDI_TransmitProgramChangeh
+     /tmp/ccWtCLAw.s:163    .bss:0000000000000002 MIDI_TxBuffer
+
+UNDEFINED SYMBOLS
+_Z13UART1_GetCharv
+System_MidiChannel
+_Z15UART1_PutStringPKc
+__do_clear_bss

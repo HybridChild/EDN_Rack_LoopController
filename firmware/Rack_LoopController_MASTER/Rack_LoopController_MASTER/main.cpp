@@ -118,7 +118,7 @@ int main(void)
 		/* Service 7-segment display */
 		if (SP10281_OvfFlag)
 		{
-			SP10281_OvfFlag = 0;
+			SP10281_OvfFlag = false;
 			SP10281_Update();
 		}
 		

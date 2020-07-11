@@ -1,0 +1,1736 @@
+   1               		.file	"PedalCom.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  11               	_Z12Select_RX_TXh.part.0:
+  12               	.LFB15:
+  13               		.file 1 "PedalCom.cpp"
+   1:PedalCom.cpp  **** /*
+   2:PedalCom.cpp  ****  * PedalComunication.cpp
+   3:PedalCom.cpp  ****  *
+   4:PedalCom.cpp  ****  * Created: 27-01-2020 19:35:30
+   5:PedalCom.cpp  ****  *  Author: Esben
+   6:PedalCom.cpp  ****  */ 
+   7:PedalCom.cpp  **** 
+   8:PedalCom.cpp  **** /* Includes */
+   9:PedalCom.cpp  **** #include <avr/io.h>
+  10:PedalCom.cpp  **** #include <avr/interrupt.h>
+  11:PedalCom.cpp  **** #include "PedalCom.h"
+  12:PedalCom.cpp  **** #include "UART.h"
+  13:PedalCom.cpp  **** #include "System.h"
+  14:PedalCom.cpp  **** 
+  15:PedalCom.cpp  **** /* Defines */
+  16:PedalCom.cpp  **** #define SELECT_RX_TX_DDR				DDRB
+  17:PedalCom.cpp  **** #define SELECT_RX_TX_PORT				PORTB
+  18:PedalCom.cpp  **** #define SELECT_RX_PORT					PORTB3
+  19:PedalCom.cpp  **** #define SELECT_RX_MASK					(1 << SELECT_RX_PORT)
+  20:PedalCom.cpp  **** #define SELECT_TX_PORT					PORTB4
+  21:PedalCom.cpp  **** #define SELECT_TX_MASK					(1 << SELECT_TX_PORT)
+  22:PedalCom.cpp  **** 
+  23:PedalCom.cpp  **** /* Size of the circular receive/transmit queues, must be power of 2 */
+  24:PedalCom.cpp  **** #define RX_QUEUE_SIZE		4
+  25:PedalCom.cpp  **** #define TX_QUEUE_SIZE		8
+  26:PedalCom.cpp  **** 
+  27:PedalCom.cpp  **** /* Mask for calculating RX/TX queues head/tail */
+  28:PedalCom.cpp  **** #define RX_QUEUE_MASK	( RX_QUEUE_SIZE - 1)
+  29:PedalCom.cpp  **** #define TX_QUEUE_MASK	( TX_QUEUE_SIZE - 1)
+  30:PedalCom.cpp  **** 
+  31:PedalCom.cpp  **** #define CMD_HEADER_SIZE		4
+  32:PedalCom.cpp  **** #define SOF_BYTE			0x5F
+  33:PedalCom.cpp  **** #define EOF_BYTE			0xEF
+  34:PedalCom.cpp  **** 
+  35:PedalCom.cpp  **** #define SOF_BYTE_IDX		0
+  36:PedalCom.cpp  **** #define LENGTH_BYTE_IDX		1
+  37:PedalCom.cpp  **** #define CMD_BYTE_IDX		2
+  38:PedalCom.cpp  **** #define DATA_BYTE_IDX		3
+  39:PedalCom.cpp  **** 
+  40:PedalCom.cpp  **** #define RX_BUFFER_SIZE		16
+  41:PedalCom.cpp  **** 
+  42:PedalCom.cpp  **** #define DIR_TRANSMIT		0
+  43:PedalCom.cpp  **** #define DIR_RECEIVE			1
+  44:PedalCom.cpp  **** 
+  45:PedalCom.cpp  **** #define MAX_RETRANSMITS		5
+  46:PedalCom.cpp  **** 
+  47:PedalCom.cpp  **** 
+  48:PedalCom.cpp  **** /* Function prototypes */
+  49:PedalCom.cpp  **** void Select_RX_TX(uint8_t dir);
+  50:PedalCom.cpp  **** 
+  51:PedalCom.cpp  **** /* Global variables */
+  52:PedalCom.cpp  **** volatile bool PedalCom_DelayTxFlag = false;
+  53:PedalCom.cpp  **** volatile uint8_t PedalCom_DelayTXOvfCnt = 0;
+  54:PedalCom.cpp  **** volatile uint16_t PedalCom_ResponseTimeoutOvfCnt = 0;
+  55:PedalCom.cpp  **** volatile bool PedalCom_ResponseTimeoutFlag = false;
+  56:PedalCom.cpp  **** volatile uint16_t PedalCom_FullFrameTimeoutOvfCnt = 0;
+  57:PedalCom.cpp  **** volatile bool PedalCom_FullFrameTimeoutFlag = false;
+  58:PedalCom.cpp  **** volatile uint16_t PedalCom_HeartbeatOvfCnt = 1;
+  59:PedalCom.cpp  **** volatile bool PedalCom_HeartbeatFlag = false;
+  60:PedalCom.cpp  **** volatile bool PedalCom_ConnectionOpen = true;
+  61:PedalCom.cpp  **** 
+  62:PedalCom.cpp  **** /* Local variables */
+  63:PedalCom.cpp  **** volatile unsigned char RX_Buffer[RX_BUFFER_SIZE] = {0};
+  64:PedalCom.cpp  **** 
+  65:PedalCom.cpp  **** volatile CommandStruct RX_CommandQueue[RX_QUEUE_SIZE] = {Empty, 0, {0,0,0,0}, false, false};
+  66:PedalCom.cpp  **** volatile CommandStruct TX_CommandQueue[TX_QUEUE_SIZE] = {Empty, 0, {0,0,0,0}, false, true};
+  67:PedalCom.cpp  **** volatile uint8_t RxHead = 0;
+  68:PedalCom.cpp  **** volatile uint8_t RxTail = 0;
+  69:PedalCom.cpp  **** volatile uint8_t TxHead = 0;
+  70:PedalCom.cpp  **** volatile uint8_t TxTail = 0;
+  71:PedalCom.cpp  **** 
+  72:PedalCom.cpp  **** volatile uint8_t RetransmitCnt = 0;
+  73:PedalCom.cpp  **** 
+  74:PedalCom.cpp  **** /* Function implementations */
+  75:PedalCom.cpp  **** void PedalCom_Init()
+  76:PedalCom.cpp  **** {
+  77:PedalCom.cpp  **** 	/* Set RX/TX Select GPIOs to output */
+  78:PedalCom.cpp  **** 	SELECT_RX_TX_DDR |= (SELECT_RX_MASK | SELECT_TX_MASK);
+  79:PedalCom.cpp  **** 	
+  80:PedalCom.cpp  **** 	/* Activate receive */
+  81:PedalCom.cpp  **** 	Select_RX_TX(DIR_RECEIVE);
+  82:PedalCom.cpp  **** 	
+  83:PedalCom.cpp  **** 	/* Enable TX Complete Interrupt */
+  84:PedalCom.cpp  **** 	UCSR0B |= (1 << TXCIE0);
+  85:PedalCom.cpp  **** }
+  86:PedalCom.cpp  **** 
+  87:PedalCom.cpp  **** uint8_t PedalCom_RxAvailable()
+  88:PedalCom.cpp  **** {
+  89:PedalCom.cpp  **** 	return (RxHead != RxTail);
+  90:PedalCom.cpp  **** }
+  91:PedalCom.cpp  **** 
+  92:PedalCom.cpp  **** uint8_t PedalCom_TxAvailable()
+  93:PedalCom.cpp  **** {
+  94:PedalCom.cpp  **** 	return (TxHead != TxTail);
+  95:PedalCom.cpp  **** }
+  96:PedalCom.cpp  **** 
+  97:PedalCom.cpp  **** void PedalCom_FlushTxQueue()
+  98:PedalCom.cpp  **** {
+  99:PedalCom.cpp  **** 	TxTail = TxHead;
+ 100:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = true;
+ 101:PedalCom.cpp  **** }
+ 102:PedalCom.cpp  **** 
+ 103:PedalCom.cpp  **** 
+ 104:PedalCom.cpp  **** void PedalCom_Receive()
+ 105:PedalCom.cpp  **** {
+ 106:PedalCom.cpp  **** 	static uint8_t RX_ByteCnt = 0;
+ 107:PedalCom.cpp  **** 	
+ 108:PedalCom.cpp  **** 	/* Start/reset Delay TX timer. Both in case a NACK needs to be sent, and also to
+ 109:PedalCom.cpp  **** 	   prevent response to previous command being sent while still receiving new data. */
+ 110:PedalCom.cpp  **** 	if (PedalCom_DelayTXOvfCnt != 0)
+ 111:PedalCom.cpp  **** 	{
+ 112:PedalCom.cpp  **** 		PedalCom_DelayTXOvfCnt = 1;
+ 113:PedalCom.cpp  **** 	}
+ 114:PedalCom.cpp  **** 	
+ 115:PedalCom.cpp  **** 	/* Fetch new byte from UART buffer */
+ 116:PedalCom.cpp  **** 	RX_Buffer[RX_ByteCnt] = UART0_GetChar();
+ 117:PedalCom.cpp  **** 	RX_ByteCnt++;
+ 118:PedalCom.cpp  **** 	
+ 119:PedalCom.cpp  **** 	/* Handle new byte */
+ 120:PedalCom.cpp  **** 	if ((RX_ByteCnt - 1) == SOF_BYTE_IDX)
+ 121:PedalCom.cpp  **** 	{
+ 122:PedalCom.cpp  **** 		PedalCom_ResponseTimeoutOvfCnt = 0;		// Stop counter
+ 123:PedalCom.cpp  **** 		
+ 124:PedalCom.cpp  **** 		if (RX_Buffer[SOF_BYTE_IDX] == SOF_BYTE)
+ 125:PedalCom.cpp  **** 		{
+ 126:PedalCom.cpp  **** 			PedalCom_FullFrameTimeoutOvfCnt = 1;
+ 127:PedalCom.cpp  **** 		}
+ 128:PedalCom.cpp  **** 		else
+ 129:PedalCom.cpp  **** 		{
+ 130:PedalCom.cpp  **** 			RX_ByteCnt = 0;
+ 131:PedalCom.cpp  **** 			PedalCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX counter in case a new message is in queue to
+ 132:PedalCom.cpp  **** 				
+ 133:PedalCom.cpp  **** 			if (RX_Buffer[SOF_BYTE_IDX] == ACK_BYTE)
+ 134:PedalCom.cpp  **** 			{
+ 135:PedalCom.cpp  **** 				RetransmitCnt = 0;	// Reset retransmit counter
+ 136:PedalCom.cpp  **** 				TX_CommandQueue[TxTail].acked = true;
+ 137:PedalCom.cpp  **** 				
+ 138:PedalCom.cpp  **** 				if (!PedalCom_ConnectionOpen)
+ 139:PedalCom.cpp  **** 				{
+ 140:PedalCom.cpp  **** 					PedalCom_ConnectionOpen = true;
+ 141:PedalCom.cpp  **** 					
+ 142:PedalCom.cpp  **** 					/* Set system state to initialize Pedal */
+ 143:PedalCom.cpp  **** 					SystemState = INITIALIZE_SYSTEM;
+ 144:PedalCom.cpp  **** 				}
+ 145:PedalCom.cpp  **** 			}
+ 146:PedalCom.cpp  **** 			else if (RX_Buffer[SOF_BYTE_IDX] == NACK_BYTE)
+ 147:PedalCom.cpp  **** 			{
+ 148:PedalCom.cpp  **** 				PedalCom_PrepareRetransmit();
+ 149:PedalCom.cpp  **** 			}
+ 150:PedalCom.cpp  **** 		}
+ 151:PedalCom.cpp  **** 	}
+ 152:PedalCom.cpp  **** 	else if ((RX_ByteCnt - 1) == LENGTH_BYTE_IDX)
+ 153:PedalCom.cpp  **** 	{
+ 154:PedalCom.cpp  **** 		RX_CommandQueue[RxHead].length = RX_Buffer[LENGTH_BYTE_IDX];
+ 155:PedalCom.cpp  **** 	}
+ 156:PedalCom.cpp  **** 	else if (RX_ByteCnt == RX_CommandQueue[RxHead].length)
+ 157:PedalCom.cpp  **** 	{
+ 158:PedalCom.cpp  **** 		PedalCom_FullFrameTimeoutOvfCnt = 0;
+ 159:PedalCom.cpp  **** 		
+ 160:PedalCom.cpp  **** 		/* If full frame received */
+ 161:PedalCom.cpp  **** 		if (RX_Buffer[RX_CommandQueue[RxHead].length - 1] == EOF_BYTE)
+ 162:PedalCom.cpp  **** 		{
+ 163:PedalCom.cpp  **** 			RX_CommandQueue[RxHead].command = (CMD)RX_Buffer[CMD_BYTE_IDX];
+ 164:PedalCom.cpp  **** 			
+ 165:PedalCom.cpp  **** 			for (uint8_t i = 0; i < (RX_CommandQueue[RxHead].length - CMD_HEADER_SIZE); i++)
+ 166:PedalCom.cpp  **** 			{
+ 167:PedalCom.cpp  **** 				RX_CommandQueue[RxHead].data[i] = RX_Buffer[DATA_BYTE_IDX + i];
+ 168:PedalCom.cpp  **** 			}
+ 169:PedalCom.cpp  **** 			
+ 170:PedalCom.cpp  **** 			/* calculate new RX head index */
+ 171:PedalCom.cpp  **** 			uint8_t tmpHead = (RxHead + 1) & RX_QUEUE_MASK;
+ 172:PedalCom.cpp  **** 				
+ 173:PedalCom.cpp  **** 			if ( tmpHead == RxTail )
+ 174:PedalCom.cpp  **** 			{
+ 175:PedalCom.cpp  **** 				/* error: RX command queue overflow */
+ 176:PedalCom.cpp  **** 			}
+ 177:PedalCom.cpp  **** 			else
+ 178:PedalCom.cpp  **** 			{
+ 179:PedalCom.cpp  **** 				/* store new index */
+ 180:PedalCom.cpp  **** 				RxHead = tmpHead;
+ 181:PedalCom.cpp  **** 			}
+ 182:PedalCom.cpp  **** 		}
+ 183:PedalCom.cpp  **** 		else
+ 184:PedalCom.cpp  **** 		{
+ 185:PedalCom.cpp  **** 			/* Prepare Transmit NACK */
+ 186:PedalCom.cpp  **** 			UART0_QueueChar(NACK_BYTE);
+ 187:PedalCom.cpp  **** 			PedalCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX timer
+ 188:PedalCom.cpp  **** 		}
+ 189:PedalCom.cpp  **** 			
+ 190:PedalCom.cpp  **** 		RX_ByteCnt = 0;
+ 191:PedalCom.cpp  **** 	}	
+ 192:PedalCom.cpp  **** }
+ 193:PedalCom.cpp  **** 
+ 194:PedalCom.cpp  **** 
+ 195:PedalCom.cpp  **** void PedalCom_HandleReceived()
+ 196:PedalCom.cpp  **** {
+ 197:PedalCom.cpp  **** 	unsigned char response;
+ 198:PedalCom.cpp  **** 	response = System_HandlePedalCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].leng
+ 199:PedalCom.cpp  **** 		
+ 200:PedalCom.cpp  **** 	/* Calculate and store new queue index */
+ 201:PedalCom.cpp  **** 	RxTail = (RxTail + 1) & RX_QUEUE_MASK;
+ 202:PedalCom.cpp  **** 
+ 203:PedalCom.cpp  **** 	/* Prepare Transmit response */
+ 204:PedalCom.cpp  **** 	UART0_QueueChar(response);
+ 205:PedalCom.cpp  **** 	
+ 206:PedalCom.cpp  **** 	/* Start/reset Delay TX timer */
+ 207:PedalCom.cpp  **** 	PedalCom_DelayTXOvfCnt = 1;
+ 208:PedalCom.cpp  **** }
+ 209:PedalCom.cpp  **** 
+ 210:PedalCom.cpp  **** 
+ 211:PedalCom.cpp  **** bool PedalCom_QueueCommand(CMD cmd, uint8_t datLen, uint8_t *dat)
+ 212:PedalCom.cpp  **** {
+ 213:PedalCom.cpp  **** 	/* Calculate new queue head index */
+ 214:PedalCom.cpp  **** 	uint8_t tmpHead = (TxHead + 1) & TX_QUEUE_MASK;
+ 215:PedalCom.cpp  **** 	
+ 216:PedalCom.cpp  **** 	/* Check for free space in queue */
+ 217:PedalCom.cpp  **** 	if ( tmpHead == TxTail )
+ 218:PedalCom.cpp  **** 		return false;
+ 219:PedalCom.cpp  **** 	
+ 220:PedalCom.cpp  **** 	/* Copy command to queue */
+ 221:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].command = cmd;
+ 222:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].length = datLen + CMD_HEADER_SIZE;
+ 223:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].sent = false;
+ 224:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = false;
+ 225:PedalCom.cpp  **** 	
+ 226:PedalCom.cpp  **** 	for (uint8_t i = 0; i < datLen; i++)
+ 227:PedalCom.cpp  **** 	{
+ 228:PedalCom.cpp  **** 		TX_CommandQueue[TxHead].data[i] = dat[i];
+ 229:PedalCom.cpp  **** 	}
+ 230:PedalCom.cpp  **** 	
+ 231:PedalCom.cpp  **** 	/* Update queue head */
+ 232:PedalCom.cpp  **** 	TxHead = tmpHead;
+ 233:PedalCom.cpp  **** 	
+ 234:PedalCom.cpp  **** 	return true;
+ 235:PedalCom.cpp  **** }
+ 236:PedalCom.cpp  **** 
+ 237:PedalCom.cpp  **** void PedalCom_PutCommand()
+ 238:PedalCom.cpp  **** {
+ 239:PedalCom.cpp  **** 	/* Only transmit new command if previous one got an ACK */
+ 240:PedalCom.cpp  **** 	if (TX_CommandQueue[TxTail].acked)
+ 241:PedalCom.cpp  **** 	{
+ 242:PedalCom.cpp  **** 		/* Calculate and store new queue tail index */
+ 243:PedalCom.cpp  **** 		TxTail = (TxTail + 1) & TX_QUEUE_MASK;
+ 244:PedalCom.cpp  **** 	}
+ 245:PedalCom.cpp  **** 	else if (!(TX_CommandQueue[TxTail].sent))
+ 246:PedalCom.cpp  **** 	{
+ 247:PedalCom.cpp  **** 		/* Send command frame to UART TX buffer */
+ 248:PedalCom.cpp  **** 		UART0_QueueChar(SOF_BYTE);
+ 249:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].length);
+ 250:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].command);
+ 251:PedalCom.cpp  **** 		
+ 252:PedalCom.cpp  **** 		for (uint8_t i = 0; i < (TX_CommandQueue[TxTail].length - CMD_HEADER_SIZE); i++)
+ 253:PedalCom.cpp  **** 		{
+ 254:PedalCom.cpp  **** 			UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].data[i]);
+ 255:PedalCom.cpp  **** 		}
+ 256:PedalCom.cpp  **** 		
+ 257:PedalCom.cpp  **** 		UART0_QueueChar(EOF_BYTE);
+ 258:PedalCom.cpp  **** 		
+ 259:PedalCom.cpp  **** 		/* If no data is waiting to be transmitted */
+ 260:PedalCom.cpp  **** 		if (PedalCom_DelayTXOvfCnt == 0)
+ 261:PedalCom.cpp  **** 		{
+ 262:PedalCom.cpp  **** 			/* Signal that data is waiting to be transmitted without delay */
+ 263:PedalCom.cpp  **** 			PedalCom_DelayTxFlag = true;
+ 264:PedalCom.cpp  **** 		}
+ 265:PedalCom.cpp  **** 		
+ 266:PedalCom.cpp  **** 		TX_CommandQueue[TxTail].sent = true;
+ 267:PedalCom.cpp  **** 		
+ 268:PedalCom.cpp  **** 		/* Start response timer */
+ 269:PedalCom.cpp  **** 		PedalCom_ResponseTimeoutOvfCnt = 1;
+ 270:PedalCom.cpp  **** 	}
+ 271:PedalCom.cpp  **** }
+ 272:PedalCom.cpp  **** 
+ 273:PedalCom.cpp  **** void PedalCom_PrepareRetransmit()
+ 274:PedalCom.cpp  **** {
+ 275:PedalCom.cpp  **** 	if (RetransmitCnt < MAX_RETRANSMITS)
+ 276:PedalCom.cpp  **** 	{
+ 277:PedalCom.cpp  **** 		RetransmitCnt++;
+ 278:PedalCom.cpp  **** 		
+ 279:PedalCom.cpp  **** 		/* Prepare retransmit latest command */
+ 280:PedalCom.cpp  **** 		TX_CommandQueue[TxTail].sent = false;
+ 281:PedalCom.cpp  **** 	}
+ 282:PedalCom.cpp  **** }
+ 283:PedalCom.cpp  **** 
+ 284:PedalCom.cpp  **** 
+ 285:PedalCom.cpp  **** void PedalCom_Transmit()
+ 286:PedalCom.cpp  **** {
+ 287:PedalCom.cpp  **** 	/* Activate Transmit */
+ 288:PedalCom.cpp  **** 	Select_RX_TX(DIR_TRANSMIT);
+ 289:PedalCom.cpp  **** 	
+ 290:PedalCom.cpp  **** 	/* Start transmit */
+ 291:PedalCom.cpp  **** 	UART0_PutQueue();
+ 292:PedalCom.cpp  **** }
+ 293:PedalCom.cpp  **** 
+ 294:PedalCom.cpp  **** 
+ 295:PedalCom.cpp  **** void Select_RX_TX(uint8_t dir)
+  14               		.loc 1 295 6 view -0
+  15               		.cfi_startproc
+  16               	/* prologue: function */
+  17               	/* frame size = 0 */
+  18               	/* stack size = 0 */
+  19               	.L__stack_usage = 0
+  20               	.LVL0:
+ 296:PedalCom.cpp  **** {
+ 297:PedalCom.cpp  **** 	if (dir == DIR_TRANSMIT)
+ 298:PedalCom.cpp  **** 	{
+ 299:PedalCom.cpp  **** 		SELECT_RX_TX_PORT &= ~(SELECT_RX_MASK);
+  21               		.loc 1 299 3 view .LVU1
+  22               		.loc 1 299 21 is_stmt 0 view .LVU2
+  23 0000 2B98      		cbi 0x5,3
+ 300:PedalCom.cpp  **** 		SELECT_RX_TX_PORT |= SELECT_TX_MASK;
+  24               		.loc 1 300 3 is_stmt 1 view .LVU3
+  25               		.loc 1 300 21 is_stmt 0 view .LVU4
+  26 0002 2C9A      		sbi 0x5,4
+  27               	/* epilogue start */
+ 301:PedalCom.cpp  **** 	}
+ 302:PedalCom.cpp  **** 	else
+ 303:PedalCom.cpp  **** 	{
+ 304:PedalCom.cpp  **** 		SELECT_RX_TX_PORT |= SELECT_RX_MASK;
+ 305:PedalCom.cpp  **** 		SELECT_RX_TX_PORT &= ~(SELECT_TX_MASK);
+ 306:PedalCom.cpp  **** 	}
+ 307:PedalCom.cpp  **** }
+  28               		.loc 1 307 1 view .LVU5
+  29 0004 0895      		ret
+  30               		.cfi_endproc
+  31               	.LFE15:
+  33               	.global	_Z20PedalCom_RxAvailablev
+  35               	_Z20PedalCom_RxAvailablev:
+  36               	.LFB3:
+  88:PedalCom.cpp  **** 	return (RxHead != RxTail);
+  37               		.loc 1 88 1 is_stmt 1 view -0
+  38               		.cfi_startproc
+  39               	/* prologue: function */
+  40               	/* frame size = 0 */
+  41               	/* stack size = 0 */
+  42               	.L__stack_usage = 0
+  89:PedalCom.cpp  **** }
+  43               		.loc 1 89 2 view .LVU7
+  89:PedalCom.cpp  **** }
+  44               		.loc 1 89 17 is_stmt 0 view .LVU8
+  45 0006 2091 0000 		lds r18,RxHead
+  46 000a 9091 0000 		lds r25,RxTail
+  47 000e 81E0      		ldi r24,lo8(1)
+  48 0010 2913      		cpse r18,r25
+  49 0012 00C0      		rjmp .L3
+  50 0014 80E0      		ldi r24,0
+  51               	.L3:
+  52               	/* epilogue start */
+  90:PedalCom.cpp  **** 
+  53               		.loc 1 90 1 view .LVU9
+  54 0016 0895      		ret
+  55               		.cfi_endproc
+  56               	.LFE3:
+  58               	.global	_Z20PedalCom_TxAvailablev
+  60               	_Z20PedalCom_TxAvailablev:
+  61               	.LFB4:
+  93:PedalCom.cpp  **** 	return (TxHead != TxTail);
+  62               		.loc 1 93 1 is_stmt 1 view -0
+  63               		.cfi_startproc
+  64               	/* prologue: function */
+  65               	/* frame size = 0 */
+  66               	/* stack size = 0 */
+  67               	.L__stack_usage = 0
+  94:PedalCom.cpp  **** }
+  68               		.loc 1 94 2 view .LVU11
+  94:PedalCom.cpp  **** }
+  69               		.loc 1 94 17 is_stmt 0 view .LVU12
+  70 0018 2091 0000 		lds r18,TxHead
+  71 001c 9091 0000 		lds r25,TxTail
+  72 0020 81E0      		ldi r24,lo8(1)
+  73 0022 2913      		cpse r18,r25
+  74 0024 00C0      		rjmp .L5
+  75 0026 80E0      		ldi r24,0
+  76               	.L5:
+  77               	/* epilogue start */
+  95:PedalCom.cpp  **** 
+  78               		.loc 1 95 1 view .LVU13
+  79 0028 0895      		ret
+  80               		.cfi_endproc
+  81               	.LFE4:
+  83               	.global	_Z21PedalCom_FlushTxQueuev
+  85               	_Z21PedalCom_FlushTxQueuev:
+  86               	.LFB5:
+  98:PedalCom.cpp  **** 	TxTail = TxHead;
+  87               		.loc 1 98 1 is_stmt 1 view -0
+  88               		.cfi_startproc
+  89               	/* prologue: function */
+  90               	/* frame size = 0 */
+  91               	/* stack size = 0 */
+  92               	.L__stack_usage = 0
+  99:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = true;
+  93               		.loc 1 99 2 view .LVU15
+  99:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = true;
+  94               		.loc 1 99 9 is_stmt 0 view .LVU16
+  95 002a 8091 0000 		lds r24,TxHead
+  96 002e 8093 0000 		sts TxTail,r24
+ 100:PedalCom.cpp  **** }
+  97               		.loc 1 100 2 is_stmt 1 view .LVU17
+ 100:PedalCom.cpp  **** }
+  98               		.loc 1 100 18 is_stmt 0 view .LVU18
+  99 0032 E091 0000 		lds r30,TxHead
+ 100:PedalCom.cpp  **** }
+ 100               		.loc 1 100 32 view .LVU19
+ 101 0036 88E0      		ldi r24,lo8(8)
+ 102 0038 E89F      		mul r30,r24
+ 103 003a F001      		movw r30,r0
+ 104 003c 1124      		clr __zero_reg__
+ 105 003e E050      		subi r30,lo8(-(TX_CommandQueue))
+ 106 0040 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 107 0042 81E0      		ldi r24,lo8(1)
+ 108 0044 8783      		std Z+7,r24
+ 109               	/* epilogue start */
+ 101:PedalCom.cpp  **** 
+ 110               		.loc 1 101 1 view .LVU20
+ 111 0046 0895      		ret
+ 112               		.cfi_endproc
+ 113               	.LFE5:
+ 115               	.global	_Z23PedalCom_HandleReceivedv
+ 117               	_Z23PedalCom_HandleReceivedv:
+ 118               	.LFB7:
+ 196:PedalCom.cpp  **** 	unsigned char response;
+ 119               		.loc 1 196 1 is_stmt 1 view -0
+ 120               		.cfi_startproc
+ 121               	/* prologue: function */
+ 122               	/* frame size = 0 */
+ 123               	/* stack size = 0 */
+ 124               	.L__stack_usage = 0
+ 197:PedalCom.cpp  **** 	response = System_HandlePedalCommand(RX_CommandQueue[RxTail].command, RX_CommandQueue[RxTail].leng
+ 125               		.loc 1 197 2 view .LVU22
+ 198:PedalCom.cpp  **** 		
+ 126               		.loc 1 198 2 view .LVU23
+ 198:PedalCom.cpp  **** 		
+ 127               		.loc 1 198 131 is_stmt 0 view .LVU24
+ 128 0048 4091 0000 		lds r20,RxTail
+ 198:PedalCom.cpp  **** 		
+ 129               		.loc 1 198 88 view .LVU25
+ 130 004c E091 0000 		lds r30,RxTail
+ 198:PedalCom.cpp  **** 		
+ 131               		.loc 1 198 96 view .LVU26
+ 132 0050 88E0      		ldi r24,lo8(8)
+ 133 0052 E89F      		mul r30,r24
+ 134 0054 F001      		movw r30,r0
+ 135 0056 1124      		clr __zero_reg__
+ 136 0058 E050      		subi r30,lo8(-(RX_CommandQueue))
+ 137 005a F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 138 005c 6181      		ldd r22,Z+1
+ 198:PedalCom.cpp  **** 		
+ 139               		.loc 1 198 55 view .LVU27
+ 140 005e E091 0000 		lds r30,RxTail
+ 198:PedalCom.cpp  **** 		
+ 141               		.loc 1 198 63 view .LVU28
+ 142 0062 98E0      		ldi r25,lo8(8)
+ 143 0064 E99F      		mul r30,r25
+ 144 0066 F001      		movw r30,r0
+ 145 0068 1124      		clr __zero_reg__
+ 146 006a E050      		subi r30,lo8(-(RX_CommandQueue))
+ 147 006c F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 148 006e 8081      		ld r24,Z
+ 198:PedalCom.cpp  **** 		
+ 149               		.loc 1 198 139 view .LVU29
+ 150 0070 98E0      		ldi r25,lo8(8)
+ 151 0072 499F      		mul r20,r25
+ 152 0074 A001      		movw r20,r0
+ 153 0076 1124      		clr __zero_reg__
+ 154 0078 4050      		subi r20,lo8(-(RX_CommandQueue+2))
+ 155 007a 5040      		sbci r21,hi8(-(RX_CommandQueue+2))
+ 198:PedalCom.cpp  **** 		
+ 156               		.loc 1 198 38 view .LVU30
+ 157 007c 0E94 0000 		call _Z25System_HandlePedalCommand3CMDhPh
+ 158               	.LVL1:
+ 201:PedalCom.cpp  **** 
+ 159               		.loc 1 201 2 is_stmt 1 view .LVU31
+ 201:PedalCom.cpp  **** 
+ 160               		.loc 1 201 24 is_stmt 0 view .LVU32
+ 161 0080 9091 0000 		lds r25,RxTail
+ 201:PedalCom.cpp  **** 
+ 162               		.loc 1 201 19 view .LVU33
+ 163 0084 9F5F      		subi r25,lo8(-(1))
+ 201:PedalCom.cpp  **** 
+ 164               		.loc 1 201 24 view .LVU34
+ 165 0086 9370      		andi r25,lo8(3)
+ 201:PedalCom.cpp  **** 
+ 166               		.loc 1 201 9 view .LVU35
+ 167 0088 9093 0000 		sts RxTail,r25
+ 204:PedalCom.cpp  **** 	
+ 168               		.loc 1 204 2 is_stmt 1 view .LVU36
+ 204:PedalCom.cpp  **** 	
+ 169               		.loc 1 204 17 is_stmt 0 view .LVU37
+ 170 008c 0E94 0000 		call _Z15UART0_QueueCharh
+ 171               	.LVL2:
+ 207:PedalCom.cpp  **** }
+ 172               		.loc 1 207 2 is_stmt 1 view .LVU38
+ 207:PedalCom.cpp  **** }
+ 173               		.loc 1 207 25 is_stmt 0 view .LVU39
+ 174 0090 81E0      		ldi r24,lo8(1)
+ 175 0092 8093 0000 		sts PedalCom_DelayTXOvfCnt,r24
+ 176               	/* epilogue start */
+ 208:PedalCom.cpp  **** 
+ 177               		.loc 1 208 1 view .LVU40
+ 178 0096 0895      		ret
+ 179               		.cfi_endproc
+ 180               	.LFE7:
+ 182               	.global	_Z21PedalCom_QueueCommand3CMDhPh
+ 184               	_Z21PedalCom_QueueCommand3CMDhPh:
+ 185               	.LVL3:
+ 186               	.LFB8:
+ 212:PedalCom.cpp  **** 	/* Calculate new queue head index */
+ 187               		.loc 1 212 1 is_stmt 1 view -0
+ 188               		.cfi_startproc
+ 212:PedalCom.cpp  **** 	/* Calculate new queue head index */
+ 189               		.loc 1 212 1 is_stmt 0 view .LVU42
+ 190 0098 CF93      		push r28
+ 191               	.LCFI0:
+ 192               		.cfi_def_cfa_offset 3
+ 193               		.cfi_offset 28, -2
+ 194 009a DF93      		push r29
+ 195               	.LCFI1:
+ 196               		.cfi_def_cfa_offset 4
+ 197               		.cfi_offset 29, -3
+ 198               	/* prologue: function */
+ 199               	/* frame size = 0 */
+ 200               	/* stack size = 2 */
+ 201               	.L__stack_usage = 2
+ 202 009c DA01      		movw r26,r20
+ 214:PedalCom.cpp  **** 	
+ 203               		.loc 1 214 2 is_stmt 1 view .LVU43
+ 214:PedalCom.cpp  **** 	
+ 204               		.loc 1 214 33 is_stmt 0 view .LVU44
+ 205 009e 9091 0000 		lds r25,TxHead
+ 214:PedalCom.cpp  **** 	
+ 206               		.loc 1 214 28 view .LVU45
+ 207 00a2 9F5F      		subi r25,lo8(-(1))
+ 214:PedalCom.cpp  **** 	
+ 208               		.loc 1 214 35 view .LVU46
+ 209 00a4 9770      		andi r25,lo8(7)
+ 210               	.LVL4:
+ 217:PedalCom.cpp  **** 		return false;
+ 211               		.loc 1 217 2 is_stmt 1 view .LVU47
+ 217:PedalCom.cpp  **** 		return false;
+ 212               		.loc 1 217 15 is_stmt 0 view .LVU48
+ 213 00a6 2091 0000 		lds r18,TxTail
+ 217:PedalCom.cpp  **** 		return false;
+ 214               		.loc 1 217 2 view .LVU49
+ 215 00aa 2917      		cp r18,r25
+ 216 00ac 01F4      		brne .+2
+ 217 00ae 00C0      		rjmp .L12
+ 221:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].length = datLen + CMD_HEADER_SIZE;
+ 218               		.loc 1 221 2 is_stmt 1 view .LVU50
+ 221:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].length = datLen + CMD_HEADER_SIZE;
+ 219               		.loc 1 221 18 is_stmt 0 view .LVU51
+ 220 00b0 E091 0000 		lds r30,TxHead
+ 221:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].length = datLen + CMD_HEADER_SIZE;
+ 221               		.loc 1 221 34 view .LVU52
+ 222 00b4 28E0      		ldi r18,lo8(8)
+ 223 00b6 E29F      		mul r30,r18
+ 224 00b8 F001      		movw r30,r0
+ 225 00ba 1124      		clr __zero_reg__
+ 226 00bc E050      		subi r30,lo8(-(TX_CommandQueue))
+ 227 00be F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 228 00c0 8083      		st Z,r24
+ 222:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].sent = false;
+ 229               		.loc 1 222 2 is_stmt 1 view .LVU53
+ 222:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].sent = false;
+ 230               		.loc 1 222 18 is_stmt 0 view .LVU54
+ 231 00c2 E091 0000 		lds r30,TxHead
+ 222:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].sent = false;
+ 232               		.loc 1 222 33 view .LVU55
+ 233 00c6 48E0      		ldi r20,lo8(8)
+ 234               	.LVL5:
+ 222:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].sent = false;
+ 235               		.loc 1 222 33 view .LVU56
+ 236 00c8 E49F      		mul r30,r20
+ 237 00ca F001      		movw r30,r0
+ 238 00cc 1124      		clr __zero_reg__
+ 239 00ce E050      		subi r30,lo8(-(TX_CommandQueue))
+ 240 00d0 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 241 00d2 84E0      		ldi r24,lo8(4)
+ 242               	.LVL6:
+ 222:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].sent = false;
+ 243               		.loc 1 222 33 view .LVU57
+ 244 00d4 860F      		add r24,r22
+ 245 00d6 8183      		std Z+1,r24
+ 223:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = false;
+ 246               		.loc 1 223 2 is_stmt 1 view .LVU58
+ 223:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = false;
+ 247               		.loc 1 223 18 is_stmt 0 view .LVU59
+ 248 00d8 E091 0000 		lds r30,TxHead
+ 223:PedalCom.cpp  **** 	TX_CommandQueue[TxHead].acked = false;
+ 249               		.loc 1 223 31 view .LVU60
+ 250 00dc 88E0      		ldi r24,lo8(8)
+ 251 00de E89F      		mul r30,r24
+ 252 00e0 F001      		movw r30,r0
+ 253 00e2 1124      		clr __zero_reg__
+ 254 00e4 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 255 00e6 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 256 00e8 1682      		std Z+6,__zero_reg__
+ 224:PedalCom.cpp  **** 	
+ 257               		.loc 1 224 2 is_stmt 1 view .LVU61
+ 224:PedalCom.cpp  **** 	
+ 258               		.loc 1 224 18 is_stmt 0 view .LVU62
+ 259 00ea E091 0000 		lds r30,TxHead
+ 224:PedalCom.cpp  **** 	
+ 260               		.loc 1 224 32 view .LVU63
+ 261 00ee 28E0      		ldi r18,lo8(8)
+ 262 00f0 E29F      		mul r30,r18
+ 263 00f2 F001      		movw r30,r0
+ 264 00f4 1124      		clr __zero_reg__
+ 265 00f6 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 266 00f8 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 267 00fa 1782      		std Z+7,__zero_reg__
+ 226:PedalCom.cpp  **** 	{
+ 268               		.loc 1 226 2 is_stmt 1 view .LVU64
+ 269               	.LVL7:
+ 224:PedalCom.cpp  **** 	
+ 270               		.loc 1 224 32 is_stmt 0 view .LVU65
+ 271 00fc 30E0      		ldi r19,0
+ 272 00fe 20E0      		ldi r18,0
+ 273               	.LVL8:
+ 274               	.L11:
+ 275               	.LBB4:
+ 226:PedalCom.cpp  **** 	{
+ 276               		.loc 1 226 24 is_stmt 1 discriminator 3 view .LVU66
+ 277 0100 2617      		cp r18,r22
+ 278 0102 00F4      		brsh .L10
+ 228:PedalCom.cpp  **** 	}
+ 279               		.loc 1 228 3 discriminator 2 view .LVU67
+ 228:PedalCom.cpp  **** 	}
+ 280               		.loc 1 228 19 is_stmt 0 discriminator 2 view .LVU68
+ 281 0104 E091 0000 		lds r30,TxHead
+ 228:PedalCom.cpp  **** 	}
+ 282               		.loc 1 228 42 discriminator 2 view .LVU69
+ 283 0108 ED01      		movw r28,r26
+ 284 010a C20F      		add r28,r18
+ 285 010c D31F      		adc r29,r19
+ 286 010e 8881      		ld r24,Y
+ 228:PedalCom.cpp  **** 	}
+ 287               		.loc 1 228 35 discriminator 2 view .LVU70
+ 288 0110 48E0      		ldi r20,lo8(8)
+ 289 0112 E49F      		mul r30,r20
+ 290 0114 F001      		movw r30,r0
+ 291 0116 1124      		clr __zero_reg__
+ 292 0118 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 293 011a F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 294 011c E20F      		add r30,r18
+ 295 011e F31F      		adc r31,r19
+ 296 0120 8283      		std Z+2,r24
+ 226:PedalCom.cpp  **** 	{
+ 297               		.loc 1 226 2 is_stmt 1 discriminator 2 view .LVU71
+ 298               	.LVL9:
+ 226:PedalCom.cpp  **** 	{
+ 299               		.loc 1 226 2 is_stmt 0 discriminator 2 view .LVU72
+ 300 0122 2F5F      		subi r18,-1
+ 301 0124 3F4F      		sbci r19,-1
+ 302               	.LVL10:
+ 226:PedalCom.cpp  **** 	{
+ 303               		.loc 1 226 2 discriminator 2 view .LVU73
+ 304 0126 00C0      		rjmp .L11
+ 305               	.L10:
+ 226:PedalCom.cpp  **** 	{
+ 306               		.loc 1 226 2 discriminator 2 view .LVU74
+ 307               	.LBE4:
+ 232:PedalCom.cpp  **** 	
+ 308               		.loc 1 232 2 is_stmt 1 view .LVU75
+ 232:PedalCom.cpp  **** 	
+ 309               		.loc 1 232 9 is_stmt 0 view .LVU76
+ 310 0128 9093 0000 		sts TxHead,r25
+ 234:PedalCom.cpp  **** }
+ 311               		.loc 1 234 2 is_stmt 1 view .LVU77
+ 234:PedalCom.cpp  **** }
+ 312               		.loc 1 234 9 is_stmt 0 view .LVU78
+ 313 012c 81E0      		ldi r24,lo8(1)
+ 314               	.LVL11:
+ 315               	.L8:
+ 316               	/* epilogue start */
+ 235:PedalCom.cpp  **** 
+ 317               		.loc 1 235 1 view .LVU79
+ 318 012e DF91      		pop r29
+ 319 0130 CF91      		pop r28
+ 320 0132 0895      		ret
+ 321               	.LVL12:
+ 322               	.L12:
+ 218:PedalCom.cpp  **** 	
+ 323               		.loc 1 218 10 view .LVU80
+ 324 0134 80E0      		ldi r24,0
+ 325               	.LVL13:
+ 218:PedalCom.cpp  **** 	
+ 326               		.loc 1 218 10 view .LVU81
+ 327 0136 00C0      		rjmp .L8
+ 328               		.cfi_endproc
+ 329               	.LFE8:
+ 331               	.global	_Z19PedalCom_PutCommandv
+ 333               	_Z19PedalCom_PutCommandv:
+ 334               	.LFB9:
+ 238:PedalCom.cpp  **** 	/* Only transmit new command if previous one got an ACK */
+ 335               		.loc 1 238 1 is_stmt 1 view -0
+ 336               		.cfi_startproc
+ 337 0138 CF93      		push r28
+ 338               	.LCFI2:
+ 339               		.cfi_def_cfa_offset 3
+ 340               		.cfi_offset 28, -2
+ 341               	/* prologue: function */
+ 342               	/* frame size = 0 */
+ 343               	/* stack size = 1 */
+ 344               	.L__stack_usage = 1
+ 240:PedalCom.cpp  **** 	{
+ 345               		.loc 1 240 2 view .LVU83
+ 346               	.LBB5:
+ 240:PedalCom.cpp  **** 	{
+ 347               		.loc 1 240 22 is_stmt 0 view .LVU84
+ 348 013a E091 0000 		lds r30,TxTail
+ 240:PedalCom.cpp  **** 	{
+ 349               		.loc 1 240 30 view .LVU85
+ 350 013e 88E0      		ldi r24,lo8(8)
+ 351 0140 E89F      		mul r30,r24
+ 352 0142 F001      		movw r30,r0
+ 353 0144 1124      		clr __zero_reg__
+ 354 0146 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 355 0148 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 356 014a 8781      		ldd r24,Z+7
+ 240:PedalCom.cpp  **** 	{
+ 357               		.loc 1 240 2 view .LVU86
+ 358 014c 8823      		tst r24
+ 359 014e 01F0      		breq .L14
+ 243:PedalCom.cpp  **** 	}
+ 360               		.loc 1 243 3 is_stmt 1 view .LVU87
+ 243:PedalCom.cpp  **** 	}
+ 361               		.loc 1 243 25 is_stmt 0 view .LVU88
+ 362 0150 8091 0000 		lds r24,TxTail
+ 243:PedalCom.cpp  **** 	}
+ 363               		.loc 1 243 20 view .LVU89
+ 364 0154 8F5F      		subi r24,lo8(-(1))
+ 243:PedalCom.cpp  **** 	}
+ 365               		.loc 1 243 25 view .LVU90
+ 366 0156 8770      		andi r24,lo8(7)
+ 243:PedalCom.cpp  **** 	}
+ 367               		.loc 1 243 10 view .LVU91
+ 368 0158 8093 0000 		sts TxTail,r24
+ 369               	.L13:
+ 370               	/* epilogue start */
+ 371               	.LBE5:
+ 271:PedalCom.cpp  **** 
+ 372               		.loc 1 271 1 view .LVU92
+ 373 015c CF91      		pop r28
+ 374 015e 0895      		ret
+ 375               	.L14:
+ 245:PedalCom.cpp  **** 	{
+ 376               		.loc 1 245 7 is_stmt 1 view .LVU93
+ 377               	.LBB9:
+ 378               	.LBB6:
+ 245:PedalCom.cpp  **** 	{
+ 379               		.loc 1 245 29 is_stmt 0 view .LVU94
+ 380 0160 E091 0000 		lds r30,TxTail
+ 245:PedalCom.cpp  **** 	{
+ 381               		.loc 1 245 37 view .LVU95
+ 382 0164 88E0      		ldi r24,lo8(8)
+ 383 0166 E89F      		mul r30,r24
+ 384 0168 F001      		movw r30,r0
+ 385 016a 1124      		clr __zero_reg__
+ 386 016c E050      		subi r30,lo8(-(TX_CommandQueue))
+ 387 016e F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 388 0170 8681      		ldd r24,Z+6
+ 245:PedalCom.cpp  **** 	{
+ 389               		.loc 1 245 7 view .LVU96
+ 390 0172 8111      		cpse r24,__zero_reg__
+ 391 0174 00C0      		rjmp .L13
+ 392               	.LBB7:
+ 248:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].length);
+ 393               		.loc 1 248 3 is_stmt 1 view .LVU97
+ 248:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].length);
+ 394               		.loc 1 248 18 is_stmt 0 view .LVU98
+ 395 0176 8FE5      		ldi r24,lo8(95)
+ 396 0178 0E94 0000 		call _Z15UART0_QueueCharh
+ 397               	.LVL14:
+ 249:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].command);
+ 398               		.loc 1 249 3 is_stmt 1 view .LVU99
+ 249:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].command);
+ 399               		.loc 1 249 50 is_stmt 0 view .LVU100
+ 400 017c E091 0000 		lds r30,TxTail
+ 249:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].command);
+ 401               		.loc 1 249 58 view .LVU101
+ 402 0180 88E0      		ldi r24,lo8(8)
+ 403 0182 E89F      		mul r30,r24
+ 404 0184 F001      		movw r30,r0
+ 405 0186 1124      		clr __zero_reg__
+ 406 0188 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 407 018a F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 408 018c 8181      		ldd r24,Z+1
+ 249:PedalCom.cpp  **** 		UART0_QueueChar((unsigned char)TX_CommandQueue[TxTail].command);
+ 409               		.loc 1 249 18 view .LVU102
+ 410 018e 0E94 0000 		call _Z15UART0_QueueCharh
+ 411               	.LVL15:
+ 250:PedalCom.cpp  **** 		
+ 412               		.loc 1 250 3 is_stmt 1 view .LVU103
+ 250:PedalCom.cpp  **** 		
+ 413               		.loc 1 250 50 is_stmt 0 view .LVU104
+ 414 0192 E091 0000 		lds r30,TxTail
+ 250:PedalCom.cpp  **** 		
+ 415               		.loc 1 250 58 view .LVU105
+ 416 0196 88E0      		ldi r24,lo8(8)
+ 417 0198 E89F      		mul r30,r24
+ 418 019a F001      		movw r30,r0
+ 419 019c 1124      		clr __zero_reg__
+ 420 019e E050      		subi r30,lo8(-(TX_CommandQueue))
+ 421 01a0 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 422 01a2 8081      		ld r24,Z
+ 250:PedalCom.cpp  **** 		
+ 423               		.loc 1 250 18 view .LVU106
+ 424 01a4 0E94 0000 		call _Z15UART0_QueueCharh
+ 425               	.LVL16:
+ 252:PedalCom.cpp  **** 		{
+ 426               		.loc 1 252 3 is_stmt 1 view .LVU107
+ 427               	.LBB8:
+ 252:PedalCom.cpp  **** 		{
+ 428               		.loc 1 252 16 is_stmt 0 view .LVU108
+ 429 01a8 C0E0      		ldi r28,0
+ 430               	.LVL17:
+ 431               	.L17:
+ 252:PedalCom.cpp  **** 		{
+ 432               		.loc 1 252 25 is_stmt 1 discriminator 3 view .LVU109
+ 252:PedalCom.cpp  **** 		{
+ 433               		.loc 1 252 23 is_stmt 0 discriminator 3 view .LVU110
+ 434 01aa 2C2F      		mov r18,r28
+ 435 01ac 30E0      		ldi r19,0
+ 252:PedalCom.cpp  **** 		{
+ 436               		.loc 1 252 44 discriminator 3 view .LVU111
+ 437 01ae A091 0000 		lds r26,TxTail
+ 252:PedalCom.cpp  **** 		{
+ 438               		.loc 1 252 52 discriminator 3 view .LVU112
+ 439 01b2 88E0      		ldi r24,lo8(8)
+ 440 01b4 A89F      		mul r26,r24
+ 441 01b6 D001      		movw r26,r0
+ 442 01b8 1124      		clr __zero_reg__
+ 443 01ba A050      		subi r26,lo8(-(TX_CommandQueue))
+ 444 01bc B040      		sbci r27,hi8(-(TX_CommandQueue))
+ 445 01be 1196      		adiw r26,1
+ 446 01c0 8C91      		ld r24,X
+ 252:PedalCom.cpp  **** 		{
+ 447               		.loc 1 252 59 discriminator 3 view .LVU113
+ 448 01c2 8450      		subi r24,4
+ 449 01c4 990B      		sbc r25,r25
+ 252:PedalCom.cpp  **** 		{
+ 450               		.loc 1 252 25 discriminator 3 view .LVU114
+ 451 01c6 2817      		cp r18,r24
+ 452 01c8 3907      		cpc r19,r25
+ 453 01ca 04F4      		brge .L16
+ 254:PedalCom.cpp  **** 		}
+ 454               		.loc 1 254 4 is_stmt 1 discriminator 2 view .LVU115
+ 254:PedalCom.cpp  **** 		}
+ 455               		.loc 1 254 51 is_stmt 0 discriminator 2 view .LVU116
+ 456 01cc E091 0000 		lds r30,TxTail
+ 254:PedalCom.cpp  **** 		}
+ 457               		.loc 1 254 65 discriminator 2 view .LVU117
+ 458 01d0 88E0      		ldi r24,lo8(8)
+ 459 01d2 E89F      		mul r30,r24
+ 460 01d4 F001      		movw r30,r0
+ 461 01d6 1124      		clr __zero_reg__
+ 462 01d8 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 463 01da F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 464 01dc E20F      		add r30,r18
+ 465 01de F31F      		adc r31,r19
+ 466 01e0 8281      		ldd r24,Z+2
+ 254:PedalCom.cpp  **** 		}
+ 467               		.loc 1 254 19 discriminator 2 view .LVU118
+ 468 01e2 0E94 0000 		call _Z15UART0_QueueCharh
+ 469               	.LVL18:
+ 252:PedalCom.cpp  **** 		{
+ 470               		.loc 1 252 3 is_stmt 1 discriminator 2 view .LVU119
+ 471 01e6 CF5F      		subi r28,lo8(-(1))
+ 472               	.LVL19:
+ 252:PedalCom.cpp  **** 		{
+ 473               		.loc 1 252 3 is_stmt 0 discriminator 2 view .LVU120
+ 474 01e8 00C0      		rjmp .L17
+ 475               	.LVL20:
+ 476               	.L16:
+ 252:PedalCom.cpp  **** 		{
+ 477               		.loc 1 252 3 discriminator 2 view .LVU121
+ 478               	.LBE8:
+ 257:PedalCom.cpp  **** 		
+ 479               		.loc 1 257 3 is_stmt 1 view .LVU122
+ 257:PedalCom.cpp  **** 		
+ 480               		.loc 1 257 18 is_stmt 0 view .LVU123
+ 481 01ea 8FEE      		ldi r24,lo8(-17)
+ 482 01ec 0E94 0000 		call _Z15UART0_QueueCharh
+ 483               	.LVL21:
+ 260:PedalCom.cpp  **** 		{
+ 484               		.loc 1 260 3 is_stmt 1 view .LVU124
+ 260:PedalCom.cpp  **** 		{
+ 485               		.loc 1 260 30 is_stmt 0 view .LVU125
+ 486 01f0 8091 0000 		lds r24,PedalCom_DelayTXOvfCnt
+ 260:PedalCom.cpp  **** 		{
+ 487               		.loc 1 260 3 view .LVU126
+ 488 01f4 8111      		cpse r24,__zero_reg__
+ 489 01f6 00C0      		rjmp .L18
+ 263:PedalCom.cpp  **** 		}
+ 490               		.loc 1 263 4 is_stmt 1 view .LVU127
+ 263:PedalCom.cpp  **** 		}
+ 491               		.loc 1 263 25 is_stmt 0 view .LVU128
+ 492 01f8 81E0      		ldi r24,lo8(1)
+ 493 01fa 8093 0000 		sts PedalCom_DelayTxFlag,r24
+ 494               	.L18:
+ 266:PedalCom.cpp  **** 		
+ 495               		.loc 1 266 3 is_stmt 1 view .LVU129
+ 266:PedalCom.cpp  **** 		
+ 496               		.loc 1 266 19 is_stmt 0 view .LVU130
+ 497 01fe E091 0000 		lds r30,TxTail
+ 266:PedalCom.cpp  **** 		
+ 498               		.loc 1 266 32 view .LVU131
+ 499 0202 88E0      		ldi r24,lo8(8)
+ 500 0204 E89F      		mul r30,r24
+ 501 0206 F001      		movw r30,r0
+ 502 0208 1124      		clr __zero_reg__
+ 503 020a E050      		subi r30,lo8(-(TX_CommandQueue))
+ 504 020c F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 505 020e 81E0      		ldi r24,lo8(1)
+ 506 0210 8683      		std Z+6,r24
+ 269:PedalCom.cpp  **** 	}
+ 507               		.loc 1 269 3 is_stmt 1 view .LVU132
+ 269:PedalCom.cpp  **** 	}
+ 508               		.loc 1 269 34 is_stmt 0 view .LVU133
+ 509 0212 81E0      		ldi r24,lo8(1)
+ 510 0214 90E0      		ldi r25,0
+ 511 0216 9093 0000 		sts PedalCom_ResponseTimeoutOvfCnt+1,r25
+ 512 021a 8093 0000 		sts PedalCom_ResponseTimeoutOvfCnt,r24
+ 513               	.LBE7:
+ 514               	.LBE6:
+ 515               	.LBE9:
+ 271:PedalCom.cpp  **** 
+ 516               		.loc 1 271 1 view .LVU134
+ 517 021e 00C0      		rjmp .L13
+ 518               		.cfi_endproc
+ 519               	.LFE9:
+ 521               	.global	_Z26PedalCom_PrepareRetransmitv
+ 523               	_Z26PedalCom_PrepareRetransmitv:
+ 524               	.LFB10:
+ 274:PedalCom.cpp  **** 	if (RetransmitCnt < MAX_RETRANSMITS)
+ 525               		.loc 1 274 1 is_stmt 1 view -0
+ 526               		.cfi_startproc
+ 527               	/* prologue: function */
+ 528               	/* frame size = 0 */
+ 529               	/* stack size = 0 */
+ 530               	.L__stack_usage = 0
+ 275:PedalCom.cpp  **** 	{
+ 531               		.loc 1 275 2 view .LVU136
+ 275:PedalCom.cpp  **** 	{
+ 532               		.loc 1 275 20 is_stmt 0 view .LVU137
+ 533 0220 8091 0000 		lds r24,RetransmitCnt
+ 275:PedalCom.cpp  **** 	{
+ 534               		.loc 1 275 2 view .LVU138
+ 535 0224 8530      		cpi r24,lo8(5)
+ 536 0226 00F4      		brsh .L19
+ 537               	.LBB12:
+ 538               	.LBI12:
+ 273:PedalCom.cpp  **** {
+ 539               		.loc 1 273 6 is_stmt 1 view .LVU139
+ 540               	.LBB13:
+ 277:PedalCom.cpp  **** 		
+ 541               		.loc 1 277 3 view .LVU140
+ 277:PedalCom.cpp  **** 		
+ 542               		.loc 1 277 16 is_stmt 0 view .LVU141
+ 543 0228 8091 0000 		lds r24,RetransmitCnt
+ 544 022c 8F5F      		subi r24,lo8(-(1))
+ 545 022e 8093 0000 		sts RetransmitCnt,r24
+ 280:PedalCom.cpp  **** 	}
+ 546               		.loc 1 280 3 is_stmt 1 view .LVU142
+ 280:PedalCom.cpp  **** 	}
+ 547               		.loc 1 280 19 is_stmt 0 view .LVU143
+ 548 0232 E091 0000 		lds r30,TxTail
+ 280:PedalCom.cpp  **** 	}
+ 549               		.loc 1 280 32 view .LVU144
+ 550 0236 88E0      		ldi r24,lo8(8)
+ 551 0238 E89F      		mul r30,r24
+ 552 023a F001      		movw r30,r0
+ 553 023c 1124      		clr __zero_reg__
+ 554 023e E050      		subi r30,lo8(-(TX_CommandQueue))
+ 555 0240 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 556 0242 1682      		std Z+6,__zero_reg__
+ 557               	.L19:
+ 558               	/* epilogue start */
+ 559               	.LBE13:
+ 560               	.LBE12:
+ 282:PedalCom.cpp  **** 
+ 561               		.loc 1 282 1 view .LVU145
+ 562 0244 0895      		ret
+ 563               		.cfi_endproc
+ 564               	.LFE10:
+ 566               	.global	_Z16PedalCom_Receivev
+ 568               	_Z16PedalCom_Receivev:
+ 569               	.LFB6:
+ 105:PedalCom.cpp  **** 	static uint8_t RX_ByteCnt = 0;
+ 570               		.loc 1 105 1 is_stmt 1 view -0
+ 571               		.cfi_startproc
+ 572               	/* prologue: function */
+ 573               	/* frame size = 0 */
+ 574               	/* stack size = 0 */
+ 575               	.L__stack_usage = 0
+ 106:PedalCom.cpp  **** 	
+ 576               		.loc 1 106 2 view .LVU147
+ 110:PedalCom.cpp  **** 	{
+ 577               		.loc 1 110 2 view .LVU148
+ 110:PedalCom.cpp  **** 	{
+ 578               		.loc 1 110 29 is_stmt 0 view .LVU149
+ 579 0246 8091 0000 		lds r24,PedalCom_DelayTXOvfCnt
+ 110:PedalCom.cpp  **** 	{
+ 580               		.loc 1 110 2 view .LVU150
+ 581 024a 8823      		tst r24
+ 582 024c 01F0      		breq .L22
+ 112:PedalCom.cpp  **** 	}
+ 583               		.loc 1 112 3 is_stmt 1 view .LVU151
+ 112:PedalCom.cpp  **** 	}
+ 584               		.loc 1 112 26 is_stmt 0 view .LVU152
+ 585 024e 81E0      		ldi r24,lo8(1)
+ 586 0250 8093 0000 		sts PedalCom_DelayTXOvfCnt,r24
+ 587               	.L22:
+ 116:PedalCom.cpp  **** 	RX_ByteCnt++;
+ 588               		.loc 1 116 2 is_stmt 1 view .LVU153
+ 116:PedalCom.cpp  **** 	RX_ByteCnt++;
+ 589               		.loc 1 116 39 is_stmt 0 view .LVU154
+ 590 0254 0E94 0000 		call _Z13UART0_GetCharv
+ 591               	.LVL22:
+ 592 0258 982F      		mov r25,r24
+ 116:PedalCom.cpp  **** 	RX_ByteCnt++;
+ 593               		.loc 1 116 12 view .LVU155
+ 594 025a 8091 0000 		lds r24,_ZZ16PedalCom_ReceivevE10RX_ByteCnt
+ 595 025e E82F      		mov r30,r24
+ 596 0260 F0E0      		ldi r31,0
+ 116:PedalCom.cpp  **** 	RX_ByteCnt++;
+ 597               		.loc 1 116 24 view .LVU156
+ 598 0262 E050      		subi r30,lo8(-(RX_Buffer))
+ 599 0264 F040      		sbci r31,hi8(-(RX_Buffer))
+ 600 0266 9083      		st Z,r25
+ 117:PedalCom.cpp  **** 	
+ 601               		.loc 1 117 2 is_stmt 1 view .LVU157
+ 117:PedalCom.cpp  **** 	
+ 602               		.loc 1 117 12 is_stmt 0 view .LVU158
+ 603 0268 8F5F      		subi r24,lo8(-(1))
+ 604 026a 8093 0000 		sts _ZZ16PedalCom_ReceivevE10RX_ByteCnt,r24
+ 120:PedalCom.cpp  **** 	{
+ 605               		.loc 1 120 2 is_stmt 1 view .LVU159
+ 606               	.LBB14:
+ 607 026e 8130      		cpi r24,lo8(1)
+ 608 0270 01F4      		brne .L23
+ 122:PedalCom.cpp  **** 		
+ 609               		.loc 1 122 3 view .LVU160
+ 122:PedalCom.cpp  **** 		
+ 610               		.loc 1 122 34 is_stmt 0 view .LVU161
+ 611 0272 1092 0000 		sts PedalCom_ResponseTimeoutOvfCnt+1,__zero_reg__
+ 612 0276 1092 0000 		sts PedalCom_ResponseTimeoutOvfCnt,__zero_reg__
+ 124:PedalCom.cpp  **** 		{
+ 613               		.loc 1 124 3 is_stmt 1 view .LVU162
+ 124:PedalCom.cpp  **** 		{
+ 614               		.loc 1 124 29 is_stmt 0 view .LVU163
+ 615 027a 9091 0000 		lds r25,RX_Buffer
+ 124:PedalCom.cpp  **** 		{
+ 616               		.loc 1 124 3 view .LVU164
+ 617 027e 9F35      		cpi r25,lo8(95)
+ 618 0280 01F4      		brne .L24
+ 126:PedalCom.cpp  **** 		}
+ 619               		.loc 1 126 4 is_stmt 1 view .LVU165
+ 126:PedalCom.cpp  **** 		}
+ 620               		.loc 1 126 36 is_stmt 0 view .LVU166
+ 621 0282 81E0      		ldi r24,lo8(1)
+ 622 0284 90E0      		ldi r25,0
+ 623 0286 9093 0000 		sts PedalCom_FullFrameTimeoutOvfCnt+1,r25
+ 624 028a 8093 0000 		sts PedalCom_FullFrameTimeoutOvfCnt,r24
+ 625 028e 0895      		ret
+ 626               	.L24:
+ 130:PedalCom.cpp  **** 			PedalCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX counter in case a new message is in queue to
+ 627               		.loc 1 130 4 is_stmt 1 view .LVU167
+ 130:PedalCom.cpp  **** 			PedalCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX counter in case a new message is in queue to
+ 628               		.loc 1 130 15 is_stmt 0 view .LVU168
+ 629 0290 1092 0000 		sts _ZZ16PedalCom_ReceivevE10RX_ByteCnt,__zero_reg__
+ 131:PedalCom.cpp  **** 				
+ 630               		.loc 1 131 4 is_stmt 1 view .LVU169
+ 131:PedalCom.cpp  **** 				
+ 631               		.loc 1 131 27 is_stmt 0 view .LVU170
+ 632 0294 8093 0000 		sts PedalCom_DelayTXOvfCnt,r24
+ 133:PedalCom.cpp  **** 			{
+ 633               		.loc 1 133 4 is_stmt 1 view .LVU171
+ 133:PedalCom.cpp  **** 			{
+ 634               		.loc 1 133 30 is_stmt 0 view .LVU172
+ 635 0298 9091 0000 		lds r25,RX_Buffer
+ 133:PedalCom.cpp  **** 			{
+ 636               		.loc 1 133 4 view .LVU173
+ 637 029c 9C3A      		cpi r25,lo8(-84)
+ 638 029e 01F4      		brne .L26
+ 135:PedalCom.cpp  **** 				TX_CommandQueue[TxTail].acked = true;
+ 639               		.loc 1 135 5 is_stmt 1 view .LVU174
+ 135:PedalCom.cpp  **** 				TX_CommandQueue[TxTail].acked = true;
+ 640               		.loc 1 135 19 is_stmt 0 view .LVU175
+ 641 02a0 1092 0000 		sts RetransmitCnt,__zero_reg__
+ 136:PedalCom.cpp  **** 				
+ 642               		.loc 1 136 5 is_stmt 1 view .LVU176
+ 136:PedalCom.cpp  **** 				
+ 643               		.loc 1 136 21 is_stmt 0 view .LVU177
+ 644 02a4 E091 0000 		lds r30,TxTail
+ 136:PedalCom.cpp  **** 				
+ 645               		.loc 1 136 35 view .LVU178
+ 646 02a8 48E0      		ldi r20,lo8(8)
+ 647 02aa E49F      		mul r30,r20
+ 648 02ac F001      		movw r30,r0
+ 649 02ae 1124      		clr __zero_reg__
+ 650 02b0 E050      		subi r30,lo8(-(TX_CommandQueue))
+ 651 02b2 F040      		sbci r31,hi8(-(TX_CommandQueue))
+ 652 02b4 8783      		std Z+7,r24
+ 138:PedalCom.cpp  **** 				{
+ 653               		.loc 1 138 5 is_stmt 1 view .LVU179
+ 138:PedalCom.cpp  **** 				{
+ 654               		.loc 1 138 10 is_stmt 0 view .LVU180
+ 655 02b6 9091 0000 		lds r25,PedalCom_ConnectionOpen
+ 138:PedalCom.cpp  **** 				{
+ 656               		.loc 1 138 5 view .LVU181
+ 657 02ba 9111      		cpse r25,__zero_reg__
+ 658 02bc 00C0      		rjmp .L21
+ 140:PedalCom.cpp  **** 					
+ 659               		.loc 1 140 6 is_stmt 1 view .LVU182
+ 140:PedalCom.cpp  **** 					
+ 660               		.loc 1 140 30 is_stmt 0 view .LVU183
+ 661 02be 8093 0000 		sts PedalCom_ConnectionOpen,r24
+ 143:PedalCom.cpp  **** 				}
+ 662               		.loc 1 143 6 is_stmt 1 view .LVU184
+ 143:PedalCom.cpp  **** 				}
+ 663               		.loc 1 143 18 is_stmt 0 view .LVU185
+ 664 02c2 82E0      		ldi r24,lo8(2)
+ 665 02c4 8093 0000 		sts SystemState,r24
+ 666 02c8 0895      		ret
+ 667               	.L26:
+ 146:PedalCom.cpp  **** 			{
+ 668               		.loc 1 146 9 is_stmt 1 view .LVU186
+ 146:PedalCom.cpp  **** 			{
+ 669               		.loc 1 146 35 is_stmt 0 view .LVU187
+ 670 02ca 8091 0000 		lds r24,RX_Buffer
+ 146:PedalCom.cpp  **** 			{
+ 671               		.loc 1 146 9 view .LVU188
+ 672 02ce 8A32      		cpi r24,lo8(42)
+ 673 02d0 01F0      		breq .+2
+ 674 02d2 00C0      		rjmp .L21
+ 148:PedalCom.cpp  **** 			}
+ 675               		.loc 1 148 5 is_stmt 1 view .LVU189
+ 148:PedalCom.cpp  **** 			}
+ 676               		.loc 1 148 31 is_stmt 0 view .LVU190
+ 677 02d4 0C94 0000 		jmp _Z26PedalCom_PrepareRetransmitv
+ 678               	.LVL23:
+ 679               	.L23:
+ 680               	.LBE14:
+ 152:PedalCom.cpp  **** 	{
+ 681               		.loc 1 152 7 is_stmt 1 view .LVU191
+ 682               	.LBB26:
+ 683               	.LBB15:
+ 154:PedalCom.cpp  **** 	}
+ 684               		.loc 1 154 19 is_stmt 0 view .LVU192
+ 685 02d8 E091 0000 		lds r30,RxHead
+ 152:PedalCom.cpp  **** 	{
+ 686               		.loc 1 152 7 view .LVU193
+ 687 02dc 8230      		cpi r24,lo8(2)
+ 688 02de 01F4      		brne .L29
+ 154:PedalCom.cpp  **** 	}
+ 689               		.loc 1 154 3 is_stmt 1 view .LVU194
+ 154:PedalCom.cpp  **** 	}
+ 690               		.loc 1 154 61 is_stmt 0 view .LVU195
+ 691 02e0 8091 0000 		lds r24,RX_Buffer+1
+ 154:PedalCom.cpp  **** 	}
+ 692               		.loc 1 154 34 view .LVU196
+ 693 02e4 98E0      		ldi r25,lo8(8)
+ 694 02e6 E99F      		mul r30,r25
+ 695 02e8 F001      		movw r30,r0
+ 696 02ea 1124      		clr __zero_reg__
+ 697 02ec E050      		subi r30,lo8(-(RX_CommandQueue))
+ 698 02ee F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 699 02f0 8183      		std Z+1,r24
+ 700 02f2 0895      		ret
+ 701               	.L29:
+ 702               	.LBE15:
+ 703               	.LBE26:
+ 156:PedalCom.cpp  **** 	{
+ 704               		.loc 1 156 7 is_stmt 1 view .LVU197
+ 705               	.LBB27:
+ 706               	.LBB24:
+ 707               	.LBB16:
+ 156:PedalCom.cpp  **** 	{
+ 708               		.loc 1 156 49 is_stmt 0 view .LVU198
+ 709 02f4 48E0      		ldi r20,lo8(8)
+ 710 02f6 E49F      		mul r30,r20
+ 711 02f8 F001      		movw r30,r0
+ 712 02fa 1124      		clr __zero_reg__
+ 713 02fc E050      		subi r30,lo8(-(RX_CommandQueue))
+ 714 02fe F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 715 0300 9181      		ldd r25,Z+1
+ 156:PedalCom.cpp  **** 	{
+ 716               		.loc 1 156 7 view .LVU199
+ 717 0302 8913      		cpse r24,r25
+ 718 0304 00C0      		rjmp .L21
+ 719               	.LBB17:
+ 158:PedalCom.cpp  **** 		
+ 720               		.loc 1 158 3 is_stmt 1 view .LVU200
+ 158:PedalCom.cpp  **** 		
+ 721               		.loc 1 158 35 is_stmt 0 view .LVU201
+ 722 0306 1092 0000 		sts PedalCom_FullFrameTimeoutOvfCnt+1,__zero_reg__
+ 723 030a 1092 0000 		sts PedalCom_FullFrameTimeoutOvfCnt,__zero_reg__
+ 161:PedalCom.cpp  **** 		{
+ 724               		.loc 1 161 3 is_stmt 1 view .LVU202
+ 725               	.LBB18:
+ 161:PedalCom.cpp  **** 		{
+ 726               		.loc 1 161 33 is_stmt 0 view .LVU203
+ 727 030e E091 0000 		lds r30,RxHead
+ 161:PedalCom.cpp  **** 		{
+ 728               		.loc 1 161 41 view .LVU204
+ 729 0312 88E0      		ldi r24,lo8(8)
+ 730 0314 E89F      		mul r30,r24
+ 731 0316 F001      		movw r30,r0
+ 732 0318 1124      		clr __zero_reg__
+ 733 031a E050      		subi r30,lo8(-(RX_CommandQueue))
+ 734 031c F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 735 031e E181      		ldd r30,Z+1
+ 161:PedalCom.cpp  **** 		{
+ 736               		.loc 1 161 48 view .LVU205
+ 737 0320 E150      		subi r30,1
+ 738 0322 FF0B      		sbc r31,r31
+ 161:PedalCom.cpp  **** 		{
+ 739               		.loc 1 161 51 view .LVU206
+ 740 0324 E050      		subi r30,lo8(-(RX_Buffer))
+ 741 0326 F040      		sbci r31,hi8(-(RX_Buffer))
+ 742 0328 8081      		ld r24,Z
+ 161:PedalCom.cpp  **** 		{
+ 743               		.loc 1 161 3 view .LVU207
+ 744 032a 8F3E      		cpi r24,lo8(-17)
+ 745 032c 01F4      		brne .L30
+ 746               	.LBB19:
+ 163:PedalCom.cpp  **** 			
+ 747               		.loc 1 163 4 is_stmt 1 view .LVU208
+ 163:PedalCom.cpp  **** 			
+ 748               		.loc 1 163 20 is_stmt 0 view .LVU209
+ 749 032e E091 0000 		lds r30,RxHead
+ 163:PedalCom.cpp  **** 			
+ 750               		.loc 1 163 65 view .LVU210
+ 751 0332 8091 0000 		lds r24,RX_Buffer+2
+ 163:PedalCom.cpp  **** 			
+ 752               		.loc 1 163 36 view .LVU211
+ 753 0336 98E0      		ldi r25,lo8(8)
+ 754 0338 E99F      		mul r30,r25
+ 755 033a F001      		movw r30,r0
+ 756 033c 1124      		clr __zero_reg__
+ 757 033e E050      		subi r30,lo8(-(RX_CommandQueue))
+ 758 0340 F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 759 0342 8083      		st Z,r24
+ 165:PedalCom.cpp  **** 			{
+ 760               		.loc 1 165 4 is_stmt 1 view .LVU212
+ 761               	.LVL24:
+ 762               	.LBB20:
+ 165:PedalCom.cpp  **** 			{
+ 763               		.loc 1 165 17 is_stmt 0 view .LVU213
+ 764 0344 80E0      		ldi r24,0
+ 765               	.LVL25:
+ 766               	.L32:
+ 165:PedalCom.cpp  **** 			{
+ 767               		.loc 1 165 26 is_stmt 1 discriminator 3 view .LVU214
+ 165:PedalCom.cpp  **** 			{
+ 768               		.loc 1 165 24 is_stmt 0 discriminator 3 view .LVU215
+ 769 0346 282F      		mov r18,r24
+ 770 0348 30E0      		ldi r19,0
+ 165:PedalCom.cpp  **** 			{
+ 771               		.loc 1 165 45 discriminator 3 view .LVU216
+ 772 034a A091 0000 		lds r26,RxHead
+ 165:PedalCom.cpp  **** 			{
+ 773               		.loc 1 165 53 discriminator 3 view .LVU217
+ 774 034e 48E0      		ldi r20,lo8(8)
+ 775 0350 A49F      		mul r26,r20
+ 776 0352 D001      		movw r26,r0
+ 777 0354 1124      		clr __zero_reg__
+ 778 0356 A050      		subi r26,lo8(-(RX_CommandQueue))
+ 779 0358 B040      		sbci r27,hi8(-(RX_CommandQueue))
+ 780 035a 1196      		adiw r26,1
+ 781 035c 4C91      		ld r20,X
+ 165:PedalCom.cpp  **** 			{
+ 782               		.loc 1 165 60 discriminator 3 view .LVU218
+ 783 035e 4450      		subi r20,4
+ 784 0360 550B      		sbc r21,r21
+ 165:PedalCom.cpp  **** 			{
+ 785               		.loc 1 165 26 discriminator 3 view .LVU219
+ 786 0362 2417      		cp r18,r20
+ 787 0364 3507      		cpc r19,r21
+ 788 0366 04F4      		brge .L31
+ 167:PedalCom.cpp  **** 			}
+ 789               		.loc 1 167 5 is_stmt 1 discriminator 2 view .LVU220
+ 167:PedalCom.cpp  **** 			}
+ 790               		.loc 1 167 21 is_stmt 0 discriminator 2 view .LVU221
+ 791 0368 E091 0000 		lds r30,RxHead
+ 167:PedalCom.cpp  **** 			}
+ 792               		.loc 1 167 66 discriminator 2 view .LVU222
+ 793 036c D901      		movw r26,r18
+ 794 036e A050      		subi r26,lo8(-(RX_Buffer+3))
+ 795 0370 B040      		sbci r27,hi8(-(RX_Buffer+3))
+ 796 0372 9C91      		ld r25,X
+ 167:PedalCom.cpp  **** 			}
+ 797               		.loc 1 167 37 discriminator 2 view .LVU223
+ 798 0374 48E0      		ldi r20,lo8(8)
+ 799 0376 E49F      		mul r30,r20
+ 800 0378 F001      		movw r30,r0
+ 801 037a 1124      		clr __zero_reg__
+ 802 037c E050      		subi r30,lo8(-(RX_CommandQueue))
+ 803 037e F040      		sbci r31,hi8(-(RX_CommandQueue))
+ 804 0380 E20F      		add r30,r18
+ 805 0382 F31F      		adc r31,r19
+ 806 0384 9283      		std Z+2,r25
+ 165:PedalCom.cpp  **** 			{
+ 807               		.loc 1 165 4 is_stmt 1 discriminator 2 view .LVU224
+ 808 0386 8F5F      		subi r24,lo8(-(1))
+ 809               	.LVL26:
+ 165:PedalCom.cpp  **** 			{
+ 810               		.loc 1 165 4 is_stmt 0 discriminator 2 view .LVU225
+ 811 0388 00C0      		rjmp .L32
+ 812               	.LVL27:
+ 813               	.L31:
+ 165:PedalCom.cpp  **** 			{
+ 814               		.loc 1 165 4 discriminator 2 view .LVU226
+ 815               	.LBE20:
+ 171:PedalCom.cpp  **** 				
+ 816               		.loc 1 171 4 is_stmt 1 view .LVU227
+ 171:PedalCom.cpp  **** 				
+ 817               		.loc 1 171 35 is_stmt 0 view .LVU228
+ 818 038a 8091 0000 		lds r24,RxHead
+ 171:PedalCom.cpp  **** 				
+ 819               		.loc 1 171 30 view .LVU229
+ 820 038e 8F5F      		subi r24,lo8(-(1))
+ 171:PedalCom.cpp  **** 				
+ 821               		.loc 1 171 37 view .LVU230
+ 822 0390 8370      		andi r24,lo8(3)
+ 823               	.LVL28:
+ 173:PedalCom.cpp  **** 			{
+ 824               		.loc 1 173 4 is_stmt 1 view .LVU231
+ 173:PedalCom.cpp  **** 			{
+ 825               		.loc 1 173 17 is_stmt 0 view .LVU232
+ 826 0392 9091 0000 		lds r25,RxTail
+ 173:PedalCom.cpp  **** 			{
+ 827               		.loc 1 173 4 view .LVU233
+ 828 0396 9813      		cpse r25,r24
+ 180:PedalCom.cpp  **** 			}
+ 829               		.loc 1 180 5 is_stmt 1 view .LVU234
+ 180:PedalCom.cpp  **** 			}
+ 830               		.loc 1 180 12 is_stmt 0 view .LVU235
+ 831 0398 8093 0000 		sts RxHead,r24
+ 832               	.LVL29:
+ 833               	.L33:
+ 180:PedalCom.cpp  **** 			}
+ 834               		.loc 1 180 12 view .LVU236
+ 835               	.LBE19:
+ 836               	.LBE18:
+ 190:PedalCom.cpp  **** 	}	
+ 837               		.loc 1 190 3 is_stmt 1 view .LVU237
+ 190:PedalCom.cpp  **** 	}	
+ 838               		.loc 1 190 14 is_stmt 0 view .LVU238
+ 839 039c 1092 0000 		sts _ZZ16PedalCom_ReceivevE10RX_ByteCnt,__zero_reg__
+ 840               	.L21:
+ 841               	/* epilogue start */
+ 842               	.LBE17:
+ 843               	.LBE16:
+ 844               	.LBE24:
+ 845               	.LBE27:
+ 192:PedalCom.cpp  **** 
+ 846               		.loc 1 192 1 view .LVU239
+ 847 03a0 0895      		ret
+ 848               	.L30:
+ 849               	.LBB28:
+ 850               	.LBB25:
+ 851               	.LBB23:
+ 852               	.LBB22:
+ 853               	.LBB21:
+ 186:PedalCom.cpp  **** 			PedalCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX timer
+ 854               		.loc 1 186 4 is_stmt 1 view .LVU240
+ 186:PedalCom.cpp  **** 			PedalCom_DelayTXOvfCnt = 1;	// Start/reset Delay TX timer
+ 855               		.loc 1 186 19 is_stmt 0 view .LVU241
+ 856 03a2 8AE2      		ldi r24,lo8(42)
+ 857 03a4 0E94 0000 		call _Z15UART0_QueueCharh
+ 858               	.LVL30:
+ 187:PedalCom.cpp  **** 		}
+ 859               		.loc 1 187 4 is_stmt 1 view .LVU242
+ 187:PedalCom.cpp  **** 		}
+ 860               		.loc 1 187 27 is_stmt 0 view .LVU243
+ 861 03a8 81E0      		ldi r24,lo8(1)
+ 862 03aa 8093 0000 		sts PedalCom_DelayTXOvfCnt,r24
+ 863 03ae 00C0      		rjmp .L33
+ 864               	.LBE21:
+ 865               	.LBE22:
+ 866               	.LBE23:
+ 867               	.LBE25:
+ 868               	.LBE28:
+ 869               		.cfi_endproc
+ 870               	.LFE6:
+ 872               	.global	_Z17PedalCom_Transmitv
+ 874               	_Z17PedalCom_Transmitv:
+ 875               	.LFB11:
+ 286:PedalCom.cpp  **** 	/* Activate Transmit */
+ 876               		.loc 1 286 1 is_stmt 1 view -0
+ 877               		.cfi_startproc
+ 878               	/* prologue: function */
+ 879               	/* frame size = 0 */
+ 880               	/* stack size = 0 */
+ 881               	.L__stack_usage = 0
+ 288:PedalCom.cpp  **** 	
+ 882               		.loc 1 288 2 view .LVU245
+ 883               	.LVL31:
+ 884               	.LBB29:
+ 885               	.LBI29:
+ 295:PedalCom.cpp  **** {
+ 886               		.loc 1 295 6 view .LVU246
+ 887               	.LBB30:
+ 297:PedalCom.cpp  **** 	{
+ 888               		.loc 1 297 2 view .LVU247
+ 889 03b0 0E94 0000 		call _Z12Select_RX_TXh.part.0
+ 890               	.LVL32:
+ 297:PedalCom.cpp  **** 	{
+ 891               		.loc 1 297 2 is_stmt 0 view .LVU248
+ 892               	.LBE30:
+ 893               	.LBE29:
+ 291:PedalCom.cpp  **** }
+ 894               		.loc 1 291 2 is_stmt 1 view .LVU249
+ 291:PedalCom.cpp  **** }
+ 895               		.loc 1 291 16 is_stmt 0 view .LVU250
+ 896 03b4 0C94 0000 		jmp _Z14UART0_PutQueuev
+ 897               	.LVL33:
+ 898               		.cfi_endproc
+ 899               	.LFE11:
+ 901               	.global	_Z12Select_RX_TXh
+ 903               	_Z12Select_RX_TXh:
+ 904               	.LVL34:
+ 905               	.LFB12:
+ 296:PedalCom.cpp  **** 	if (dir == DIR_TRANSMIT)
+ 906               		.loc 1 296 1 is_stmt 1 view -0
+ 907               		.cfi_startproc
+ 908               	/* prologue: function */
+ 909               	/* frame size = 0 */
+ 910               	/* stack size = 0 */
+ 911               	.L__stack_usage = 0
+ 297:PedalCom.cpp  **** 	{
+ 912               		.loc 1 297 2 view .LVU252
+ 913 03b8 8111      		cpse r24,__zero_reg__
+ 914 03ba 00C0      		rjmp .L39
+ 915 03bc 0C94 0000 		jmp _Z12Select_RX_TXh.part.0
+ 916               	.LVL35:
+ 917               	.L39:
+ 304:PedalCom.cpp  **** 		SELECT_RX_TX_PORT &= ~(SELECT_TX_MASK);
+ 918               		.loc 1 304 3 view .LVU253
+ 304:PedalCom.cpp  **** 		SELECT_RX_TX_PORT &= ~(SELECT_TX_MASK);
+ 919               		.loc 1 304 21 is_stmt 0 view .LVU254
+ 920 03c0 2B9A      		sbi 0x5,3
+ 305:PedalCom.cpp  **** 	}
+ 921               		.loc 1 305 3 is_stmt 1 view .LVU255
+ 305:PedalCom.cpp  **** 	}
+ 922               		.loc 1 305 21 is_stmt 0 view .LVU256
+ 923 03c2 2C98      		cbi 0x5,4
+ 924               	/* epilogue start */
+ 925               		.loc 1 307 1 view .LVU257
+ 926 03c4 0895      		ret
+ 927               		.cfi_endproc
+ 928               	.LFE12:
+ 930               	.global	_Z13PedalCom_Initv
+ 932               	_Z13PedalCom_Initv:
+ 933               	.LFB2:
+  76:PedalCom.cpp  **** 	/* Set RX/TX Select GPIOs to output */
+ 934               		.loc 1 76 1 is_stmt 1 view -0
+ 935               		.cfi_startproc
+ 936               	/* prologue: function */
+ 937               	/* frame size = 0 */
+ 938               	/* stack size = 0 */
+ 939               	.L__stack_usage = 0
+  78:PedalCom.cpp  **** 	
+ 940               		.loc 1 78 2 view .LVU259
+  78:PedalCom.cpp  **** 	
+ 941               		.loc 1 78 19 is_stmt 0 view .LVU260
+ 942 03c6 84B1      		in r24,0x4
+ 943 03c8 8861      		ori r24,lo8(24)
+ 944 03ca 84B9      		out 0x4,r24
+  81:PedalCom.cpp  **** 	
+ 945               		.loc 1 81 2 is_stmt 1 view .LVU261
+  81:PedalCom.cpp  **** 	
+ 946               		.loc 1 81 14 is_stmt 0 view .LVU262
+ 947 03cc 81E0      		ldi r24,lo8(1)
+ 948 03ce 0E94 0000 		call _Z12Select_RX_TXh
+ 949               	.LVL36:
+  84:PedalCom.cpp  **** }
+ 950               		.loc 1 84 2 is_stmt 1 view .LVU263
+  84:PedalCom.cpp  **** }
+ 951               		.loc 1 84 9 is_stmt 0 view .LVU264
+ 952 03d2 E1EC      		ldi r30,lo8(-63)
+ 953 03d4 F0E0      		ldi r31,0
+ 954 03d6 8081      		ld r24,Z
+ 955 03d8 8064      		ori r24,lo8(64)
+ 956 03da 8083      		st Z,r24
+ 957               	/* epilogue start */
+  85:PedalCom.cpp  **** 
+ 958               		.loc 1 85 1 view .LVU265
+ 959 03dc 0895      		ret
+ 960               		.cfi_endproc
+ 961               	.LFE2:
+ 963               	.global	__vector_22
+ 965               	__vector_22:
+ 966               	.LFB13:
+ 308:PedalCom.cpp  **** 
+ 309:PedalCom.cpp  **** /* TX Complete Interrupt ISR */
+ 310:PedalCom.cpp  **** ISR(USART0_TX_vect)
+ 311:PedalCom.cpp  **** {
+ 967               		.loc 1 311 1 is_stmt 1 view -0
+ 968               		.cfi_startproc
+ 969 03de 1F92      		push r1
+ 970               	.LCFI3:
+ 971               		.cfi_def_cfa_offset 3
+ 972               		.cfi_offset 1, -2
+ 973 03e0 0F92      		push r0
+ 974               	.LCFI4:
+ 975               		.cfi_def_cfa_offset 4
+ 976               		.cfi_offset 0, -3
+ 977 03e2 0FB6      		in r0,__SREG__
+ 978 03e4 0F92      		push r0
+ 979 03e6 1124      		clr __zero_reg__
+ 980 03e8 2F93      		push r18
+ 981               	.LCFI5:
+ 982               		.cfi_def_cfa_offset 5
+ 983               		.cfi_offset 18, -4
+ 984 03ea 3F93      		push r19
+ 985               	.LCFI6:
+ 986               		.cfi_def_cfa_offset 6
+ 987               		.cfi_offset 19, -5
+ 988 03ec 4F93      		push r20
+ 989               	.LCFI7:
+ 990               		.cfi_def_cfa_offset 7
+ 991               		.cfi_offset 20, -6
+ 992 03ee 5F93      		push r21
+ 993               	.LCFI8:
+ 994               		.cfi_def_cfa_offset 8
+ 995               		.cfi_offset 21, -7
+ 996 03f0 6F93      		push r22
+ 997               	.LCFI9:
+ 998               		.cfi_def_cfa_offset 9
+ 999               		.cfi_offset 22, -8
+ 1000 03f2 7F93      		push r23
+ 1001               	.LCFI10:
+ 1002               		.cfi_def_cfa_offset 10
+ 1003               		.cfi_offset 23, -9
+ 1004 03f4 8F93      		push r24
+ 1005               	.LCFI11:
+ 1006               		.cfi_def_cfa_offset 11
+ 1007               		.cfi_offset 24, -10
+ 1008 03f6 9F93      		push r25
+ 1009               	.LCFI12:
+ 1010               		.cfi_def_cfa_offset 12
+ 1011               		.cfi_offset 25, -11
+ 1012 03f8 AF93      		push r26
+ 1013               	.LCFI13:
+ 1014               		.cfi_def_cfa_offset 13
+ 1015               		.cfi_offset 26, -12
+ 1016 03fa BF93      		push r27
+ 1017               	.LCFI14:
+ 1018               		.cfi_def_cfa_offset 14
+ 1019               		.cfi_offset 27, -13
+ 1020 03fc EF93      		push r30
+ 1021               	.LCFI15:
+ 1022               		.cfi_def_cfa_offset 15
+ 1023               		.cfi_offset 30, -14
+ 1024 03fe FF93      		push r31
+ 1025               	.LCFI16:
+ 1026               		.cfi_def_cfa_offset 16
+ 1027               		.cfi_offset 31, -15
+ 1028               	/* prologue: Signal */
+ 1029               	/* frame size = 0 */
+ 1030               	/* stack size = 15 */
+ 1031               	.L__stack_usage = 15
+ 312:PedalCom.cpp  **** 	/* Deactivate Transmit */
+ 313:PedalCom.cpp  **** 	Select_RX_TX(DIR_RECEIVE);
+ 1032               		.loc 1 313 2 view .LVU267
+ 1033               		.loc 1 313 14 is_stmt 0 view .LVU268
+ 1034 0400 81E0      		ldi r24,lo8(1)
+ 1035 0402 0E94 0000 		call _Z12Select_RX_TXh
+ 1036               	.LVL37:
+ 1037               	/* epilogue start */
+ 314:PedalCom.cpp  **** }...
+ 1038               		.loc 1 314 1 view .LVU269
+ 1039 0406 FF91      		pop r31
+ 1040 0408 EF91      		pop r30
+ 1041 040a BF91      		pop r27
+ 1042 040c AF91      		pop r26
+ 1043 040e 9F91      		pop r25
+ 1044 0410 8F91      		pop r24
+ 1045 0412 7F91      		pop r23
+ 1046 0414 6F91      		pop r22
+ 1047 0416 5F91      		pop r21
+ 1048 0418 4F91      		pop r20
+ 1049 041a 3F91      		pop r19
+ 1050 041c 2F91      		pop r18
+ 1051 041e 0F90      		pop r0
+ 1052 0420 0FBE      		out __SREG__,r0
+ 1053 0422 0F90      		pop r0
+ 1054 0424 1F90      		pop r1
+ 1055 0426 1895      		reti
+ 1056               		.cfi_endproc
+ 1057               	.LFE13:
+ 1059               		.local	_ZZ16PedalCom_ReceivevE10RX_ByteCnt
+ 1060               		.comm	_ZZ16PedalCom_ReceivevE10RX_ByteCnt,1,1
+ 1061               	.global	RetransmitCnt
+ 1062               		.section .bss
+ 1065               	RetransmitCnt:
+ 1066 0000 00        		.zero	1
+ 1067               	.global	TxTail
+ 1070               	TxTail:
+ 1071 0001 00        		.zero	1
+ 1072               	.global	TxHead
+ 1075               	TxHead:
+ 1076 0002 00        		.zero	1
+ 1077               	.global	RxTail
+ 1080               	RxTail:
+ 1081 0003 00        		.zero	1
+ 1082               	.global	RxHead
+ 1085               	RxHead:
+ 1086 0004 00        		.zero	1
+ 1087               	.global	TX_CommandQueue
+ 1088               		.data
+ 1091               	TX_CommandQueue:
+ 1092 0000 00        		.byte	0
+ 1093 0001 00        		.byte	0
+ 1094 0002 00        		.string	""
+ 1095 0003 0000 00   		.zero	3
+ 1096 0006 00        		.byte	0
+ 1097 0007 01        		.byte	1
+ 1098 0008 0000 0000 		.zero	56
+ 1098      0000 0000 
+ 1098      0000 0000 
+ 1098      0000 0000 
+ 1098      0000 0000 
+ 1099               	.global	RX_CommandQueue
+ 1100               		.section .bss
+ 1103               	RX_CommandQueue:
+ 1104 0005 0000 0000 		.zero	32
+ 1104      0000 0000 
+ 1104      0000 0000 
+ 1104      0000 0000 
+ 1104      0000 0000 
+ 1105               	.global	RX_Buffer
+ 1108               	RX_Buffer:
+ 1109 0025 0000 0000 		.zero	16
+ 1109      0000 0000 
+ 1109      0000 0000 
+ 1109      0000 0000 
+ 1110               	.global	PedalCom_ConnectionOpen
+ 1111               		.data
+ 1114               	PedalCom_ConnectionOpen:
+ 1115 0040 01        		.byte	1
+ 1116               	.global	PedalCom_HeartbeatFlag
+ 1117               		.section .bss
+ 1120               	PedalCom_HeartbeatFlag:
+ 1121 0035 00        		.zero	1
+ 1122               	.global	PedalCom_HeartbeatOvfCnt
+ 1123               		.data
+ 1126               	PedalCom_HeartbeatOvfCnt:
+ 1127 0041 0100      		.word	1
+ 1128               	.global	PedalCom_FullFrameTimeoutFlag
+ 1129               		.section .bss
+ 1132               	PedalCom_FullFrameTimeoutFlag:
+ 1133 0036 00        		.zero	1
+ 1134               	.global	PedalCom_FullFrameTimeoutOvfCnt
+ 1137               	PedalCom_FullFrameTimeoutOvfCnt:
+ 1138 0037 0000      		.zero	2
+ 1139               	.global	PedalCom_ResponseTimeoutFlag
+ 1142               	PedalCom_ResponseTimeoutFlag:
+ 1143 0039 00        		.zero	1
+ 1144               	.global	PedalCom_ResponseTimeoutOvfCnt
+ 1147               	PedalCom_ResponseTimeoutOvfCnt:
+ 1148 003a 0000      		.zero	2
+ 1149               	.global	PedalCom_DelayTXOvfCnt
+ 1152               	PedalCom_DelayTXOvfCnt:
+ 1153 003c 00        		.zero	1
+ 1154               	.global	PedalCom_DelayTxFlag
+ 1157               	PedalCom_DelayTxFlag:
+ 1158 003d 00        		.zero	1
+ 1159               		.text
+ 1160               	.Letext0:
+ 1161               		.file 2 "/usr/avr/include/stdint.h"
+ 1162               		.file 3 "PedalCom.h"
+ 1163               		.file 4 "MIDI.h"
+ 1164               		.file 5 "System.h"
+ 1165               		.file 6 "UART.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 PedalCom.cpp
+     /tmp/ccK7Y7AW.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccK7Y7AW.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccK7Y7AW.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccK7Y7AW.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccK7Y7AW.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccK7Y7AW.s:11     .text:0000000000000000 _Z12Select_RX_TXh.part.0
+     /tmp/ccK7Y7AW.s:35     .text:0000000000000006 _Z20PedalCom_RxAvailablev
+     /tmp/ccK7Y7AW.s:1085   .bss:0000000000000004 RxHead
+     /tmp/ccK7Y7AW.s:1080   .bss:0000000000000003 RxTail
+     /tmp/ccK7Y7AW.s:60     .text:0000000000000018 _Z20PedalCom_TxAvailablev
+     /tmp/ccK7Y7AW.s:1075   .bss:0000000000000002 TxHead
+     /tmp/ccK7Y7AW.s:1070   .bss:0000000000000001 TxTail
+     /tmp/ccK7Y7AW.s:85     .text:000000000000002a _Z21PedalCom_FlushTxQueuev
+     /tmp/ccK7Y7AW.s:1091   .data:0000000000000000 TX_CommandQueue
+     /tmp/ccK7Y7AW.s:117    .text:0000000000000048 _Z23PedalCom_HandleReceivedv
+     /tmp/ccK7Y7AW.s:1103   .bss:0000000000000005 RX_CommandQueue
+     /tmp/ccK7Y7AW.s:1152   .bss:000000000000003c PedalCom_DelayTXOvfCnt
+     /tmp/ccK7Y7AW.s:184    .text:0000000000000098 _Z21PedalCom_QueueCommand3CMDhPh
+     /tmp/ccK7Y7AW.s:333    .text:0000000000000138 _Z19PedalCom_PutCommandv
+     /tmp/ccK7Y7AW.s:1157   .bss:000000000000003d PedalCom_DelayTxFlag
+     /tmp/ccK7Y7AW.s:1147   .bss:000000000000003a PedalCom_ResponseTimeoutOvfCnt
+     /tmp/ccK7Y7AW.s:523    .text:0000000000000220 _Z26PedalCom_PrepareRetransmitv
+     /tmp/ccK7Y7AW.s:1065   .bss:0000000000000000 RetransmitCnt
+     /tmp/ccK7Y7AW.s:568    .text:0000000000000246 _Z16PedalCom_Receivev
+                             .bss:000000000000003e _ZZ16PedalCom_ReceivevE10RX_ByteCnt
+     /tmp/ccK7Y7AW.s:1108   .bss:0000000000000025 RX_Buffer
+     /tmp/ccK7Y7AW.s:1137   .bss:0000000000000037 PedalCom_FullFrameTimeoutOvfCnt
+     /tmp/ccK7Y7AW.s:1114   .data:0000000000000040 PedalCom_ConnectionOpen
+     /tmp/ccK7Y7AW.s:874    .text:00000000000003b0 _Z17PedalCom_Transmitv
+     /tmp/ccK7Y7AW.s:903    .text:00000000000003b8 _Z12Select_RX_TXh
+     /tmp/ccK7Y7AW.s:932    .text:00000000000003c6 _Z13PedalCom_Initv
+     /tmp/ccK7Y7AW.s:965    .text:00000000000003de __vector_22
+     /tmp/ccK7Y7AW.s:1120   .bss:0000000000000035 PedalCom_HeartbeatFlag
+     /tmp/ccK7Y7AW.s:1126   .data:0000000000000041 PedalCom_HeartbeatOvfCnt
+     /tmp/ccK7Y7AW.s:1132   .bss:0000000000000036 PedalCom_FullFrameTimeoutFlag
+     /tmp/ccK7Y7AW.s:1142   .bss:0000000000000039 PedalCom_ResponseTimeoutFlag
+
+UNDEFINED SYMBOLS
+_Z25System_HandlePedalCommand3CMDhPh
+_Z15UART0_QueueCharh
+_Z13UART0_GetCharv
+SystemState
+_Z14UART0_PutQueuev
+__do_copy_data
+__do_clear_bss

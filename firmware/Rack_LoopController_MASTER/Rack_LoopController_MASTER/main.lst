@@ -1,0 +1,584 @@
+   1               		.file	"main.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.startup,"ax",@progbits
+  11               	.global	main
+  13               	main:
+  14               	.LFB2:
+  15               		.file 1 "main.cpp"
+   1:main.cpp      **** /*
+   2:main.cpp      ****  * Cpp_Test.cpp
+   3:main.cpp      ****  *
+   4:main.cpp      ****  * Created: 19-01-2020 17:20:54
+   5:main.cpp      ****  * Author : Esben
+   6:main.cpp      ****  */ 
+   7:main.cpp      **** 
+   8:main.cpp      **** #define F_CPU 20000000UL
+   9:main.cpp      **** 
+  10:main.cpp      **** /* Includes */
+  11:main.cpp      **** #include <avr/io.h>
+  12:main.cpp      **** #include <avr/interrupt.h>
+  13:main.cpp      **** #include <stdint-gcc.h>
+  14:main.cpp      **** #include "Timer.h"
+  15:main.cpp      **** #include "i2cmaster.h"
+  16:main.cpp      **** #include "UART.h"
+  17:main.cpp      **** #include "RotaryEncoder.h"
+  18:main.cpp      **** #include "SP10281_3x7segment.h"
+  19:main.cpp      **** #include "MCP23017.h"
+  20:main.cpp      **** #include "UI.h"
+  21:main.cpp      **** #include "PedalCom.h"
+  22:main.cpp      **** #include "MIDI.h"
+  23:main.cpp      **** #include "System.h"
+  24:main.cpp      **** 
+  25:main.cpp      **** /* Main application */
+  26:main.cpp      **** int main(void)
+  27:main.cpp      **** {
+  16               		.loc 1 27 1 view -0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+  28:main.cpp      **** 	/* Initialization */
+  29:main.cpp      **** 	Timer0_Init();
+  22               		.loc 1 29 2 view .LVU1
+  23               		.loc 1 29 13 is_stmt 0 view .LVU2
+  24 0000 0E94 0000 		call _Z11Timer0_Initv
+  25               	.LVL0:
+  30:main.cpp      **** 	i2c_init();
+  26               		.loc 1 30 2 is_stmt 1 view .LVU3
+  27               		.loc 1 30 10 is_stmt 0 view .LVU4
+  28 0004 0E94 0000 		call _Z8i2c_initv
+  29               	.LVL1:
+  31:main.cpp      **** 	UART0_Init(PEDAL_UART_BAUDRATE, UART_2_STOP_BITS, UART_NO_PARITY);
+  30               		.loc 1 31 2 is_stmt 1 view .LVU5
+  31               		.loc 1 31 12 is_stmt 0 view .LVU6
+  32 0008 40E0      		ldi r20,0
+  33 000a 62E0      		ldi r22,lo8(2)
+  34 000c 80E0      		ldi r24,0
+  35 000e 9BE4      		ldi r25,lo8(75)
+  36 0010 0E94 0000 		call _Z10UART0_Initjhh
+  37               	.LVL2:
+  32:main.cpp      **** 	UART1_Init(MIDI_UART_BAUDRATE, UART_1_STOP_BIT, UART_NO_PARITY);
+  38               		.loc 1 32 2 is_stmt 1 view .LVU7
+  39               		.loc 1 32 12 is_stmt 0 view .LVU8
+  40 0014 40E0      		ldi r20,0
+  41 0016 61E0      		ldi r22,lo8(1)
+  42 0018 82E1      		ldi r24,lo8(18)
+  43 001a 9AE7      		ldi r25,lo8(122)
+  44 001c 0E94 0000 		call _Z10UART1_Initjhh
+  45               	.LVL3:
+  33:main.cpp      **** 	PedalCom_Init();
+  46               		.loc 1 33 2 is_stmt 1 view .LVU9
+  47               		.loc 1 33 15 is_stmt 0 view .LVU10
+  48 0020 0E94 0000 		call _Z13PedalCom_Initv
+  49               	.LVL4:
+  34:main.cpp      **** 	
+  35:main.cpp      **** 	RotaryEncoder_Init();
+  50               		.loc 1 35 2 is_stmt 1 view .LVU11
+  51               		.loc 1 35 20 is_stmt 0 view .LVU12
+  52 0024 0E94 0000 		call _Z18RotaryEncoder_Initv
+  53               	.LVL5:
+  36:main.cpp      **** 	SP10281_Init();
+  54               		.loc 1 36 2 is_stmt 1 view .LVU13
+  55               		.loc 1 36 14 is_stmt 0 view .LVU14
+  56 0028 0E94 0000 		call _Z12SP10281_Initv
+  57               	.LVL6:
+  37:main.cpp      **** 	UI_Init();
+  58               		.loc 1 37 2 is_stmt 1 view .LVU15
+  59               		.loc 1 37 9 is_stmt 0 view .LVU16
+  60 002c 0E94 0000 		call _Z7UI_Initv
+  61               	.LVL7:
+  38:main.cpp      **** 	
+  39:main.cpp      **** 	/* Global Enable Interrupt */
+  40:main.cpp      **** 	sei();
+  62               		.loc 1 40 2 is_stmt 1 view .LVU17
+  63               	/* #APP */
+  64               	 ;  40 "main.cpp" 1
+  65 0030 7894      		sei
+  66               	 ;  0 "" 2
+  41:main.cpp      **** 	
+  42:main.cpp      **** 	/* Main loop */
+  43:main.cpp      ****     while (1) 
+  44:main.cpp      ****     {
+  45:main.cpp      **** 		/* Handle incoming MIDI */
+  46:main.cpp      **** 		if (UART1_Available())
+  47:main.cpp      **** 		{
+  48:main.cpp      **** 			MIDI_ReceiveIncoming();
+  49:main.cpp      **** 		}
+  50:main.cpp      **** 		
+  51:main.cpp      **** 		if (MIDI_ProgramChangeFlag)
+  52:main.cpp      **** 		{
+  53:main.cpp      **** 			MIDI_ProgramChangeFlag = false;
+  54:main.cpp      **** 			System_HandleMIDIProgramChange();
+  55:main.cpp      **** 		}
+  56:main.cpp      **** 		
+  57:main.cpp      **** 		/* Handle incoming data from Pedal */
+  58:main.cpp      **** 		while (UART0_Available())
+  59:main.cpp      **** 		{
+  60:main.cpp      **** 			PedalCom_Receive();
+  61:main.cpp      **** 		}
+  62:main.cpp      **** 		
+  63:main.cpp      **** 		/* Handle command received from Pedal. (Only once per program loop) */
+  64:main.cpp      **** 		if (PedalCom_RxAvailable())
+  65:main.cpp      **** 		{
+  66:main.cpp      **** 			PedalCom_HandleReceived();
+  67:main.cpp      **** 		}
+  68:main.cpp      **** 		
+  69:main.cpp      **** 		/* Handle TX Command queue */
+  70:main.cpp      **** 		if (PedalCom_TxAvailable())
+  71:main.cpp      **** 		{
+  72:main.cpp      **** 			PedalCom_PutCommand();
+  73:main.cpp      **** 		}
+  74:main.cpp      **** 		
+  75:main.cpp      **** 		/* Transmit data to Pedal */
+  76:main.cpp      **** 		if (PedalCom_DelayTxFlag)
+  77:main.cpp      **** 		{
+  78:main.cpp      **** 			PedalCom_DelayTxFlag = false;
+  79:main.cpp      **** 			
+  80:main.cpp      **** 			if (!UART0_QueueIsEmpty())
+  81:main.cpp      **** 			{
+  82:main.cpp      **** 				PedalCom_Transmit();
+  83:main.cpp      **** 			}
+  84:main.cpp      **** 		}
+  85:main.cpp      **** 		
+  86:main.cpp      **** 		/* Retransmit command if no response was received */
+  87:main.cpp      **** 		if (PedalCom_ResponseTimeoutFlag)
+  88:main.cpp      **** 		{
+  89:main.cpp      **** 			PedalCom_ResponseTimeoutFlag = false;
+  90:main.cpp      **** 			PedalCom_PrepareRetransmit();
+  91:main.cpp      **** 		}
+  92:main.cpp      **** 		
+  93:main.cpp      **** 		/* Send NACK if full command frame was not received before timeout */
+  94:main.cpp      **** 		if (PedalCom_FullFrameTimeoutFlag)
+  95:main.cpp      **** 		{
+  96:main.cpp      **** 			PedalCom_FullFrameTimeoutFlag = false;
+  97:main.cpp      **** 			UART0_QueueChar(NACK_BYTE);
+  98:main.cpp      **** 			PedalCom_DelayTxFlag = true;
+  67               		.loc 1 98 25 is_stmt 0 view .LVU18
+  68               	/* #NOAPP */
+  69 0032 C1E0      		ldi r28,lo8(1)
+  70               	.L20:
+  43:main.cpp      ****     {
+  71               		.loc 1 43 5 is_stmt 1 view .LVU19
+  46:main.cpp      **** 		{
+  72               		.loc 1 46 3 view .LVU20
+  46:main.cpp      **** 		{
+  73               		.loc 1 46 22 is_stmt 0 view .LVU21
+  74 0034 0E94 0000 		call _Z15UART1_Availablev
+  75               	.LVL8:
+  46:main.cpp      **** 		{
+  76               		.loc 1 46 3 view .LVU22
+  77 0038 892B      		or r24,r25
+  78 003a 01F0      		breq .L2
+  48:main.cpp      **** 		}
+  79               		.loc 1 48 4 is_stmt 1 view .LVU23
+  48:main.cpp      **** 		}
+  80               		.loc 1 48 24 is_stmt 0 view .LVU24
+  81 003c 0E94 0000 		call _Z20MIDI_ReceiveIncomingv
+  82               	.LVL9:
+  83               	.L2:
+  51:main.cpp      **** 		{
+  84               		.loc 1 51 3 is_stmt 1 view .LVU25
+  51:main.cpp      **** 		{
+  85               		.loc 1 51 7 is_stmt 0 view .LVU26
+  86 0040 8091 0000 		lds r24,MIDI_ProgramChangeFlag
+  51:main.cpp      **** 		{
+  87               		.loc 1 51 3 view .LVU27
+  88 0044 8823      		tst r24
+  89 0046 01F0      		breq .L5
+  53:main.cpp      **** 			System_HandleMIDIProgramChange();
+  90               		.loc 1 53 4 is_stmt 1 view .LVU28
+  53:main.cpp      **** 			System_HandleMIDIProgramChange();
+  91               		.loc 1 53 27 is_stmt 0 view .LVU29
+  92 0048 1092 0000 		sts MIDI_ProgramChangeFlag,__zero_reg__
+  54:main.cpp      **** 		}
+  93               		.loc 1 54 4 is_stmt 1 view .LVU30
+  54:main.cpp      **** 		}
+  94               		.loc 1 54 34 is_stmt 0 view .LVU31
+  95 004c 0E94 0000 		call _Z30System_HandleMIDIProgramChangev
+  96               	.LVL10:
+  97               	.L5:
+  58:main.cpp      **** 		{
+  98               		.loc 1 58 3 is_stmt 1 view .LVU32
+  58:main.cpp      **** 		{
+  99               		.loc 1 58 25 view .LVU33
+ 100 0050 0E94 0000 		call _Z15UART0_Availablev
+ 101               	.LVL11:
+ 102 0054 892B      		or r24,r25
+ 103 0056 01F0      		breq .L4
+  60:main.cpp      **** 		}
+ 104               		.loc 1 60 4 view .LVU34
+  60:main.cpp      **** 		}
+ 105               		.loc 1 60 20 is_stmt 0 view .LVU35
+ 106 0058 0E94 0000 		call _Z16PedalCom_Receivev
+ 107               	.LVL12:
+  58:main.cpp      **** 		{
+ 108               		.loc 1 58 3 view .LVU36
+ 109 005c 00C0      		rjmp .L5
+ 110               	.L4:
+  64:main.cpp      **** 		{
+ 111               		.loc 1 64 3 is_stmt 1 view .LVU37
+  64:main.cpp      **** 		{
+ 112               		.loc 1 64 27 is_stmt 0 view .LVU38
+ 113 005e 0E94 0000 		call _Z20PedalCom_RxAvailablev
+ 114               	.LVL13:
+  64:main.cpp      **** 		{
+ 115               		.loc 1 64 3 view .LVU39
+ 116 0062 8111      		cpse r24,__zero_reg__
+  66:main.cpp      **** 		}
+ 117               		.loc 1 66 4 is_stmt 1 view .LVU40
+  66:main.cpp      **** 		}
+ 118               		.loc 1 66 27 is_stmt 0 view .LVU41
+ 119 0064 0E94 0000 		call _Z23PedalCom_HandleReceivedv
+ 120               	.LVL14:
+ 121               	.L6:
+  70:main.cpp      **** 		{
+ 122               		.loc 1 70 3 is_stmt 1 view .LVU42
+  70:main.cpp      **** 		{
+ 123               		.loc 1 70 27 is_stmt 0 view .LVU43
+ 124 0068 0E94 0000 		call _Z20PedalCom_TxAvailablev
+ 125               	.LVL15:
+  70:main.cpp      **** 		{
+ 126               		.loc 1 70 3 view .LVU44
+ 127 006c 8111      		cpse r24,__zero_reg__
+  72:main.cpp      **** 		}
+ 128               		.loc 1 72 4 is_stmt 1 view .LVU45
+  72:main.cpp      **** 		}
+ 129               		.loc 1 72 23 is_stmt 0 view .LVU46
+ 130 006e 0E94 0000 		call _Z19PedalCom_PutCommandv
+ 131               	.LVL16:
+ 132               	.L7:
+  76:main.cpp      **** 		{
+ 133               		.loc 1 76 3 is_stmt 1 view .LVU47
+  76:main.cpp      **** 		{
+ 134               		.loc 1 76 7 is_stmt 0 view .LVU48
+ 135 0072 8091 0000 		lds r24,PedalCom_DelayTxFlag
+  76:main.cpp      **** 		{
+ 136               		.loc 1 76 3 view .LVU49
+ 137 0076 8823      		tst r24
+ 138 0078 01F0      		breq .L9
+  78:main.cpp      **** 			
+ 139               		.loc 1 78 4 is_stmt 1 view .LVU50
+  78:main.cpp      **** 			
+ 140               		.loc 1 78 25 is_stmt 0 view .LVU51
+ 141 007a 1092 0000 		sts PedalCom_DelayTxFlag,__zero_reg__
+  80:main.cpp      **** 			{
+ 142               		.loc 1 80 4 is_stmt 1 view .LVU52
+  80:main.cpp      **** 			{
+ 143               		.loc 1 80 27 is_stmt 0 view .LVU53
+ 144 007e 0E94 0000 		call _Z18UART0_QueueIsEmptyv
+ 145               	.LVL17:
+  80:main.cpp      **** 			{
+ 146               		.loc 1 80 4 view .LVU54
+ 147 0082 8111      		cpse r24,__zero_reg__
+ 148 0084 00C0      		rjmp .L9
+  82:main.cpp      **** 			}
+ 149               		.loc 1 82 5 is_stmt 1 view .LVU55
+  82:main.cpp      **** 			}
+ 150               		.loc 1 82 22 is_stmt 0 view .LVU56
+ 151 0086 0E94 0000 		call _Z17PedalCom_Transmitv
+ 152               	.LVL18:
+ 153               	.L9:
+  87:main.cpp      **** 		{
+ 154               		.loc 1 87 3 is_stmt 1 view .LVU57
+  87:main.cpp      **** 		{
+ 155               		.loc 1 87 7 is_stmt 0 view .LVU58
+ 156 008a 8091 0000 		lds r24,PedalCom_ResponseTimeoutFlag
+  87:main.cpp      **** 		{
+ 157               		.loc 1 87 3 view .LVU59
+ 158 008e 8823      		tst r24
+ 159 0090 01F0      		breq .L11
+  89:main.cpp      **** 			PedalCom_PrepareRetransmit();
+ 160               		.loc 1 89 4 is_stmt 1 view .LVU60
+  89:main.cpp      **** 			PedalCom_PrepareRetransmit();
+ 161               		.loc 1 89 33 is_stmt 0 view .LVU61
+ 162 0092 1092 0000 		sts PedalCom_ResponseTimeoutFlag,__zero_reg__
+  90:main.cpp      **** 		}
+ 163               		.loc 1 90 4 is_stmt 1 view .LVU62
+  90:main.cpp      **** 		}
+ 164               		.loc 1 90 30 is_stmt 0 view .LVU63
+ 165 0096 0E94 0000 		call _Z26PedalCom_PrepareRetransmitv
+ 166               	.LVL19:
+ 167               	.L11:
+  94:main.cpp      **** 		{
+ 168               		.loc 1 94 3 is_stmt 1 view .LVU64
+  94:main.cpp      **** 		{
+ 169               		.loc 1 94 7 is_stmt 0 view .LVU65
+ 170 009a 8091 0000 		lds r24,PedalCom_FullFrameTimeoutFlag
+  94:main.cpp      **** 		{
+ 171               		.loc 1 94 3 view .LVU66
+ 172 009e 8823      		tst r24
+ 173 00a0 01F0      		breq .L12
+  96:main.cpp      **** 			UART0_QueueChar(NACK_BYTE);
+ 174               		.loc 1 96 4 is_stmt 1 view .LVU67
+  96:main.cpp      **** 			UART0_QueueChar(NACK_BYTE);
+ 175               		.loc 1 96 34 is_stmt 0 view .LVU68
+ 176 00a2 1092 0000 		sts PedalCom_FullFrameTimeoutFlag,__zero_reg__
+  97:main.cpp      **** 			PedalCom_DelayTxFlag = true;
+ 177               		.loc 1 97 4 is_stmt 1 view .LVU69
+  97:main.cpp      **** 			PedalCom_DelayTxFlag = true;
+ 178               		.loc 1 97 19 is_stmt 0 view .LVU70
+ 179 00a6 8AE2      		ldi r24,lo8(42)
+ 180 00a8 0E94 0000 		call _Z15UART0_QueueCharh
+ 181               	.LVL20:
+ 182               		.loc 1 98 4 is_stmt 1 view .LVU71
+ 183               		.loc 1 98 25 is_stmt 0 view .LVU72
+ 184 00ac C093 0000 		sts PedalCom_DelayTxFlag,r28
+ 185               	.L12:
+  99:main.cpp      **** 		}
+ 100:main.cpp      **** 		
+ 101:main.cpp      **** 		/* Send current System State to Pedal (Heartbeat) */
+ 102:main.cpp      **** 		if (PedalCom_HeartbeatFlag)
+ 186               		.loc 1 102 3 is_stmt 1 view .LVU73
+ 187               		.loc 1 102 7 is_stmt 0 view .LVU74
+ 188 00b0 8091 0000 		lds r24,PedalCom_HeartbeatFlag
+ 189               		.loc 1 102 3 view .LVU75
+ 190 00b4 8823      		tst r24
+ 191 00b6 01F0      		breq .L13
+ 103:main.cpp      **** 		{
+ 104:main.cpp      **** 			PedalCom_HeartbeatFlag = false;
+ 192               		.loc 1 104 4 is_stmt 1 view .LVU76
+ 193               		.loc 1 104 27 is_stmt 0 view .LVU77
+ 194 00b8 1092 0000 		sts PedalCom_HeartbeatFlag,__zero_reg__
+ 105:main.cpp      **** 			
+ 106:main.cpp      **** 			/* If last command did not get an ACK */
+ 107:main.cpp      **** 			if (PedalCom_TxAvailable())
+ 195               		.loc 1 107 4 is_stmt 1 view .LVU78
+ 196               		.loc 1 107 28 is_stmt 0 view .LVU79
+ 197 00bc 0E94 0000 		call _Z20PedalCom_TxAvailablev
+ 198               	.LVL21:
+ 199               		.loc 1 107 4 view .LVU80
+ 200 00c0 8823      		tst r24
+ 201 00c2 01F0      		breq .L14
+ 108:main.cpp      **** 			{
+ 109:main.cpp      **** 				PedalCom_ConnectionOpen = false;
+ 202               		.loc 1 109 5 is_stmt 1 view .LVU81
+ 203               		.loc 1 109 29 is_stmt 0 view .LVU82
+ 204 00c4 1092 0000 		sts PedalCom_ConnectionOpen,__zero_reg__
+ 110:main.cpp      **** 				PedalCom_FlushTxQueue();
+ 205               		.loc 1 110 5 is_stmt 1 view .LVU83
+ 206               		.loc 1 110 26 is_stmt 0 view .LVU84
+ 207 00c8 0E94 0000 		call _Z21PedalCom_FlushTxQueuev
+ 208               	.LVL22:
+ 209               	.L13:
+ 111:main.cpp      **** 			}
+ 112:main.cpp      **** 			else
+ 113:main.cpp      **** 			{
+ 114:main.cpp      **** 				PedalCom_QueueCommand(UpdateSystemState, 1, (uint8_t *)&SystemState);
+ 115:main.cpp      **** 			}
+ 116:main.cpp      **** 		}
+ 117:main.cpp      **** 		
+ 118:main.cpp      **** 		/* Service 7-segment display */
+ 119:main.cpp      **** 		if (SP10281_OvfFlag)
+ 210               		.loc 1 119 3 is_stmt 1 view .LVU85
+ 211               		.loc 1 119 7 is_stmt 0 view .LVU86
+ 212 00cc 8091 0000 		lds r24,SP10281_OvfFlag
+ 213               		.loc 1 119 3 view .LVU87
+ 214 00d0 8823      		tst r24
+ 215 00d2 01F0      		breq .L15
+ 120:main.cpp      **** 		{
+ 121:main.cpp      **** 			SP10281_OvfFlag = false;
+ 216               		.loc 1 121 4 is_stmt 1 view .LVU88
+ 217               		.loc 1 121 20 is_stmt 0 view .LVU89
+ 218 00d4 1092 0000 		sts SP10281_OvfFlag,__zero_reg__
+ 122:main.cpp      **** 			SP10281_Update();
+ 219               		.loc 1 122 4 is_stmt 1 view .LVU90
+ 220               		.loc 1 122 18 is_stmt 0 view .LVU91
+ 221 00d8 0E94 0000 		call _Z14SP10281_Updatev
+ 222               	.LVL23:
+ 223               	.L15:
+ 123:main.cpp      **** 		}
+ 124:main.cpp      **** 		
+ 125:main.cpp      **** 		/* Blink UI LEDs */
+ 126:main.cpp      **** 		if (MCP_Output::AutoToggle_Flag)
+ 224               		.loc 1 126 3 is_stmt 1 view .LVU92
+ 225               		.loc 1 126 19 is_stmt 0 view .LVU93
+ 226 00dc 8091 0000 		lds r24,_ZN10MCP_Output15AutoToggle_FlagE
+ 227               		.loc 1 126 3 view .LVU94
+ 228 00e0 8823      		tst r24
+ 229 00e2 01F0      		breq .L16
+ 127:main.cpp      **** 		{
+ 128:main.cpp      **** 			MCP_Output::AutoToggle_Flag = 0;
+ 230               		.loc 1 128 4 is_stmt 1 view .LVU95
+ 231               		.loc 1 128 32 is_stmt 0 view .LVU96
+ 232 00e4 1092 0000 		sts _ZN10MCP_Output15AutoToggle_FlagE,__zero_reg__
+ 129:main.cpp      **** 			MCP_Output::PerformAutoToggle(MCP23017_UI_LEDS_ADDR);
+ 233               		.loc 1 129 4 is_stmt 1 view .LVU97
+ 234               		.loc 1 129 33 is_stmt 0 view .LVU98
+ 235 00e8 80E0      		ldi r24,0
+ 236 00ea 0E94 0000 		call _ZN10MCP_Output17PerformAutoToggleEh
+ 237               	.LVL24:
+ 238               	.L16:
+ 130:main.cpp      **** 		}
+ 131:main.cpp      **** 		
+ 132:main.cpp      **** 		/* Handle input from rotary encoder */
+ 133:main.cpp      **** 		if (RotEnc_State != IDLE && RotEnc_State != PRESSED)
+ 239               		.loc 1 133 3 is_stmt 1 view .LVU99
+ 240               		.loc 1 133 20 is_stmt 0 view .LVU100
+ 241 00ee 8091 0000 		lds r24,RotEnc_State
+ 242               		.loc 1 133 28 view .LVU101
+ 243 00f2 8823      		tst r24
+ 244 00f4 01F0      		breq .L17
+ 245               		.loc 1 133 44 discriminator 1 view .LVU102
+ 246 00f6 8091 0000 		lds r24,RotEnc_State
+ 247               		.loc 1 133 28 discriminator 1 view .LVU103
+ 248 00fa 8430      		cpi r24,lo8(4)
+ 249 00fc 01F0      		breq .L17
+ 134:main.cpp      **** 		{
+ 135:main.cpp      **** 			System_HandleRotaryEncoderInput();
+ 250               		.loc 1 135 4 is_stmt 1 view .LVU104
+ 251               		.loc 1 135 35 is_stmt 0 view .LVU105
+ 252 00fe 0E94 0000 		call _Z31System_HandleRotaryEncoderInputv
+ 253               	.LVL25:
+ 136:main.cpp      **** 			
+ 137:main.cpp      **** 			RotEnc_State = IDLE;
+ 254               		.loc 1 137 4 is_stmt 1 view .LVU106
+ 255               		.loc 1 137 17 is_stmt 0 view .LVU107
+ 256 0102 1092 0000 		sts RotEnc_State,__zero_reg__
+ 138:main.cpp      **** 			RotaryEncoder_EnableInterrupt();
+ 257               		.loc 1 138 4 is_stmt 1 view .LVU108
+ 258               		.loc 1 138 33 is_stmt 0 view .LVU109
+ 259 0106 0E94 0000 		call _Z29RotaryEncoder_EnableInterruptv
+ 260               	.LVL26:
+ 261               	.L17:
+ 139:main.cpp      **** 		}
+ 140:main.cpp      **** 		
+ 141:main.cpp      **** 		/* Handle temp select timeout condition */
+ 142:main.cpp      **** 		if (System_TempSelectFlag)
+ 262               		.loc 1 142 3 is_stmt 1 view .LVU110
+ 263               		.loc 1 142 7 is_stmt 0 view .LVU111
+ 264 010a 8091 0000 		lds r24,System_TempSelectFlag
+ 265               		.loc 1 142 3 view .LVU112
+ 266 010e 8823      		tst r24
+ 267 0110 01F0      		breq .L18
+ 143:main.cpp      **** 		{
+ 144:main.cpp      **** 			System_TempSelectFlag = false;
+ 268               		.loc 1 144 4 is_stmt 1 view .LVU113
+ 269               		.loc 1 144 26 is_stmt 0 view .LVU114
+ 270 0112 1092 0000 		sts System_TempSelectFlag,__zero_reg__
+ 145:main.cpp      **** 			System_HandleTempSelectTimeout();
+ 271               		.loc 1 145 4 is_stmt 1 view .LVU115
+ 272               		.loc 1 145 34 is_stmt 0 view .LVU116
+ 273 0116 0E94 0000 		call _Z30System_HandleTempSelectTimeoutv
+ 274               	.LVL27:
+ 275               	.L18:
+ 146:main.cpp      **** 		}
+ 147:main.cpp      **** 		
+ 148:main.cpp      **** 		/* Reset UI LEDs after selection mark */
+ 149:main.cpp      **** 		if (System_MarkSelectionFlag)
+ 276               		.loc 1 149 3 is_stmt 1 view .LVU117
+ 277               		.loc 1 149 7 is_stmt 0 view .LVU118
+ 278 011a 8091 0000 		lds r24,System_MarkSelectionFlag
+ 279               		.loc 1 149 3 view .LVU119
+ 280 011e 8823      		tst r24
+ 281 0120 01F0      		breq .L19
+ 150:main.cpp      **** 		{
+ 151:main.cpp      **** 			System_MarkSelectionFlag = false;
+ 282               		.loc 1 151 4 is_stmt 1 view .LVU120
+ 283               		.loc 1 151 29 is_stmt 0 view .LVU121
+ 284 0122 1092 0000 		sts System_MarkSelectionFlag,__zero_reg__
+ 152:main.cpp      **** 			System_HandleMarkSelection();
+ 285               		.loc 1 152 4 is_stmt 1 view .LVU122
+ 286               		.loc 1 152 30 is_stmt 0 view .LVU123
+ 287 0126 0E94 0000 		call _Z26System_HandleMarkSelectionv
+ 288               	.LVL28:
+ 289               	.L19:
+ 153:main.cpp      **** 		}
+ 154:main.cpp      **** 		
+ 155:main.cpp      **** 		/* The grand state machine */
+ 156:main.cpp      **** 		System_Run();
+ 290               		.loc 1 156 3 is_stmt 1 view .LVU124
+ 291               		.loc 1 156 13 is_stmt 0 view .LVU125
+ 292 012a 0E94 0000 		call _Z10System_Runv
+ 293               	.LVL29:
+  43:main.cpp      ****     {
+ 294               		.loc 1 43 5 is_stmt 1 view .LVU126
+  46:main.cpp      **** 		{
+ 295               		.loc 1 46 3 is_stmt 0 view .LVU127
+ 296 012e 00C0      		rjmp .L20
+ 297               	.L14:
+ 114:main.cpp      **** 			}
+ 298               		.loc 1 114 5 is_stmt 1 view .LVU128
+ 114:main.cpp      **** 			}
+ 299               		.loc 1 114 26 is_stmt 0 view .LVU129
+ 300 0130 40E0      		ldi r20,lo8(SystemState)
+ 301 0132 50E0      		ldi r21,hi8(SystemState)
+ 302 0134 61E0      		ldi r22,lo8(1)
+ 303 0136 85ED      		ldi r24,lo8(-43)
+ 304 0138 0E94 0000 		call _Z21PedalCom_QueueCommand3CMDhPh
+ 305               	.LVL30:
+ 306 013c 00C0      		rjmp .L13
+ 307               		.cfi_endproc
+ 308               	.LFE2:
+ 310               		.text
+ 311               	.Letext0:
+ 312               		.file 2 "/usr/avr/include/stdint.h"
+ 313               		.file 3 "RotaryEncoder.h"
+ 314               		.file 4 "SP10281_3x7segment.h"
+ 315               		.file 5 "MCP23017.h"
+ 316               		.file 6 "PedalCom.h"
+ 317               		.file 7 "MIDI.h"
+ 318               		.file 8 "System.h"
+ 319               		.file 9 "Timer.h"
+ 320               		.file 10 "i2cmaster.h"
+ 321               		.file 11 "UART.h"
+ 322               		.file 12 "UI.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 main.cpp
+     /tmp/ccZYECV1.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccZYECV1.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccZYECV1.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccZYECV1.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccZYECV1.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccZYECV1.s:13     .text.startup:0000000000000000 main
+
+UNDEFINED SYMBOLS
+_Z11Timer0_Initv
+_Z8i2c_initv
+_Z10UART0_Initjhh
+_Z10UART1_Initjhh
+_Z13PedalCom_Initv
+_Z18RotaryEncoder_Initv
+_Z12SP10281_Initv
+_Z7UI_Initv
+_Z15UART1_Availablev
+_Z20MIDI_ReceiveIncomingv
+MIDI_ProgramChangeFlag
+_Z30System_HandleMIDIProgramChangev
+_Z15UART0_Availablev
+_Z16PedalCom_Receivev
+_Z20PedalCom_RxAvailablev
+_Z23PedalCom_HandleReceivedv
+_Z20PedalCom_TxAvailablev
+_Z19PedalCom_PutCommandv
+PedalCom_DelayTxFlag
+_Z18UART0_QueueIsEmptyv
+_Z17PedalCom_Transmitv
+PedalCom_ResponseTimeoutFlag
+_Z26PedalCom_PrepareRetransmitv
+PedalCom_FullFrameTimeoutFlag
+_Z15UART0_QueueCharh
+PedalCom_HeartbeatFlag
+PedalCom_ConnectionOpen
+_Z21PedalCom_FlushTxQueuev
+SP10281_OvfFlag
+_Z14SP10281_Updatev
+_ZN10MCP_Output15AutoToggle_FlagE
+_ZN10MCP_Output17PerformAutoToggleEh
+RotEnc_State
+_Z31System_HandleRotaryEncoderInputv
+_Z29RotaryEncoder_EnableInterruptv
+System_TempSelectFlag
+_Z30System_HandleTempSelectTimeoutv
+System_MarkSelectionFlag
+_Z26System_HandleMarkSelectionv
+_Z10System_Runv
+SystemState
+_Z21PedalCom_QueueCommand3CMDhPh

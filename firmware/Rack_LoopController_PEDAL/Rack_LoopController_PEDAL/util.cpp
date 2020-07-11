@@ -5,7 +5,7 @@
  *  Author: Esben
  */ 
 
-#include "Util.h"
+#include "util.h"
 
 uint8_t Util_ReverseByte(uint8_t b)
 {

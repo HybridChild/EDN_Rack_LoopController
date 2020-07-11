@@ -1,0 +1,300 @@
+   1               		.file	"RotaryEncoder.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z18RotaryEncoder_Initv
+  12               	_Z18RotaryEncoder_Initv:
+  13               	.LFB0:
+  14               		.file 1 "RotaryEncoder.cpp"
+   1:RotaryEncoder.cpp **** /*
+   2:RotaryEncoder.cpp ****  * CPPFile1.cpp
+   3:RotaryEncoder.cpp ****  *
+   4:RotaryEncoder.cpp ****  * Created: 26-01-2020 20:31:31
+   5:RotaryEncoder.cpp ****  *  Author: Esben
+   6:RotaryEncoder.cpp ****  */ 
+   7:RotaryEncoder.cpp **** 
+   8:RotaryEncoder.cpp **** #include <avr/io.h>
+   9:RotaryEncoder.cpp **** #include <avr/interrupt.h>
+  10:RotaryEncoder.cpp **** #include "RotaryEncoder.h"
+  11:RotaryEncoder.cpp **** 
+  12:RotaryEncoder.cpp **** volatile unsigned short RotaryEncoder_OvfCnt = 0;
+  13:RotaryEncoder.cpp **** volatile enum RotaryEncoder_State RotEnc_State = IDLE;
+  14:RotaryEncoder.cpp **** 
+  15:RotaryEncoder.cpp **** void RotaryEncoder_Init()
+  16:RotaryEncoder.cpp **** {
+  15               		.loc 1 16 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  17:RotaryEncoder.cpp **** 	/* Setup input GPIO pins */
+  18:RotaryEncoder.cpp **** 	GPIO_ROT_ENC_DDR &= ~(GPIO_ROT_ENC_PRESS_MASK | GPIO_ROT_ENC_INDICATOR_MASK | GPIO_ROT_ENC_TRIGGER
+  21               		.loc 1 18 2 view .LVU1
+  22               		.loc 1 18 19 is_stmt 0 view .LVU2
+  23 0000 84B1      		in r24,0x4
+  24 0002 887F      		andi r24,lo8(-8)
+  25 0004 84B9      		out 0x4,r24
+  19:RotaryEncoder.cpp **** 	
+  20:RotaryEncoder.cpp **** 	/* Setup Pin Change interrupt */
+  21:RotaryEncoder.cpp **** 	PCMSK1 |= (1 << PCINT8_BIT);	// Enable Pin Change interrupt for Pin 1 (PCINT8)
+  26               		.loc 1 21 2 is_stmt 1 view .LVU3
+  27               		.loc 1 21 9 is_stmt 0 view .LVU4
+  28 0006 ECE6      		ldi r30,lo8(108)
+  29 0008 F0E0      		ldi r31,0
+  30 000a 8081      		ld r24,Z
+  31 000c 8160      		ori r24,lo8(1)
+  32 000e 8083      		st Z,r24
+  22:RotaryEncoder.cpp **** 	PCICR |= (1 << PCIE1);			// Enable Pin Change interrupt PCINT[15:8]
+  33               		.loc 1 22 2 is_stmt 1 view .LVU5
+  34               		.loc 1 22 8 is_stmt 0 view .LVU6
+  35 0010 E8E6      		ldi r30,lo8(104)
+  36 0012 F0E0      		ldi r31,0
+  37 0014 8081      		ld r24,Z
+  38 0016 8260      		ori r24,lo8(2)
+  39 0018 8083      		st Z,r24
+  23:RotaryEncoder.cpp **** 	
+  24:RotaryEncoder.cpp **** 	/* Setup Interrupt Sense (INT2) */
+  25:RotaryEncoder.cpp **** 	EICRA |= ((1 << ISC21) | (1 << ISC20));		// Rising edge trigger for INT2
+  40               		.loc 1 25 2 is_stmt 1 view .LVU7
+  41               		.loc 1 25 8 is_stmt 0 view .LVU8
+  42 001a E9E6      		ldi r30,lo8(105)
+  43 001c F0E0      		ldi r31,0
+  44 001e 8081      		ld r24,Z
+  45 0020 8063      		ori r24,lo8(48)
+  46 0022 8083      		st Z,r24
+  26:RotaryEncoder.cpp **** 	EIMSK |= (1 << INT2);						// Enable External Interrupt Request (INT2)
+  47               		.loc 1 26 2 is_stmt 1 view .LVU9
+  48               		.loc 1 26 8 is_stmt 0 view .LVU10
+  49 0024 EA9A      		sbi 0x1d,2
+  50               	/* epilogue start */
+  27:RotaryEncoder.cpp **** }
+  51               		.loc 1 27 1 view .LVU11
+  52 0026 0895      		ret
+  53               		.cfi_endproc
+  54               	.LFE0:
+  56               	.global	_Z23RotaryEncoder_IsPressedv
+  58               	_Z23RotaryEncoder_IsPressedv:
+  59               	.LFB1:
+  28:RotaryEncoder.cpp **** 
+  29:RotaryEncoder.cpp **** bool RotaryEncoder_IsPressed()
+  30:RotaryEncoder.cpp **** {
+  60               		.loc 1 30 1 is_stmt 1 view -0
+  61               		.cfi_startproc
+  62               	/* prologue: function */
+  63               	/* frame size = 0 */
+  64               	/* stack size = 0 */
+  65               	.L__stack_usage = 0
+  31:RotaryEncoder.cpp **** 	return GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK;
+  66               		.loc 1 31 2 view .LVU13
+  67               		.loc 1 31 9 is_stmt 0 view .LVU14
+  68 0028 83B1      		in r24,0x3
+  32:RotaryEncoder.cpp **** }
+  69               		.loc 1 32 1 view .LVU15
+  70 002a 82FB      		bst r24,2
+  71 002c 8827      		clr r24
+  72 002e 80F9      		bld r24,0
+  73               	/* epilogue start */
+  74 0030 0895      		ret
+  75               		.cfi_endproc
+  76               	.LFE1:
+  78               	.global	_Z29RotaryEncoder_EnableInterruptv
+  80               	_Z29RotaryEncoder_EnableInterruptv:
+  81               	.LFB2:
+  33:RotaryEncoder.cpp **** 
+  34:RotaryEncoder.cpp **** void RotaryEncoder_EnableInterrupt()
+  35:RotaryEncoder.cpp **** {
+  82               		.loc 1 35 1 is_stmt 1 view -0
+  83               		.cfi_startproc
+  84               	/* prologue: function */
+  85               	/* frame size = 0 */
+  86               	/* stack size = 0 */
+  87               	.L__stack_usage = 0
+  36:RotaryEncoder.cpp **** 	/* Clear and reenable interrupt */
+  37:RotaryEncoder.cpp **** 	EIFR |= (1 << INTF2);		// Clear External interrupt (INT2) Flag
+  88               		.loc 1 37 2 view .LVU17
+  89               		.loc 1 37 7 is_stmt 0 view .LVU18
+  90 0032 E29A      		sbi 0x1c,2
+  38:RotaryEncoder.cpp **** 	PCIFR |= (1 << PCIF1);		// Clear Pin Change interrupt Flag
+  91               		.loc 1 38 2 is_stmt 1 view .LVU19
+  92               		.loc 1 38 8 is_stmt 0 view .LVU20
+  93 0034 D99A      		sbi 0x1b,1
+  39:RotaryEncoder.cpp **** 	EIMSK |= (1 << INT2);		// Enable External Interrupt Request (INT2)
+  94               		.loc 1 39 2 is_stmt 1 view .LVU21
+  95               		.loc 1 39 8 is_stmt 0 view .LVU22
+  96 0036 EA9A      		sbi 0x1d,2
+  40:RotaryEncoder.cpp **** 	PCICR |= (1 << PCIE1);		// Enable Pin Change interrupt (PCI1) PCINT[15:8]
+  97               		.loc 1 40 2 is_stmt 1 view .LVU23
+  98               		.loc 1 40 8 is_stmt 0 view .LVU24
+  99 0038 E8E6      		ldi r30,lo8(104)
+ 100 003a F0E0      		ldi r31,0
+ 101 003c 8081      		ld r24,Z
+ 102 003e 8260      		ori r24,lo8(2)
+ 103 0040 8083      		st Z,r24
+ 104               	/* epilogue start */
+  41:RotaryEncoder.cpp **** }
+ 105               		.loc 1 41 1 view .LVU25
+ 106 0042 0895      		ret
+ 107               		.cfi_endproc
+ 108               	.LFE2:
+ 110               	.global	__vector_5
+ 112               	__vector_5:
+ 113               	.LFB3:
+  42:RotaryEncoder.cpp **** 
+  43:RotaryEncoder.cpp **** 
+  44:RotaryEncoder.cpp **** /* Pin Change Interrupt Request 1 Service Routine */
+  45:RotaryEncoder.cpp **** /* To handle Rotary Encoder Rotation */
+  46:RotaryEncoder.cpp **** ISR(PCINT1_vect)
+  47:RotaryEncoder.cpp **** {
+ 114               		.loc 1 47 1 is_stmt 1 view -0
+ 115               		.cfi_startproc
+ 116 0044 8F93 8FB7 		__gcc_isr 1
+ 116      8F93 
+ 117               	/* prologue: Signal */
+ 118               	/* frame size = 0 */
+ 119               	/* stack size = 0...4 */
+ 120               	.L__stack_usage = 0 + __gcc_isr.n_pushed
+  48:RotaryEncoder.cpp **** 	if (GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_TRIGGER_MASK)	// Only react on rising edge
+ 121               		.loc 1 48 2 view .LVU27
+ 122 004a 189B      		sbis 0x3,0
+ 123 004c 00C0      		rjmp .L4
+  49:RotaryEncoder.cpp **** 	{
+  50:RotaryEncoder.cpp **** 		/* Disable External interrupts */
+  51:RotaryEncoder.cpp **** 		EIMSK &= ~(1 << INT2);		// Disable External Interrupt Request (INT2)
+ 124               		.loc 1 51 3 view .LVU28
+ 125               		.loc 1 51 9 is_stmt 0 view .LVU29
+ 126 004e EA98      		cbi 0x1d,2
+  52:RotaryEncoder.cpp **** 		PCICR &= ~(1 << PCIE1);		// Disable Pin Change interrupt (PCI1) PCINT[15:8]
+ 127               		.loc 1 52 3 is_stmt 1 view .LVU30
+ 128               		.loc 1 52 9 is_stmt 0 view .LVU31
+ 129 0050 8091 6800 		lds r24,104
+ 130 0054 8D7F      		andi r24,lo8(-3)
+ 131 0056 8093 6800 		sts 104,r24
+  53:RotaryEncoder.cpp **** 		
+  54:RotaryEncoder.cpp **** 		/* Determine Left/Right turn */
+  55:RotaryEncoder.cpp **** 		if (GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_INDICATOR_MASK)
+ 132               		.loc 1 55 3 is_stmt 1 view .LVU32
+ 133 005a 199B      		sbis 0x3,1
+ 134 005c 00C0      		rjmp .L6
+  56:RotaryEncoder.cpp **** 			RotEnc_State = ROT_RIGHT;
+ 135               		.loc 1 56 4 view .LVU33
+ 136               		.loc 1 56 17 is_stmt 0 view .LVU34
+ 137 005e 81E0      		ldi r24,lo8(1)
+ 138               	.L10:
+  57:RotaryEncoder.cpp **** 		else
+  58:RotaryEncoder.cpp **** 			RotEnc_State = ROT_LEFT;
+ 139               		.loc 1 58 17 view .LVU35
+ 140 0060 8093 0000 		sts RotEnc_State,r24
+ 141               	.L4:
+ 142               	/* epilogue start */
+  59:RotaryEncoder.cpp **** 	}
+  60:RotaryEncoder.cpp **** }
+ 143               		.loc 1 60 1 view .LVU36
+ 144 0064 8F91 8FBF 		__gcc_isr 2
+ 144      8F91 
+ 145 006a 1895      		reti
+ 146               	.L6:
+  58:RotaryEncoder.cpp **** 	}
+ 147               		.loc 1 58 4 is_stmt 1 view .LVU37
+  58:RotaryEncoder.cpp **** 	}
+ 148               		.loc 1 58 17 is_stmt 0 view .LVU38
+ 149 006c 82E0      		ldi r24,lo8(2)
+ 150 006e 00C0      		rjmp .L10
+ 151               		__gcc_isr 0,r24
+ 152               		.cfi_endproc
+ 153               	.LFE3:
+ 155               	.global	__vector_3
+ 157               	__vector_3:
+ 158               	.LFB4:
+  61:RotaryEncoder.cpp **** 
+  62:RotaryEncoder.cpp **** /* External Interrupt Request 2 Service routine */
+  63:RotaryEncoder.cpp **** /* To handle Rotary Encoder Press */
+  64:RotaryEncoder.cpp **** ISR(INT2_vect)
+  65:RotaryEncoder.cpp **** {
+ 159               		.loc 1 65 1 is_stmt 1 view -0
+ 160               		.cfi_startproc
+ 161 0070 8F93 8FB7 		__gcc_isr 1
+ 161      8F93 
+ 162 0076 9F93      		push r25
+ 163               	.LCFI0:
+ 164               		.cfi_def_cfa_offset 3
+ 165               		.cfi_offset 25, -2
+ 166 0078 EF93      		push r30
+ 167               	.LCFI1:
+ 168               		.cfi_def_cfa_offset 4
+ 169               		.cfi_offset 30, -3
+ 170 007a FF93      		push r31
+ 171               	.LCFI2:
+ 172               		.cfi_def_cfa_offset 5
+ 173               		.cfi_offset 31, -4
+ 174               	/* prologue: Signal */
+ 175               	/* frame size = 0 */
+ 176               	/* stack size = 3...7 */
+ 177               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+  66:RotaryEncoder.cpp **** 	RotaryEncoder_OvfCnt = 1;		// Start overflow counter
+ 178               		.loc 1 66 2 view .LVU40
+ 179               		.loc 1 66 23 is_stmt 0 view .LVU41
+ 180 007c 81E0      		ldi r24,lo8(1)
+ 181 007e 90E0      		ldi r25,0
+ 182 0080 9093 0000 		sts RotaryEncoder_OvfCnt+1,r25
+ 183 0084 8093 0000 		sts RotaryEncoder_OvfCnt,r24
+  67:RotaryEncoder.cpp **** 	
+  68:RotaryEncoder.cpp **** 	/* Disable External interrupts */
+  69:RotaryEncoder.cpp **** 	EIMSK &= ~(1 << INT2);		// Disable External Interrupt Request (INT2)
+ 184               		.loc 1 69 2 is_stmt 1 view .LVU42
+ 185               		.loc 1 69 8 is_stmt 0 view .LVU43
+ 186 0088 EA98      		cbi 0x1d,2
+  70:RotaryEncoder.cpp **** 	PCICR &= ~(1 << PCIE1);		// Disable Pin Change interrupt (PCI1) PCINT[15:8]
+ 187               		.loc 1 70 2 is_stmt 1 view .LVU44
+ 188               		.loc 1 70 8 is_stmt 0 view .LVU45
+ 189 008a E8E6      		ldi r30,lo8(104)
+ 190 008c F0E0      		ldi r31,0
+ 191 008e 8081      		ld r24,Z
+ 192 0090 8D7F      		andi r24,lo8(-3)
+ 193 0092 8083      		st Z,r24
+ 194               	/* epilogue start */
+  71:RotaryEncoder.cpp **** }...
+ 195               		.loc 1 71 1 view .LVU46
+ 196 0094 FF91      		pop r31
+ 197 0096 EF91      		pop r30
+ 198 0098 9F91      		pop r25
+ 199 009a 8F91 8FBF 		__gcc_isr 2
+ 199      8F91 
+ 200 00a0 1895      		reti
+ 201               		__gcc_isr 0,r24
+ 202               		.cfi_endproc
+ 203               	.LFE4:
+ 205               	.global	RotEnc_State
+ 206               		.section .bss
+ 209               	RotEnc_State:
+ 210 0000 00        		.zero	1
+ 211               	.global	RotaryEncoder_OvfCnt
+ 214               	RotaryEncoder_OvfCnt:
+ 215 0001 0000      		.zero	2
+ 216               		.text
+ 217               	.Letext0:
+ 218               		.file 2 "RotaryEncoder.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 RotaryEncoder.cpp
+     /tmp/ccMzszcB.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccMzszcB.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccMzszcB.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccMzszcB.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccMzszcB.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccMzszcB.s:12     .text:0000000000000000 _Z18RotaryEncoder_Initv
+     /tmp/ccMzszcB.s:58     .text:0000000000000028 _Z23RotaryEncoder_IsPressedv
+     /tmp/ccMzszcB.s:80     .text:0000000000000032 _Z29RotaryEncoder_EnableInterruptv
+     /tmp/ccMzszcB.s:112    .text:0000000000000044 __vector_5
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.001
+     /tmp/ccMzszcB.s:209    .bss:0000000000000000 RotEnc_State
+     /tmp/ccMzszcB.s:157    .text:0000000000000070 __vector_3
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.002
+     /tmp/ccMzszcB.s:214    .bss:0000000000000001 RotaryEncoder_OvfCnt
+
+UNDEFINED SYMBOLS
+__do_clear_bss

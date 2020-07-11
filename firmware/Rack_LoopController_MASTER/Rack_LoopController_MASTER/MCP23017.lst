@@ -1,0 +1,1206 @@
+   1               		.file	"MCP23017.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z17MCP23017_WriteReghhh
+  12               	_Z17MCP23017_WriteReghhh:
+  13               	.LVL0:
+  14               	.LFB0:
+  15               		.file 1 "MCP23017.cpp"
+   1:MCP23017.cpp  **** /*
+   2:MCP23017.cpp  ****  * MCP23017.cpp
+   3:MCP23017.cpp  ****  *
+   4:MCP23017.cpp  ****  * Created: 19-01-2020 21:25:51
+   5:MCP23017.cpp  ****  *  Author: Esben
+   6:MCP23017.cpp  ****  */ 
+   7:MCP23017.cpp  **** 
+   8:MCP23017.cpp  **** #include "MCP23017.h"
+   9:MCP23017.cpp  **** #include "i2cmaster.h"
+  10:MCP23017.cpp  **** #include "Timer.h"
+  11:MCP23017.cpp  **** 
+  12:MCP23017.cpp  **** #define START_BYTE_MASK    0x20
+  13:MCP23017.cpp  **** 
+  14:MCP23017.cpp  **** volatile uint16_t MCP_Output::AutoToggle_OvfCnt = 0;
+  15:MCP23017.cpp  **** volatile uint16_t MCP_Output::AutoToggle_Timeout = 100;
+  16:MCP23017.cpp  **** volatile uint8_t MCP_Output::AutoToggle_Flag = 0;
+  17:MCP23017.cpp  **** volatile uint8_t MCP_Output::AutoToggle_PortA = 0;
+  18:MCP23017.cpp  **** volatile uint8_t MCP_Output::AutoToggle_PortB = 0;
+  19:MCP23017.cpp  **** 
+  20:MCP23017.cpp  **** void MCP23017_WriteReg(unsigned char chip_addr, unsigned char reg, unsigned char val)
+  21:MCP23017.cpp  **** {
+  16               		.loc 1 21 1 view -0
+  17               		.cfi_startproc
+  18               		.loc 1 21 1 is_stmt 0 view .LVU1
+  19 0000 CF93      		push r28
+  20               	.LCFI0:
+  21               		.cfi_def_cfa_offset 3
+  22               		.cfi_offset 28, -2
+  23 0002 DF93      		push r29
+  24               	.LCFI1:
+  25               		.cfi_def_cfa_offset 4
+  26               		.cfi_offset 29, -3
+  27               	/* prologue: function */
+  28               	/* frame size = 0 */
+  29               	/* stack size = 2 */
+  30               	.L__stack_usage = 2
+  31 0004 D62F      		mov r29,r22
+  32 0006 C42F      		mov r28,r20
+  22:MCP23017.cpp  **** 	unsigned char start_byte = (((START_BYTE_MASK | chip_addr) << 1) + I2C_WRITE);
+  33               		.loc 1 22 2 is_stmt 1 view .LVU2
+  34               	.LVL1:
+  23:MCP23017.cpp  **** 	
+  24:MCP23017.cpp  **** 	i2c_start(start_byte);		// Set device address and write mode
+  35               		.loc 1 24 2 view .LVU3
+  22:MCP23017.cpp  **** 	unsigned char start_byte = (((START_BYTE_MASK | chip_addr) << 1) + I2C_WRITE);
+  36               		.loc 1 22 61 is_stmt 0 view .LVU4
+  37 0008 880F      		lsl r24
+  38               	.LVL2:
+  39               		.loc 1 24 11 view .LVU5
+  40 000a 8064      		ori r24,lo8(64)
+  41               	.LVL3:
+  42               		.loc 1 24 11 view .LVU6
+  43 000c 0E94 0000 		call _Z9i2c_starth
+  44               	.LVL4:
+  25:MCP23017.cpp  **** 	i2c_write(reg);             // Set MCP23017 memory pointer
+  45               		.loc 1 25 2 is_stmt 1 view .LVU7
+  46               		.loc 1 25 11 is_stmt 0 view .LVU8
+  47 0010 8D2F      		mov r24,r29
+  48 0012 0E94 0000 		call _Z9i2c_writeh
+  49               	.LVL5:
+  26:MCP23017.cpp  **** 	i2c_write(val);             // Write value to register
+  50               		.loc 1 26 2 is_stmt 1 view .LVU9
+  51               		.loc 1 26 11 is_stmt 0 view .LVU10
+  52 0016 8C2F      		mov r24,r28
+  53 0018 0E94 0000 		call _Z9i2c_writeh
+  54               	.LVL6:
+  27:MCP23017.cpp  **** 	i2c_stop();                 // Set stop condition = release bus
+  55               		.loc 1 27 2 is_stmt 1 view .LVU11
+  56               	/* epilogue start */
+  28:MCP23017.cpp  **** }
+  57               		.loc 1 28 1 is_stmt 0 view .LVU12
+  58 001c DF91      		pop r29
+  59               	.LVL7:
+  60               		.loc 1 28 1 view .LVU13
+  61 001e CF91      		pop r28
+  62               	.LVL8:
+  27:MCP23017.cpp  **** 	i2c_stop();                 // Set stop condition = release bus
+  63               		.loc 1 27 10 view .LVU14
+  64 0020 0C94 0000 		jmp _Z8i2c_stopv
+  65               	.LVL9:
+  66               		.cfi_endproc
+  67               	.LFE0:
+  69               	.global	_Z16MCP23017_ReadReghh
+  71               	_Z16MCP23017_ReadReghh:
+  72               	.LVL10:
+  73               	.LFB1:
+  29:MCP23017.cpp  **** 
+  30:MCP23017.cpp  **** unsigned char MCP23017_ReadReg(unsigned char chip_addr, unsigned char reg)
+  31:MCP23017.cpp  **** {
+  74               		.loc 1 31 1 is_stmt 1 view -0
+  75               		.cfi_startproc
+  76               		.loc 1 31 1 is_stmt 0 view .LVU16
+  77 0024 CF93      		push r28
+  78               	.LCFI2:
+  79               		.cfi_def_cfa_offset 3
+  80               		.cfi_offset 28, -2
+  81 0026 DF93      		push r29
+  82               	.LCFI3:
+  83               		.cfi_def_cfa_offset 4
+  84               		.cfi_offset 29, -3
+  85               	/* prologue: function */
+  86               	/* frame size = 0 */
+  87               	/* stack size = 2 */
+  88               	.L__stack_usage = 2
+  89 0028 D62F      		mov r29,r22
+  32:MCP23017.cpp  **** 	unsigned char start_byte = (((START_BYTE_MASK | chip_addr) << 1) + I2C_WRITE);
+  90               		.loc 1 32 2 is_stmt 1 view .LVU17
+  91               		.loc 1 32 61 is_stmt 0 view .LVU18
+  92 002a C82F      		mov r28,r24
+  93 002c CC0F      		lsl r28
+  94               	.LVL11:
+  33:MCP23017.cpp  **** 
+  34:MCP23017.cpp  **** 	i2c_start(start_byte);		// Set device address and write mode
+  95               		.loc 1 34 2 is_stmt 1 view .LVU19
+  96               		.loc 1 34 11 is_stmt 0 view .LVU20
+  97 002e 8C2F      		mov r24,r28
+  98               	.LVL12:
+  99               		.loc 1 34 11 view .LVU21
+ 100 0030 8064      		ori r24,lo8(64)
+ 101               	.LVL13:
+ 102               		.loc 1 34 11 view .LVU22
+ 103 0032 0E94 0000 		call _Z9i2c_starth
+ 104               	.LVL14:
+  35:MCP23017.cpp  **** 	i2c_write(reg);             // Set MCP23017 memory pointer
+ 105               		.loc 1 35 2 is_stmt 1 view .LVU23
+ 106               		.loc 1 35 11 is_stmt 0 view .LVU24
+ 107 0036 8D2F      		mov r24,r29
+ 108 0038 0E94 0000 		call _Z9i2c_writeh
+ 109               	.LVL15:
+  36:MCP23017.cpp  **** 	i2c_stop();                 // Set stop condition = release bus
+ 110               		.loc 1 36 2 is_stmt 1 view .LVU25
+ 111               		.loc 1 36 10 is_stmt 0 view .LVU26
+ 112 003c 0E94 0000 		call _Z8i2c_stopv
+ 113               	.LVL16:
+  37:MCP23017.cpp  **** 
+  38:MCP23017.cpp  **** 	start_byte |= I2C_READ;
+ 114               		.loc 1 38 2 is_stmt 1 view .LVU27
+  39:MCP23017.cpp  **** 
+  40:MCP23017.cpp  **** 	i2c_start(start_byte);		// Set device address and write mode
+ 115               		.loc 1 40 2 view .LVU28
+ 116               		.loc 1 40 11 is_stmt 0 view .LVU29
+ 117 0040 8C2F      		mov r24,r28
+ 118 0042 8164      		ori r24,lo8(65)
+ 119               	.LVL17:
+ 120               		.loc 1 40 11 view .LVU30
+ 121 0044 0E94 0000 		call _Z9i2c_starth
+ 122               	.LVL18:
+  41:MCP23017.cpp  **** 	return i2c_readNak();       // Read byte and send stop condition
+ 123               		.loc 1 41 2 is_stmt 1 view .LVU31
+ 124               	/* epilogue start */
+  42:MCP23017.cpp  **** }
+ 125               		.loc 1 42 1 is_stmt 0 view .LVU32
+ 126 0048 DF91      		pop r29
+ 127               	.LVL19:
+ 128               		.loc 1 42 1 view .LVU33
+ 129 004a CF91      		pop r28
+ 130               	.LVL20:
+  41:MCP23017.cpp  **** 	return i2c_readNak();       // Read byte and send stop condition
+ 131               		.loc 1 41 20 view .LVU34
+ 132 004c 0C94 0000 		jmp _Z11i2c_readNakv
+ 133               	.LVL21:
+ 134               		.cfi_endproc
+ 135               	.LFE1:
+ 137               	.global	_ZN10MCP_OutputC2Ev
+ 139               	_ZN10MCP_OutputC2Ev:
+ 140               	.LVL22:
+ 141               	.LFB3:
+  43:MCP23017.cpp  **** 
+  44:MCP23017.cpp  **** MCP_Output::MCP_Output()
+ 142               		.loc 1 44 1 is_stmt 1 view -0
+ 143               		.cfi_startproc
+ 144               	/* prologue: function */
+ 145               	/* frame size = 0 */
+ 146               	/* stack size = 0 */
+ 147               	.L__stack_usage = 0
+ 148               	/* epilogue start */
+  45:MCP23017.cpp  **** {
+  46:MCP23017.cpp  **** 
+  47:MCP23017.cpp  **** }
+ 149               		.loc 1 47 1 is_stmt 0 view .LVU36
+ 150 0050 0895      		ret
+ 151               		.cfi_endproc
+ 152               	.LFE3:
+ 154               	.global	_ZN10MCP_OutputC1Ev
+ 155               		.set	_ZN10MCP_OutputC1Ev,_ZN10MCP_OutputC2Ev
+ 156               	.global	_ZN10MCP_Output8getStateEv
+ 158               	_ZN10MCP_Output8getStateEv:
+ 159               	.LVL23:
+ 160               	.LFB8:
+  48:MCP23017.cpp  **** 
+  49:MCP23017.cpp  **** MCP_Output::MCP_Output(uint8_t adrr, MCP23017_Port port, MCP23017_Pin pin)
+  50:MCP23017.cpp  **** {
+  51:MCP23017.cpp  **** 	/* Initialize members */
+  52:MCP23017.cpp  **** 	Addr = adrr;
+  53:MCP23017.cpp  **** 	Port = port;
+  54:MCP23017.cpp  **** 	Pin = pin;
+  55:MCP23017.cpp  **** 	
+  56:MCP23017.cpp  **** 	/* Set Port pin to output */
+  57:MCP23017.cpp  **** 	unsigned char val;
+  58:MCP23017.cpp  **** 	unsigned char reg;
+  59:MCP23017.cpp  **** 	
+  60:MCP23017.cpp  **** 	if (Port == PortA)
+  61:MCP23017.cpp  **** 	{
+  62:MCP23017.cpp  **** 		reg = IODIRA;
+  63:MCP23017.cpp  **** 	}
+  64:MCP23017.cpp  **** 	else
+  65:MCP23017.cpp  **** 	{
+  66:MCP23017.cpp  **** 		reg = IODIRB;
+  67:MCP23017.cpp  **** 	}
+  68:MCP23017.cpp  **** 	
+  69:MCP23017.cpp  **** 	val = MCP23017_ReadReg((unsigned char)Addr, reg);
+  70:MCP23017.cpp  **** 	val &= ~(1 << Pin);
+  71:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+  72:MCP23017.cpp  **** 	
+  73:MCP23017.cpp  **** 	this->Clear();
+  74:MCP23017.cpp  **** }
+  75:MCP23017.cpp  **** 
+  76:MCP23017.cpp  **** uint8_t MCP_Output::getState()
+  77:MCP23017.cpp  **** {
+ 161               		.loc 1 77 1 is_stmt 1 view -0
+ 162               		.cfi_startproc
+ 163               	/* prologue: function */
+ 164               	/* frame size = 0 */
+ 165               	/* stack size = 0 */
+ 166               	.L__stack_usage = 0
+  78:MCP23017.cpp  **** 	return (uint8_t)State;
+ 167               		.loc 1 78 2 view .LVU38
+  79:MCP23017.cpp  **** }
+ 168               		.loc 1 79 1 is_stmt 0 view .LVU39
+ 169 0052 FC01      		movw r30,r24
+ 170 0054 8381      		ldd r24,Z+3
+ 171               	.LVL24:
+ 172               	/* epilogue start */
+ 173               		.loc 1 79 1 view .LVU40
+ 174 0056 0895      		ret
+ 175               		.cfi_endproc
+ 176               	.LFE8:
+ 178               	.global	_ZN10MCP_Output3SetEv
+ 180               	_ZN10MCP_Output3SetEv:
+ 181               	.LVL25:
+ 182               	.LFB9:
+  80:MCP23017.cpp  **** 
+  81:MCP23017.cpp  **** void MCP_Output::Set()
+  82:MCP23017.cpp  **** {
+ 183               		.loc 1 82 1 is_stmt 1 view -0
+ 184               		.cfi_startproc
+ 185               		.loc 1 82 1 is_stmt 0 view .LVU42
+ 186 0058 1F93      		push r17
+ 187               	.LCFI4:
+ 188               		.cfi_def_cfa_offset 3
+ 189               		.cfi_offset 17, -2
+ 190 005a CF93      		push r28
+ 191               	.LCFI5:
+ 192               		.cfi_def_cfa_offset 4
+ 193               		.cfi_offset 28, -3
+ 194 005c DF93      		push r29
+ 195               	.LCFI6:
+ 196               		.cfi_def_cfa_offset 5
+ 197               		.cfi_offset 29, -4
+ 198               	/* prologue: function */
+ 199               	/* frame size = 0 */
+ 200               	/* stack size = 3 */
+ 201               	.L__stack_usage = 3
+ 202 005e EC01      		movw r28,r24
+  83:MCP23017.cpp  **** 	unsigned char val;
+ 203               		.loc 1 83 2 is_stmt 1 view .LVU43
+  84:MCP23017.cpp  **** 	unsigned char reg;
+ 204               		.loc 1 84 2 view .LVU44
+  85:MCP23017.cpp  **** 	
+  86:MCP23017.cpp  **** 	if (Port == PortA)
+ 205               		.loc 1 86 2 view .LVU45
+ 206 0060 2A81      		ldd r18,Y+2
+ 207 0062 81E0      		ldi r24,lo8(1)
+ 208 0064 90E0      		ldi r25,0
+ 209               	.LVL26:
+ 210               		.loc 1 86 2 is_stmt 0 view .LVU46
+ 211 0066 00C0      		rjmp 2f
+ 212               		1:
+ 213 0068 880F      		lsl r24
+ 214               		2:
+ 215 006a 2A95      		dec r18
+ 216 006c 02F4      		brpl 1b
+ 217 006e 8095      		com r24
+ 218 0070 9981      		ldd r25,Y+1
+ 219 0072 9111      		cpse r25,__zero_reg__
+ 220 0074 00C0      		rjmp .L6
+  87:MCP23017.cpp  **** 	{
+  88:MCP23017.cpp  **** 		reg = OLATA;
+ 221               		.loc 1 88 3 is_stmt 1 view .LVU47
+ 222               	.LVL27:
+  89:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortA &= ~(1 << Pin);
+ 223               		.loc 1 89 3 view .LVU48
+ 224               		.loc 1 89 32 is_stmt 0 view .LVU49
+ 225 0076 9091 0000 		lds r25,_ZN10MCP_Output16AutoToggle_PortAE
+ 226 007a 8923      		and r24,r25
+ 227 007c 8093 0000 		sts _ZN10MCP_Output16AutoToggle_PortAE,r24
+  88:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortA &= ~(1 << Pin);
+ 228               		.loc 1 88 7 view .LVU50
+ 229 0080 14E1      		ldi r17,lo8(20)
+ 230               	.LVL28:
+ 231               	.L7:
+  90:MCP23017.cpp  **** 	}
+  91:MCP23017.cpp  **** 	else
+  92:MCP23017.cpp  **** 	{
+  93:MCP23017.cpp  **** 		reg = OLATB;
+  94:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
+  95:MCP23017.cpp  **** 	}
+  96:MCP23017.cpp  **** 	
+  97:MCP23017.cpp  **** 	val = MCP23017_ReadReg((unsigned char)Addr, reg);
+ 232               		.loc 1 97 2 is_stmt 1 view .LVU51
+ 233               		.loc 1 97 24 is_stmt 0 view .LVU52
+ 234 0082 612F      		mov r22,r17
+ 235 0084 8881      		ld r24,Y
+ 236 0086 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 237               	.LVL29:
+  98:MCP23017.cpp  **** 	val |= (1 << Pin);
+ 238               		.loc 1 98 2 is_stmt 1 view .LVU53
+ 239               		.loc 1 98 15 is_stmt 0 view .LVU54
+ 240 008a 9A81      		ldd r25,Y+2
+ 241               		.loc 1 98 12 view .LVU55
+ 242 008c 41E0      		ldi r20,lo8(1)
+ 243 008e 50E0      		ldi r21,0
+ 244 0090 00C0      		rjmp 2f
+ 245               		1:
+ 246 0092 440F      		lsl r20
+ 247               		2:
+ 248 0094 9A95      		dec r25
+ 249 0096 02F4      		brpl 1b
+ 250               		.loc 1 98 6 view .LVU56
+ 251 0098 482B      		or r20,r24
+ 252               	.LVL30:
+  99:MCP23017.cpp  **** 	MCP23017_WriteReg((unsigned char)Addr,  reg, val);
+ 253               		.loc 1 99 2 is_stmt 1 view .LVU57
+ 254               		.loc 1 99 19 is_stmt 0 view .LVU58
+ 255 009a 612F      		mov r22,r17
+ 256 009c 8881      		ld r24,Y
+ 257 009e 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 258               	.LVL31:
+ 100:MCP23017.cpp  **** 	
+ 101:MCP23017.cpp  **** 	State = SET;
+ 259               		.loc 1 101 2 is_stmt 1 view .LVU59
+ 260               		.loc 1 101 8 is_stmt 0 view .LVU60
+ 261 00a2 81E0      		ldi r24,lo8(1)
+ 262 00a4 8B83      		std Y+3,r24
+ 263               	/* epilogue start */
+ 102:MCP23017.cpp  **** }
+ 264               		.loc 1 102 1 view .LVU61
+ 265 00a6 DF91      		pop r29
+ 266 00a8 CF91      		pop r28
+ 267               	.LVL32:
+ 268               		.loc 1 102 1 view .LVU62
+ 269 00aa 1F91      		pop r17
+ 270               	.LVL33:
+ 271               		.loc 1 102 1 view .LVU63
+ 272 00ac 0895      		ret
+ 273               	.LVL34:
+ 274               	.L6:
+  93:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
+ 275               		.loc 1 93 3 is_stmt 1 view .LVU64
+  94:MCP23017.cpp  **** 	}
+ 276               		.loc 1 94 3 view .LVU65
+  94:MCP23017.cpp  **** 	}
+ 277               		.loc 1 94 32 is_stmt 0 view .LVU66
+ 278 00ae 9091 0000 		lds r25,_ZN10MCP_Output16AutoToggle_PortBE
+ 279 00b2 8923      		and r24,r25
+ 280 00b4 8093 0000 		sts _ZN10MCP_Output16AutoToggle_PortBE,r24
+  93:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
+ 281               		.loc 1 93 7 view .LVU67
+ 282 00b8 15E1      		ldi r17,lo8(21)
+ 283 00ba 00C0      		rjmp .L7
+ 284               		.cfi_endproc
+ 285               	.LFE9:
+ 287               	.global	_ZN10MCP_Output5ClearEv
+ 289               	_ZN10MCP_Output5ClearEv:
+ 290               	.LVL35:
+ 291               	.LFB10:
+ 103:MCP23017.cpp  **** 
+ 104:MCP23017.cpp  **** void MCP_Output::Clear()
+ 105:MCP23017.cpp  **** {
+ 292               		.loc 1 105 1 is_stmt 1 view -0
+ 293               		.cfi_startproc
+ 294               		.loc 1 105 1 is_stmt 0 view .LVU69
+ 295 00bc 1F93      		push r17
+ 296               	.LCFI7:
+ 297               		.cfi_def_cfa_offset 3
+ 298               		.cfi_offset 17, -2
+ 299 00be CF93      		push r28
+ 300               	.LCFI8:
+ 301               		.cfi_def_cfa_offset 4
+ 302               		.cfi_offset 28, -3
+ 303 00c0 DF93      		push r29
+ 304               	.LCFI9:
+ 305               		.cfi_def_cfa_offset 5
+ 306               		.cfi_offset 29, -4
+ 307               	/* prologue: function */
+ 308               	/* frame size = 0 */
+ 309               	/* stack size = 3 */
+ 310               	.L__stack_usage = 3
+ 311 00c2 EC01      		movw r28,r24
+ 106:MCP23017.cpp  **** 	unsigned char val;
+ 312               		.loc 1 106 2 is_stmt 1 view .LVU70
+ 107:MCP23017.cpp  **** 	unsigned char reg;
+ 313               		.loc 1 107 2 view .LVU71
+ 108:MCP23017.cpp  **** 		
+ 109:MCP23017.cpp  **** 	if (Port == PortA)
+ 314               		.loc 1 109 2 view .LVU72
+ 315 00c4 2A81      		ldd r18,Y+2
+ 316 00c6 81E0      		ldi r24,lo8(1)
+ 317 00c8 90E0      		ldi r25,0
+ 318               	.LVL36:
+ 319               		.loc 1 109 2 is_stmt 0 view .LVU73
+ 320 00ca 00C0      		rjmp 2f
+ 321               		1:
+ 322 00cc 880F      		lsl r24
+ 323               		2:
+ 324 00ce 2A95      		dec r18
+ 325 00d0 02F4      		brpl 1b
+ 326 00d2 8095      		com r24
+ 327 00d4 9981      		ldd r25,Y+1
+ 328 00d6 9111      		cpse r25,__zero_reg__
+ 329 00d8 00C0      		rjmp .L9
+ 110:MCP23017.cpp  **** 	{
+ 111:MCP23017.cpp  **** 		reg = OLATA;
+ 330               		.loc 1 111 3 is_stmt 1 view .LVU74
+ 331               	.LVL37:
+ 112:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortA &= ~(1 << Pin);
+ 332               		.loc 1 112 3 view .LVU75
+ 333               		.loc 1 112 32 is_stmt 0 view .LVU76
+ 334 00da 9091 0000 		lds r25,_ZN10MCP_Output16AutoToggle_PortAE
+ 335 00de 8923      		and r24,r25
+ 336 00e0 8093 0000 		sts _ZN10MCP_Output16AutoToggle_PortAE,r24
+ 111:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortA &= ~(1 << Pin);
+ 337               		.loc 1 111 7 view .LVU77
+ 338 00e4 14E1      		ldi r17,lo8(20)
+ 339               	.LVL38:
+ 340               	.L10:
+ 113:MCP23017.cpp  **** 	}
+ 114:MCP23017.cpp  **** 	else
+ 115:MCP23017.cpp  **** 	{
+ 116:MCP23017.cpp  **** 		reg = OLATB;
+ 117:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
+ 118:MCP23017.cpp  **** 	}
+ 119:MCP23017.cpp  **** 		
+ 120:MCP23017.cpp  **** 	val = MCP23017_ReadReg((unsigned char)Addr, reg);
+ 341               		.loc 1 120 2 is_stmt 1 view .LVU78
+ 342               		.loc 1 120 24 is_stmt 0 view .LVU79
+ 343 00e6 612F      		mov r22,r17
+ 344 00e8 8881      		ld r24,Y
+ 345 00ea 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 346               	.LVL39:
+ 121:MCP23017.cpp  **** 	val &= ~(1 << Pin);
+ 347               		.loc 1 121 2 is_stmt 1 view .LVU80
+ 348               		.loc 1 121 16 is_stmt 0 view .LVU81
+ 349 00ee 9A81      		ldd r25,Y+2
+ 350               		.loc 1 121 13 view .LVU82
+ 351 00f0 21E0      		ldi r18,lo8(1)
+ 352 00f2 30E0      		ldi r19,0
+ 353 00f4 00C0      		rjmp 2f
+ 354               		1:
+ 355 00f6 220F      		lsl r18
+ 356               		2:
+ 357 00f8 9A95      		dec r25
+ 358 00fa 02F4      		brpl 1b
+ 359               		.loc 1 121 6 view .LVU83
+ 360 00fc 2095      		com r18
+ 361 00fe 422F      		mov r20,r18
+ 362 0100 4823      		and r20,r24
+ 363               	.LVL40:
+ 122:MCP23017.cpp  **** 	MCP23017_WriteReg((unsigned char)Addr,  reg, val);
+ 364               		.loc 1 122 2 is_stmt 1 view .LVU84
+ 365               		.loc 1 122 19 is_stmt 0 view .LVU85
+ 366 0102 612F      		mov r22,r17
+ 367 0104 8881      		ld r24,Y
+ 368 0106 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 369               	.LVL41:
+ 123:MCP23017.cpp  **** 		
+ 124:MCP23017.cpp  **** 	State = CLEARED;
+ 370               		.loc 1 124 2 is_stmt 1 view .LVU86
+ 371               		.loc 1 124 8 is_stmt 0 view .LVU87
+ 372 010a 1B82      		std Y+3,__zero_reg__
+ 373               	/* epilogue start */
+ 125:MCP23017.cpp  **** }
+ 374               		.loc 1 125 1 view .LVU88
+ 375 010c DF91      		pop r29
+ 376 010e CF91      		pop r28
+ 377               	.LVL42:
+ 378               		.loc 1 125 1 view .LVU89
+ 379 0110 1F91      		pop r17
+ 380               	.LVL43:
+ 381               		.loc 1 125 1 view .LVU90
+ 382 0112 0895      		ret
+ 383               	.LVL44:
+ 384               	.L9:
+ 116:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
+ 385               		.loc 1 116 3 is_stmt 1 view .LVU91
+ 117:MCP23017.cpp  **** 	}
+ 386               		.loc 1 117 3 view .LVU92
+ 117:MCP23017.cpp  **** 	}
+ 387               		.loc 1 117 32 is_stmt 0 view .LVU93
+ 388 0114 9091 0000 		lds r25,_ZN10MCP_Output16AutoToggle_PortBE
+ 389 0118 8923      		and r24,r25
+ 390 011a 8093 0000 		sts _ZN10MCP_Output16AutoToggle_PortBE,r24
+ 116:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB &= ~(1 << Pin);
+ 391               		.loc 1 116 7 view .LVU94
+ 392 011e 15E1      		ldi r17,lo8(21)
+ 393 0120 00C0      		rjmp .L10
+ 394               		.cfi_endproc
+ 395               	.LFE10:
+ 397               	.global	_ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017_Pin
+ 399               	_ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017_Pin:
+ 400               	.LVL45:
+ 401               	.LFB6:
+  49:MCP23017.cpp  **** {
+ 402               		.loc 1 49 1 is_stmt 1 view -0
+ 403               		.cfi_startproc
+  49:MCP23017.cpp  **** {
+ 404               		.loc 1 49 1 is_stmt 0 view .LVU96
+ 405 0122 1F93      		push r17
+ 406               	.LCFI10:
+ 407               		.cfi_def_cfa_offset 3
+ 408               		.cfi_offset 17, -2
+ 409 0124 CF93      		push r28
+ 410               	.LCFI11:
+ 411               		.cfi_def_cfa_offset 4
+ 412               		.cfi_offset 28, -3
+ 413 0126 DF93      		push r29
+ 414               	.LCFI12:
+ 415               		.cfi_def_cfa_offset 5
+ 416               		.cfi_offset 29, -4
+ 417               	/* prologue: function */
+ 418               	/* frame size = 0 */
+ 419               	/* stack size = 3 */
+ 420               	.L__stack_usage = 3
+ 421 0128 EC01      		movw r28,r24
+ 422 012a 862F      		mov r24,r22
+ 423               	.LVL46:
+ 424               	.LBB2:
+  52:MCP23017.cpp  **** 	Port = port;
+ 425               		.loc 1 52 2 is_stmt 1 view .LVU97
+  52:MCP23017.cpp  **** 	Port = port;
+ 426               		.loc 1 52 7 is_stmt 0 view .LVU98
+ 427 012c 6883      		st Y,r22
+  53:MCP23017.cpp  **** 	Pin = pin;
+ 428               		.loc 1 53 2 is_stmt 1 view .LVU99
+  53:MCP23017.cpp  **** 	Pin = pin;
+ 429               		.loc 1 53 7 is_stmt 0 view .LVU100
+ 430 012e 4983      		std Y+1,r20
+  54:MCP23017.cpp  **** 	
+ 431               		.loc 1 54 2 is_stmt 1 view .LVU101
+  54:MCP23017.cpp  **** 	
+ 432               		.loc 1 54 6 is_stmt 0 view .LVU102
+ 433 0130 2A83      		std Y+2,r18
+  57:MCP23017.cpp  **** 	unsigned char reg;
+ 434               		.loc 1 57 2 is_stmt 1 view .LVU103
+  58:MCP23017.cpp  **** 	
+ 435               		.loc 1 58 2 view .LVU104
+  60:MCP23017.cpp  **** 	{
+ 436               		.loc 1 60 2 view .LVU105
+ 437 0132 11E0      		ldi r17,lo8(1)
+ 438 0134 4111      		cpse r20,__zero_reg__
+ 439 0136 00C0      		rjmp .L12
+ 440 0138 10E0      		ldi r17,0
+ 441               	.L12:
+ 442               	.LVL47:
+  69:MCP23017.cpp  **** 	val &= ~(1 << Pin);
+ 443               		.loc 1 69 2 view .LVU106
+  69:MCP23017.cpp  **** 	val &= ~(1 << Pin);
+ 444               		.loc 1 69 24 is_stmt 0 view .LVU107
+ 445 013a 612F      		mov r22,r17
+ 446               	.LVL48:
+  69:MCP23017.cpp  **** 	val &= ~(1 << Pin);
+ 447               		.loc 1 69 24 view .LVU108
+ 448 013c 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 449               	.LVL49:
+  70:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 450               		.loc 1 70 2 is_stmt 1 view .LVU109
+  70:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 451               		.loc 1 70 16 is_stmt 0 view .LVU110
+ 452 0140 9A81      		ldd r25,Y+2
+  70:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 453               		.loc 1 70 13 view .LVU111
+ 454 0142 21E0      		ldi r18,lo8(1)
+ 455 0144 30E0      		ldi r19,0
+ 456 0146 00C0      		rjmp 2f
+ 457               		1:
+ 458 0148 220F      		lsl r18
+ 459               		2:
+ 460 014a 9A95      		dec r25
+ 461 014c 02F4      		brpl 1b
+  70:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 462               		.loc 1 70 6 view .LVU112
+ 463 014e 2095      		com r18
+ 464 0150 422F      		mov r20,r18
+ 465 0152 4823      		and r20,r24
+ 466               	.LVL50:
+  71:MCP23017.cpp  **** 	
+ 467               		.loc 1 71 2 is_stmt 1 view .LVU113
+  71:MCP23017.cpp  **** 	
+ 468               		.loc 1 71 19 is_stmt 0 view .LVU114
+ 469 0154 612F      		mov r22,r17
+ 470 0156 8881      		ld r24,Y
+ 471 0158 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 472               	.LVL51:
+  73:MCP23017.cpp  **** }
+ 473               		.loc 1 73 2 is_stmt 1 view .LVU115
+  73:MCP23017.cpp  **** }
+ 474               		.loc 1 73 13 is_stmt 0 view .LVU116
+ 475 015c CE01      		movw r24,r28
+ 476               	/* epilogue start */
+ 477               	.LBE2:
+  74:MCP23017.cpp  **** 
+ 478               		.loc 1 74 1 view .LVU117
+ 479 015e DF91      		pop r29
+ 480 0160 CF91      		pop r28
+ 481               	.LVL52:
+  74:MCP23017.cpp  **** 
+ 482               		.loc 1 74 1 view .LVU118
+ 483 0162 1F91      		pop r17
+ 484               	.LVL53:
+ 485               	.LBB3:
+  73:MCP23017.cpp  **** }
+ 486               		.loc 1 73 13 view .LVU119
+ 487 0164 0C94 0000 		jmp _ZN10MCP_Output5ClearEv
+ 488               	.LVL54:
+  73:MCP23017.cpp  **** }
+ 489               		.loc 1 73 13 view .LVU120
+ 490               	.LBE3:
+ 491               		.cfi_endproc
+ 492               	.LFE6:
+ 494               	.global	_ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+ 495               		.set	_ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin,_ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017
+ 496               	.global	_ZN10MCP_Output6ToggleEv
+ 498               	_ZN10MCP_Output6ToggleEv:
+ 499               	.LVL55:
+ 500               	.LFB11:
+ 126:MCP23017.cpp  **** 
+ 127:MCP23017.cpp  **** void MCP_Output::Toggle()
+ 128:MCP23017.cpp  **** {
+ 501               		.loc 1 128 1 is_stmt 1 view -0
+ 502               		.cfi_startproc
+ 503               	/* prologue: function */
+ 504               	/* frame size = 0 */
+ 505               	/* stack size = 0 */
+ 506               	.L__stack_usage = 0
+ 129:MCP23017.cpp  **** 	if (State == CLEARED)
+ 507               		.loc 1 129 2 view .LVU122
+ 508               		.loc 1 129 6 is_stmt 0 view .LVU123
+ 509 0168 FC01      		movw r30,r24
+ 510 016a 2381      		ldd r18,Z+3
+ 511               		.loc 1 129 2 view .LVU124
+ 512 016c 2111      		cpse r18,__zero_reg__
+ 513 016e 00C0      		rjmp .L14
+ 130:MCP23017.cpp  **** 	{
+ 131:MCP23017.cpp  **** 		this->Set();
+ 514               		.loc 1 131 3 is_stmt 1 view .LVU125
+ 515               		.loc 1 131 12 is_stmt 0 view .LVU126
+ 516 0170 0C94 0000 		jmp _ZN10MCP_Output3SetEv
+ 517               	.LVL56:
+ 518               	.L14:
+ 132:MCP23017.cpp  **** 	} 
+ 133:MCP23017.cpp  **** 	else if (State == SET)
+ 519               		.loc 1 133 7 is_stmt 1 view .LVU127
+ 520 0174 2130      		cpi r18,lo8(1)
+ 521 0176 01F4      		brne .L13
+ 134:MCP23017.cpp  **** 	{
+ 135:MCP23017.cpp  **** 		this->Clear();
+ 522               		.loc 1 135 3 view .LVU128
+ 523               		.loc 1 135 14 is_stmt 0 view .LVU129
+ 524 0178 0C94 0000 		jmp _ZN10MCP_Output5ClearEv
+ 525               	.LVL57:
+ 526               	.L13:
+ 527               	/* epilogue start */
+ 136:MCP23017.cpp  **** 	}
+ 137:MCP23017.cpp  **** }
+ 528               		.loc 1 137 1 view .LVU130
+ 529 017c 0895      		ret
+ 530               		.cfi_endproc
+ 531               	.LFE11:
+ 533               	.global	_ZN10MCP_Output10AutoToggleEv
+ 535               	_ZN10MCP_Output10AutoToggleEv:
+ 536               	.LVL58:
+ 537               	.LFB12:
+ 138:MCP23017.cpp  **** 
+ 139:MCP23017.cpp  **** void MCP_Output::AutoToggle()
+ 140:MCP23017.cpp  **** {
+ 538               		.loc 1 140 1 is_stmt 1 view -0
+ 539               		.cfi_startproc
+ 540               	/* prologue: function */
+ 541               	/* frame size = 0 */
+ 542               	/* stack size = 0 */
+ 543               	.L__stack_usage = 0
+ 544               		.loc 1 140 1 is_stmt 0 view .LVU132
+ 545 017e FC01      		movw r30,r24
+ 141:MCP23017.cpp  **** 	State = AUTO_TOGGLE;
+ 546               		.loc 1 141 2 is_stmt 1 view .LVU133
+ 547               		.loc 1 141 8 is_stmt 0 view .LVU134
+ 548 0180 82E0      		ldi r24,lo8(2)
+ 549               	.LVL59:
+ 550               		.loc 1 141 8 view .LVU135
+ 551 0182 8383      		std Z+3,r24
+ 142:MCP23017.cpp  **** 	
+ 143:MCP23017.cpp  **** 	if (Port == PortA)
+ 552               		.loc 1 143 2 is_stmt 1 view .LVU136
+ 553 0184 2281      		ldd r18,Z+2
+ 554 0186 81E0      		ldi r24,lo8(1)
+ 555 0188 90E0      		ldi r25,0
+ 556 018a 00C0      		rjmp 2f
+ 557               		1:
+ 558 018c 880F      		lsl r24
+ 559               		2:
+ 560 018e 2A95      		dec r18
+ 561 0190 02F4      		brpl 1b
+ 562 0192 2181      		ldd r18,Z+1
+ 563 0194 2111      		cpse r18,__zero_reg__
+ 564 0196 00C0      		rjmp .L17
+ 144:MCP23017.cpp  **** 	{
+ 145:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortA |= (1 << Pin);
+ 565               		.loc 1 145 3 view .LVU137
+ 566               		.loc 1 145 32 is_stmt 0 view .LVU138
+ 567 0198 9091 0000 		lds r25,_ZN10MCP_Output16AutoToggle_PortAE
+ 568 019c 892B      		or r24,r25
+ 569 019e 8093 0000 		sts _ZN10MCP_Output16AutoToggle_PortAE,r24
+ 570 01a2 0895      		ret
+ 571               	.L17:
+ 146:MCP23017.cpp  **** 	}
+ 147:MCP23017.cpp  **** 	else
+ 148:MCP23017.cpp  **** 	{
+ 149:MCP23017.cpp  **** 		MCP_Output::AutoToggle_PortB |= (1 << Pin);
+ 572               		.loc 1 149 3 is_stmt 1 view .LVU139
+ 573               		.loc 1 149 32 is_stmt 0 view .LVU140
+ 574 01a4 9091 0000 		lds r25,_ZN10MCP_Output16AutoToggle_PortBE
+ 575 01a8 892B      		or r24,r25
+ 576 01aa 8093 0000 		sts _ZN10MCP_Output16AutoToggle_PortBE,r24
+ 577               	/* epilogue start */
+ 150:MCP23017.cpp  **** 	}
+ 151:MCP23017.cpp  **** }
+ 578               		.loc 1 151 1 view .LVU141
+ 579 01ae 0895      		ret
+ 580               		.cfi_endproc
+ 581               	.LFE12:
+ 583               	.global	_ZN10MCP_Output18SetAutoToggleSpeedEj
+ 585               	_ZN10MCP_Output18SetAutoToggleSpeedEj:
+ 586               	.LVL60:
+ 587               	.LFB13:
+ 152:MCP23017.cpp  **** 
+ 153:MCP23017.cpp  **** void MCP_Output::SetAutoToggleSpeed(uint16_t ms)
+ 154:MCP23017.cpp  **** {
+ 588               		.loc 1 154 1 is_stmt 1 view -0
+ 589               		.cfi_startproc
+ 590               		.loc 1 154 1 is_stmt 0 view .LVU143
+ 591 01b0 CF93      		push r28
+ 592               	.LCFI13:
+ 593               		.cfi_def_cfa_offset 3
+ 594               		.cfi_offset 28, -2
+ 595 01b2 DF93      		push r29
+ 596               	.LCFI14:
+ 597               		.cfi_def_cfa_offset 4
+ 598               		.cfi_offset 29, -3
+ 599 01b4 00D0      		rcall .
+ 600 01b6 00D0      		rcall .
+ 601               	.LCFI15:
+ 602               		.cfi_def_cfa_offset 8
+ 603 01b8 CDB7      		in r28,__SP_L__
+ 604 01ba DEB7      		in r29,__SP_H__
+ 605               	.LCFI16:
+ 606               		.cfi_def_cfa_register 28
+ 607               	/* prologue: function */
+ 608               	/* frame size = 4 */
+ 609               	/* stack size = 6 */
+ 610               	.L__stack_usage = 6
+ 155:MCP23017.cpp  **** 	AutoToggle_Timeout = (uint16_t)Timer0_ms2cnt(ms);
+ 611               		.loc 1 155 2 is_stmt 1 view .LVU144
+ 612               		.loc 1 155 46 is_stmt 0 view .LVU145
+ 613 01bc 9C01      		movw r18,r24
+ 614 01be 50E0      		ldi r21,0
+ 615 01c0 40E0      		ldi r20,0
+ 616 01c2 CA01      		movw r24,r20
+ 617               	.LVL61:
+ 618               		.loc 1 155 46 view .LVU146
+ 619 01c4 B901      		movw r22,r18
+ 620 01c6 0E94 0000 		call _Z13Timer0_ms2cntm
+ 621               	.LVL62:
+ 622               		.loc 1 155 46 view .LVU147
+ 623 01ca 462F      		mov r20,r22
+ 624 01cc 572F      		mov r21,r23
+ 625               		.loc 1 155 21 view .LVU148
+ 626 01ce 5093 0000 		sts _ZN10MCP_Output18AutoToggle_TimeoutE+1,r21
+ 627 01d2 4093 0000 		sts _ZN10MCP_Output18AutoToggle_TimeoutE,r20
+ 628               	/* epilogue start */
+ 156:MCP23017.cpp  **** }
+ 629               		.loc 1 156 1 view .LVU149
+ 630 01d6 0F90      		pop __tmp_reg__
+ 631 01d8 0F90      		pop __tmp_reg__
+ 632 01da 0F90      		pop __tmp_reg__
+ 633 01dc 0F90      		pop __tmp_reg__
+ 634 01de DF91      		pop r29
+ 635 01e0 CF91      		pop r28
+ 636 01e2 0895      		ret
+ 637               		.cfi_endproc
+ 638               	.LFE13:
+ 640               	.global	_ZN10MCP_Output17PerformAutoToggleEh
+ 642               	_ZN10MCP_Output17PerformAutoToggleEh:
+ 643               	.LVL63:
+ 644               	.LFB14:
+ 157:MCP23017.cpp  **** 
+ 158:MCP23017.cpp  **** void MCP_Output::PerformAutoToggle(uint8_t addr)
+ 159:MCP23017.cpp  **** {
+ 645               		.loc 1 159 1 is_stmt 1 view -0
+ 646               		.cfi_startproc
+ 647               		.loc 1 159 1 is_stmt 0 view .LVU151
+ 648 01e4 1F93      		push r17
+ 649               	.LCFI17:
+ 650               		.cfi_def_cfa_offset 3
+ 651               		.cfi_offset 17, -2
+ 652 01e6 CF93      		push r28
+ 653               	.LCFI18:
+ 654               		.cfi_def_cfa_offset 4
+ 655               		.cfi_offset 28, -3
+ 656 01e8 DF93      		push r29
+ 657               	.LCFI19:
+ 658               		.cfi_def_cfa_offset 5
+ 659               		.cfi_offset 29, -4
+ 660               	/* prologue: function */
+ 661               	/* frame size = 0 */
+ 662               	/* stack size = 3 */
+ 663               	.L__stack_usage = 3
+ 664 01ea C82F      		mov r28,r24
+ 160:MCP23017.cpp  **** 	uint8_t valA = MCP23017_ReadReg(addr, OLATA);
+ 665               		.loc 1 160 2 is_stmt 1 view .LVU152
+ 666               		.loc 1 160 33 is_stmt 0 view .LVU153
+ 667 01ec 64E1      		ldi r22,lo8(20)
+ 668 01ee 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 669               	.LVL64:
+ 670               		.loc 1 160 33 view .LVU154
+ 671 01f2 D82F      		mov r29,r24
+ 672               	.LVL65:
+ 161:MCP23017.cpp  **** 	uint8_t valB = MCP23017_ReadReg(addr, OLATB);
+ 673               		.loc 1 161 2 is_stmt 1 view .LVU155
+ 674               		.loc 1 161 33 is_stmt 0 view .LVU156
+ 675 01f4 65E1      		ldi r22,lo8(21)
+ 676 01f6 8C2F      		mov r24,r28
+ 677               	.LVL66:
+ 678               		.loc 1 161 33 view .LVU157
+ 679 01f8 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 680               	.LVL67:
+ 162:MCP23017.cpp  **** 	
+ 163:MCP23017.cpp  **** 	valA ^= MCP_Output::AutoToggle_PortA;
+ 681               		.loc 1 163 2 is_stmt 1 view .LVU158
+ 682               		.loc 1 163 22 is_stmt 0 view .LVU159
+ 683 01fc 4091 0000 		lds r20,_ZN10MCP_Output16AutoToggle_PortAE
+ 684               	.LVL68:
+ 164:MCP23017.cpp  **** 	valB ^= MCP_Output::AutoToggle_PortB;
+ 685               		.loc 1 164 2 is_stmt 1 view .LVU160
+ 686               		.loc 1 164 22 is_stmt 0 view .LVU161
+ 687 0200 1091 0000 		lds r17,_ZN10MCP_Output16AutoToggle_PortBE
+ 688               		.loc 1 164 7 view .LVU162
+ 689 0204 1827      		eor r17,r24
+ 690               	.LVL69:
+ 165:MCP23017.cpp  **** 	
+ 166:MCP23017.cpp  **** 	MCP23017_WriteReg(addr, OLATA, valA);
+ 691               		.loc 1 166 2 is_stmt 1 view .LVU163
+ 163:MCP23017.cpp  **** 	valB ^= MCP_Output::AutoToggle_PortB;
+ 692               		.loc 1 163 7 is_stmt 0 view .LVU164
+ 693 0206 4D27      		eor r20,r29
+ 694               	.LVL70:
+ 695               		.loc 1 166 19 view .LVU165
+ 696 0208 64E1      		ldi r22,lo8(20)
+ 697 020a 8C2F      		mov r24,r28
+ 698 020c 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 699               	.LVL71:
+ 167:MCP23017.cpp  **** 	MCP23017_WriteReg(addr, OLATB, valB);
+ 700               		.loc 1 167 2 is_stmt 1 view .LVU166
+ 701               		.loc 1 167 19 is_stmt 0 view .LVU167
+ 702 0210 412F      		mov r20,r17
+ 703 0212 65E1      		ldi r22,lo8(21)
+ 704 0214 8C2F      		mov r24,r28
+ 705               	/* epilogue start */
+ 168:MCP23017.cpp  **** }
+ 706               		.loc 1 168 1 view .LVU168
+ 707 0216 DF91      		pop r29
+ 708               		.loc 1 168 1 view .LVU169
+ 709 0218 CF91      		pop r28
+ 710               	.LVL72:
+ 711               		.loc 1 168 1 view .LVU170
+ 712 021a 1F91      		pop r17
+ 713               	.LVL73:
+ 167:MCP23017.cpp  **** 	MCP23017_WriteReg(addr, OLATB, valB);
+ 714               		.loc 1 167 19 view .LVU171
+ 715 021c 0C94 0000 		jmp _Z17MCP23017_WriteReghhh
+ 716               	.LVL74:
+ 167:MCP23017.cpp  **** 	MCP23017_WriteReg(addr, OLATB, valB);
+ 717               		.loc 1 167 19 view .LVU172
+ 718               		.cfi_endproc
+ 719               	.LFE14:
+ 721               	.global	_ZN9MCP_InputC2Ev
+ 723               	_ZN9MCP_InputC2Ev:
+ 724               	.LVL75:
+ 725               	.LFB16:
+ 169:MCP23017.cpp  **** 
+ 170:MCP23017.cpp  **** MCP_Input::MCP_Input()
+ 726               		.loc 1 170 1 is_stmt 1 view -0
+ 727               		.cfi_startproc
+ 728               	/* prologue: function */
+ 729               	/* frame size = 0 */
+ 730               	/* stack size = 0 */
+ 731               	.L__stack_usage = 0
+ 732               	/* epilogue start */
+ 171:MCP23017.cpp  **** {
+ 172:MCP23017.cpp  **** 	
+ 173:MCP23017.cpp  **** }
+ 733               		.loc 1 173 1 is_stmt 0 view .LVU174
+ 734 0220 0895      		ret
+ 735               		.cfi_endproc
+ 736               	.LFE16:
+ 738               	.global	_ZN9MCP_InputC1Ev
+ 739               		.set	_ZN9MCP_InputC1Ev,_ZN9MCP_InputC2Ev
+ 740               	.global	_ZN9MCP_InputC2Eh13MCP23017_Port12MCP23017_Pin
+ 742               	_ZN9MCP_InputC2Eh13MCP23017_Port12MCP23017_Pin:
+ 743               	.LVL76:
+ 744               	.LFB19:
+ 174:MCP23017.cpp  **** 
+ 175:MCP23017.cpp  **** MCP_Input::MCP_Input(uint8_t adrr, MCP23017_Port port, MCP23017_Pin pin)
+ 745               		.loc 1 175 1 is_stmt 1 view -0
+ 746               		.cfi_startproc
+ 747               		.loc 1 175 1 is_stmt 0 view .LVU176
+ 748 0222 1F93      		push r17
+ 749               	.LCFI20:
+ 750               		.cfi_def_cfa_offset 3
+ 751               		.cfi_offset 17, -2
+ 752 0224 CF93      		push r28
+ 753               	.LCFI21:
+ 754               		.cfi_def_cfa_offset 4
+ 755               		.cfi_offset 28, -3
+ 756 0226 DF93      		push r29
+ 757               	.LCFI22:
+ 758               		.cfi_def_cfa_offset 5
+ 759               		.cfi_offset 29, -4
+ 760               	/* prologue: function */
+ 761               	/* frame size = 0 */
+ 762               	/* stack size = 3 */
+ 763               	.L__stack_usage = 3
+ 764 0228 EC01      		movw r28,r24
+ 765 022a 862F      		mov r24,r22
+ 766               	.LVL77:
+ 767               	.LBB4:
+ 176:MCP23017.cpp  **** {
+ 177:MCP23017.cpp  **** 	/* Initialize members */
+ 178:MCP23017.cpp  **** 	Addr = adrr;
+ 768               		.loc 1 178 2 is_stmt 1 view .LVU177
+ 769               		.loc 1 178 7 is_stmt 0 view .LVU178
+ 770 022c 6883      		st Y,r22
+ 179:MCP23017.cpp  **** 	Port = port;
+ 771               		.loc 1 179 2 is_stmt 1 view .LVU179
+ 772               		.loc 1 179 7 is_stmt 0 view .LVU180
+ 773 022e 4983      		std Y+1,r20
+ 180:MCP23017.cpp  **** 	Pin = pin;
+ 774               		.loc 1 180 2 is_stmt 1 view .LVU181
+ 775               		.loc 1 180 6 is_stmt 0 view .LVU182
+ 776 0230 2A83      		std Y+2,r18
+ 181:MCP23017.cpp  **** 	
+ 182:MCP23017.cpp  **** 	/* Set Port pin to output */
+ 183:MCP23017.cpp  **** 	unsigned char val;
+ 777               		.loc 1 183 2 is_stmt 1 view .LVU183
+ 184:MCP23017.cpp  **** 	unsigned char reg;
+ 778               		.loc 1 184 2 view .LVU184
+ 185:MCP23017.cpp  **** 	
+ 186:MCP23017.cpp  **** 	if (Port == PortA)
+ 779               		.loc 1 186 2 view .LVU185
+ 780 0232 11E0      		ldi r17,lo8(1)
+ 781 0234 4111      		cpse r20,__zero_reg__
+ 782 0236 00C0      		rjmp .L23
+ 783 0238 10E0      		ldi r17,0
+ 784               	.L23:
+ 785               	.LVL78:
+ 187:MCP23017.cpp  **** 	{
+ 188:MCP23017.cpp  **** 		reg = IODIRA;
+ 189:MCP23017.cpp  **** 	}
+ 190:MCP23017.cpp  **** 	else
+ 191:MCP23017.cpp  **** 	{
+ 192:MCP23017.cpp  **** 		reg = IODIRB;
+ 193:MCP23017.cpp  **** 	}
+ 194:MCP23017.cpp  **** 	
+ 195:MCP23017.cpp  **** 	val = MCP23017_ReadReg((unsigned char)Addr, reg);
+ 786               		.loc 1 195 2 view .LVU186
+ 787               		.loc 1 195 24 is_stmt 0 view .LVU187
+ 788 023a 612F      		mov r22,r17
+ 789               	.LVL79:
+ 790               		.loc 1 195 24 view .LVU188
+ 791 023c 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 792               	.LVL80:
+ 196:MCP23017.cpp  **** 	val |= (1 << Pin);
+ 793               		.loc 1 196 2 is_stmt 1 view .LVU189
+ 794               		.loc 1 196 15 is_stmt 0 view .LVU190
+ 795 0240 9A81      		ldd r25,Y+2
+ 796               		.loc 1 196 12 view .LVU191
+ 797 0242 41E0      		ldi r20,lo8(1)
+ 798 0244 50E0      		ldi r21,0
+ 799 0246 00C0      		rjmp 2f
+ 800               		1:
+ 801 0248 440F      		lsl r20
+ 802               		2:
+ 803 024a 9A95      		dec r25
+ 804 024c 02F4      		brpl 1b
+ 805               		.loc 1 196 6 view .LVU192
+ 806 024e 482B      		or r20,r24
+ 807               	.LVL81:
+ 197:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 808               		.loc 1 197 2 is_stmt 1 view .LVU193
+ 809               		.loc 1 197 19 is_stmt 0 view .LVU194
+ 810 0250 612F      		mov r22,r17
+ 811 0252 8881      		ld r24,Y
+ 812               	/* epilogue start */
+ 813               	.LBE4:
+ 198:MCP23017.cpp  **** }
+ 814               		.loc 1 198 1 view .LVU195
+ 815 0254 DF91      		pop r29
+ 816 0256 CF91      		pop r28
+ 817               	.LVL82:
+ 818               		.loc 1 198 1 view .LVU196
+ 819 0258 1F91      		pop r17
+ 820               	.LVL83:
+ 821               	.LBB5:
+ 197:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 822               		.loc 1 197 19 view .LVU197
+ 823 025a 0C94 0000 		jmp _Z17MCP23017_WriteReghhh
+ 824               	.LVL84:
+ 197:MCP23017.cpp  **** 	MCP23017_WriteReg(Addr, reg, val);
+ 825               		.loc 1 197 19 view .LVU198
+ 826               	.LBE5:
+ 827               		.cfi_endproc
+ 828               	.LFE19:
+ 830               	.global	_ZN9MCP_InputC1Eh13MCP23017_Port12MCP23017_Pin
+ 831               		.set	_ZN9MCP_InputC1Eh13MCP23017_Port12MCP23017_Pin,_ZN9MCP_InputC2Eh13MCP23017_Port12MCP23017_Pin
+ 832               	.global	_ZN9MCP_Input4ReadEv
+ 834               	_ZN9MCP_Input4ReadEv:
+ 835               	.LVL85:
+ 836               	.LFB21:
+ 199:MCP23017.cpp  **** 
+ 200:MCP23017.cpp  **** bool MCP_Input::Read()
+ 201:MCP23017.cpp  **** {
+ 837               		.loc 1 201 1 is_stmt 1 view -0
+ 838               		.cfi_startproc
+ 839               		.loc 1 201 1 is_stmt 0 view .LVU200
+ 840 025e CF93      		push r28
+ 841               	.LCFI23:
+ 842               		.cfi_def_cfa_offset 3
+ 843               		.cfi_offset 28, -2
+ 844 0260 DF93      		push r29
+ 845               	.LCFI24:
+ 846               		.cfi_def_cfa_offset 4
+ 847               		.cfi_offset 29, -3
+ 848               	/* prologue: function */
+ 849               	/* frame size = 0 */
+ 850               	/* stack size = 2 */
+ 851               	.L__stack_usage = 2
+ 852 0262 EC01      		movw r28,r24
+ 202:MCP23017.cpp  **** 	unsigned char val;
+ 853               		.loc 1 202 2 is_stmt 1 view .LVU201
+ 203:MCP23017.cpp  **** 	unsigned char reg;
+ 854               		.loc 1 203 2 view .LVU202
+ 204:MCP23017.cpp  **** 	
+ 205:MCP23017.cpp  **** 	if (Port == PortA)
+ 855               		.loc 1 205 2 view .LVU203
+ 856 0264 8981      		ldd r24,Y+1
+ 857               	.LVL86:
+ 206:MCP23017.cpp  **** 	{
+ 207:MCP23017.cpp  **** 		reg = GPIOA;
+ 208:MCP23017.cpp  **** 	}
+ 209:MCP23017.cpp  **** 	else
+ 210:MCP23017.cpp  **** 	{
+ 211:MCP23017.cpp  **** 		reg = GPIOB;
+ 858               		.loc 1 211 7 is_stmt 0 view .LVU204
+ 859 0266 63E1      		ldi r22,lo8(19)
+ 205:MCP23017.cpp  **** 	{
+ 860               		.loc 1 205 2 view .LVU205
+ 861 0268 8111      		cpse r24,__zero_reg__
+ 862 026a 00C0      		rjmp .L25
+ 207:MCP23017.cpp  **** 	}
+ 863               		.loc 1 207 7 view .LVU206
+ 864 026c 62E1      		ldi r22,lo8(18)
+ 865               	.L25:
+ 866               	.LVL87:
+ 212:MCP23017.cpp  **** 	}
+ 213:MCP23017.cpp  **** 	
+ 214:MCP23017.cpp  **** 	val = MCP23017_ReadReg((unsigned char)Addr, reg);
+ 867               		.loc 1 214 2 is_stmt 1 view .LVU207
+ 868               		.loc 1 214 24 is_stmt 0 view .LVU208
+ 869 026e 8881      		ld r24,Y
+ 870 0270 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 871               	.LVL88:
+ 215:MCP23017.cpp  **** 	val &= (1 << Pin);
+ 872               		.loc 1 215 2 is_stmt 1 view .LVU209
+ 216:MCP23017.cpp  **** 	
+ 217:MCP23017.cpp  **** 	return (bool)val;
+ 873               		.loc 1 217 2 view .LVU210
+ 215:MCP23017.cpp  **** 	val &= (1 << Pin);
+ 874               		.loc 1 215 15 is_stmt 0 view .LVU211
+ 875 0274 9A81      		ldd r25,Y+2
+ 215:MCP23017.cpp  **** 	val &= (1 << Pin);
+ 876               		.loc 1 215 12 view .LVU212
+ 877 0276 21E0      		ldi r18,lo8(1)
+ 878 0278 30E0      		ldi r19,0
+ 879 027a 00C0      		rjmp 2f
+ 880               		1:
+ 881 027c 220F      		lsl r18
+ 882               		2:
+ 883 027e 9A95      		dec r25
+ 884 0280 02F4      		brpl 1b
+ 215:MCP23017.cpp  **** 	val &= (1 << Pin);
+ 885               		.loc 1 215 6 view .LVU213
+ 886 0282 982F      		mov r25,r24
+ 887 0284 9223      		and r25,r18
+ 888               		.loc 1 217 15 view .LVU214
+ 889 0286 81E0      		ldi r24,lo8(1)
+ 890               	.LVL89:
+ 891               		.loc 1 217 15 view .LVU215
+ 892 0288 01F4      		brne .L26
+ 893 028a 80E0      		ldi r24,0
+ 894               	.L26:
+ 895               	/* epilogue start */
+ 218:MCP23017.cpp  **** }
+ 896               		.loc 1 218 1 view .LVU216
+ 897 028c DF91      		pop r29
+ 898 028e CF91      		pop r28
+ 899               	.LVL90:
+ 900               		.loc 1 218 1 view .LVU217
+ 901 0290 0895      		ret
+ 902               		.cfi_endproc
+ 903               	.LFE21:
+ 905               	.global	_ZN10MCP_Output16AutoToggle_PortBE
+ 906               		.section .bss
+ 909               	_ZN10MCP_Output16AutoToggle_PortBE:
+ 910 0000 00        		.zero	1
+ 911               	.global	_ZN10MCP_Output16AutoToggle_PortAE
+ 914               	_ZN10MCP_Output16AutoToggle_PortAE:
+ 915 0001 00        		.zero	1
+ 916               	.global	_ZN10MCP_Output15AutoToggle_FlagE
+ 919               	_ZN10MCP_Output15AutoToggle_FlagE:
+ 920 0002 00        		.zero	1
+ 921               	.global	_ZN10MCP_Output18AutoToggle_TimeoutE
+ 922               		.data
+ 925               	_ZN10MCP_Output18AutoToggle_TimeoutE:
+ 926 0000 6400      		.word	100
+ 927               	.global	_ZN10MCP_Output17AutoToggle_OvfCntE
+ 928               		.section .bss
+ 931               	_ZN10MCP_Output17AutoToggle_OvfCntE:
+ 932 0003 0000      		.zero	2
+ 933               		.text
+ 934               	.Letext0:
+ 935               		.file 2 "/usr/lib/gcc/avr/9.2.0/include/stdint-gcc.h"
+ 936               		.file 3 "MCP23017.h"
+ 937               		.file 4 "Timer.h"
+ 938               		.file 5 "i2cmaster.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 MCP23017.cpp
+     /tmp/cc69VFcD.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cc69VFcD.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cc69VFcD.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cc69VFcD.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cc69VFcD.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cc69VFcD.s:12     .text:0000000000000000 _Z17MCP23017_WriteReghhh
+     /tmp/cc69VFcD.s:71     .text:0000000000000024 _Z16MCP23017_ReadReghh
+     /tmp/cc69VFcD.s:139    .text:0000000000000050 _ZN10MCP_OutputC2Ev
+     /tmp/cc69VFcD.s:139    .text:0000000000000050 _ZN10MCP_OutputC1Ev
+     /tmp/cc69VFcD.s:158    .text:0000000000000052 _ZN10MCP_Output8getStateEv
+     /tmp/cc69VFcD.s:180    .text:0000000000000058 _ZN10MCP_Output3SetEv
+     /tmp/cc69VFcD.s:914    .bss:0000000000000001 _ZN10MCP_Output16AutoToggle_PortAE
+     /tmp/cc69VFcD.s:909    .bss:0000000000000000 _ZN10MCP_Output16AutoToggle_PortBE
+     /tmp/cc69VFcD.s:289    .text:00000000000000bc _ZN10MCP_Output5ClearEv
+     /tmp/cc69VFcD.s:399    .text:0000000000000122 _ZN10MCP_OutputC2Eh13MCP23017_Port12MCP23017_Pin
+     /tmp/cc69VFcD.s:399    .text:0000000000000122 _ZN10MCP_OutputC1Eh13MCP23017_Port12MCP23017_Pin
+     /tmp/cc69VFcD.s:498    .text:0000000000000168 _ZN10MCP_Output6ToggleEv
+     /tmp/cc69VFcD.s:535    .text:000000000000017e _ZN10MCP_Output10AutoToggleEv
+     /tmp/cc69VFcD.s:585    .text:00000000000001b0 _ZN10MCP_Output18SetAutoToggleSpeedEj
+     /tmp/cc69VFcD.s:925    .data:0000000000000000 _ZN10MCP_Output18AutoToggle_TimeoutE
+     /tmp/cc69VFcD.s:642    .text:00000000000001e4 _ZN10MCP_Output17PerformAutoToggleEh
+     /tmp/cc69VFcD.s:723    .text:0000000000000220 _ZN9MCP_InputC2Ev
+     /tmp/cc69VFcD.s:723    .text:0000000000000220 _ZN9MCP_InputC1Ev
+     /tmp/cc69VFcD.s:742    .text:0000000000000222 _ZN9MCP_InputC2Eh13MCP23017_Port12MCP23017_Pin
+     /tmp/cc69VFcD.s:742    .text:0000000000000222 _ZN9MCP_InputC1Eh13MCP23017_Port12MCP23017_Pin
+     /tmp/cc69VFcD.s:834    .text:000000000000025e _ZN9MCP_Input4ReadEv
+     /tmp/cc69VFcD.s:919    .bss:0000000000000002 _ZN10MCP_Output15AutoToggle_FlagE
+     /tmp/cc69VFcD.s:931    .bss:0000000000000003 _ZN10MCP_Output17AutoToggle_OvfCntE
+
+UNDEFINED SYMBOLS
+_Z9i2c_starth
+_Z9i2c_writeh
+_Z8i2c_stopv
+_Z11i2c_readNakv
+_Z13Timer0_ms2cntm
+__do_copy_data
+__do_clear_bss

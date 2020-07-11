@@ -1,0 +1,613 @@
+   1               		.file	"i2cmaster.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z8i2c_initv
+  12               	_Z8i2c_initv:
+  13               	.LFB0:
+  14               		.file 1 "i2cmaster.cpp"
+   1:i2cmaster.cpp **** /*************************************************************************
+   2:i2cmaster.cpp **** * Title:    I2C master library using hardware TWI interface
+   3:i2cmaster.cpp **** * Author:   Peter Fleury <pfleury@gmx.ch>  http://jump.to/fleury
+   4:i2cmaster.cpp **** * File:     $Id: twimaster.c,v 1.4 2015/01/17 12:16:05 peter Exp $
+   5:i2cmaster.cpp **** * Software: AVR-GCC 3.4.3 / avr-libc 1.2.3
+   6:i2cmaster.cpp **** * Target:   any AVR device with hardware TWI 
+   7:i2cmaster.cpp **** * Usage:    API compatible with I2C Software Library i2cmaster.h
+   8:i2cmaster.cpp **** **************************************************************************/
+   9:i2cmaster.cpp **** #include <inttypes.h>
+  10:i2cmaster.cpp **** #include <compat/twi.h>
+  11:i2cmaster.cpp **** #include "i2cmaster.h"
+  12:i2cmaster.cpp **** 
+  13:i2cmaster.cpp **** 
+  14:i2cmaster.cpp **** /* define CPU frequency in hz here if not defined in Makefile */
+  15:i2cmaster.cpp **** #ifndef F_CPU
+  16:i2cmaster.cpp **** #define F_CPU 16000000UL
+  17:i2cmaster.cpp **** #endif
+  18:i2cmaster.cpp **** 
+  19:i2cmaster.cpp **** /* I2C clock in Hz */
+  20:i2cmaster.cpp **** #define SCL_CLOCK  100000L
+  21:i2cmaster.cpp **** 
+  22:i2cmaster.cpp **** 
+  23:i2cmaster.cpp **** /*************************************************************************
+  24:i2cmaster.cpp ****  Initialization of the I2C bus interface. Need to be called only once
+  25:i2cmaster.cpp **** *************************************************************************/
+  26:i2cmaster.cpp **** void i2c_init(void)
+  27:i2cmaster.cpp **** {
+  15               		.loc 1 27 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  28:i2cmaster.cpp ****   /* initialize TWI clock: 100 kHz clock, TWPS = 0 => prescaler = 1 */
+  29:i2cmaster.cpp ****   
+  30:i2cmaster.cpp ****   TWSR = 0;                         /* no prescaler */
+  21               		.loc 1 30 3 view .LVU1
+  22               		.loc 1 30 8 is_stmt 0 view .LVU2
+  23 0000 1092 B900 		sts 185,__zero_reg__
+  31:i2cmaster.cpp ****   TWBR = ((F_CPU/SCL_CLOCK)-16)/2;  /* must be > 10 for stable operation */
+  24               		.loc 1 31 3 is_stmt 1 view .LVU3
+  25               		.loc 1 31 8 is_stmt 0 view .LVU4
+  26 0004 8CE5      		ldi r24,lo8(92)
+  27 0006 8093 B800 		sts 184,r24
+  28               	/* epilogue start */
+  32:i2cmaster.cpp **** 
+  33:i2cmaster.cpp **** }/* i2c_init */
+  29               		.loc 1 33 1 view .LVU5
+  30 000a 0895      		ret
+  31               		.cfi_endproc
+  32               	.LFE0:
+  34               	.global	_Z9i2c_starth
+  36               	_Z9i2c_starth:
+  37               	.LVL0:
+  38               	.LFB1:
+  34:i2cmaster.cpp **** 
+  35:i2cmaster.cpp **** 
+  36:i2cmaster.cpp **** /*************************************************************************	
+  37:i2cmaster.cpp ****   Issues a start condition and sends address and transfer direction.
+  38:i2cmaster.cpp ****   return 0 = device accessible, 1= failed to access device
+  39:i2cmaster.cpp **** *************************************************************************/
+  40:i2cmaster.cpp **** unsigned char i2c_start(unsigned char address)
+  41:i2cmaster.cpp **** {
+  39               		.loc 1 41 1 is_stmt 1 view -0
+  40               		.cfi_startproc
+  41               	/* prologue: function */
+  42               	/* frame size = 0 */
+  43               	/* stack size = 0 */
+  44               	.L__stack_usage = 0
+  42:i2cmaster.cpp ****     uint8_t   twst;
+  45               		.loc 1 42 5 view .LVU7
+  43:i2cmaster.cpp **** 
+  44:i2cmaster.cpp **** 	// send START condition
+  45:i2cmaster.cpp **** 	TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
+  46               		.loc 1 45 2 view .LVU8
+  47               		.loc 1 45 7 is_stmt 0 view .LVU9
+  48 000c 94EA      		ldi r25,lo8(-92)
+  49 000e 9093 BC00 		sts 188,r25
+  50               	.L3:
+  46:i2cmaster.cpp **** 
+  47:i2cmaster.cpp **** 	// wait until transmission completed
+  48:i2cmaster.cpp **** 	while(!(TWCR & (1<<TWINT)));
+  51               		.loc 1 48 2 is_stmt 1 view .LVU10
+  52               		.loc 1 48 8 view .LVU11
+  53               		.loc 1 48 10 is_stmt 0 view .LVU12
+  54 0012 9091 BC00 		lds r25,188
+  55               		.loc 1 48 8 view .LVU13
+  56 0016 97FF      		sbrs r25,7
+  57 0018 00C0      		rjmp .L3
+  49:i2cmaster.cpp **** 
+  50:i2cmaster.cpp **** 	// check value of TWI Status Register. Mask prescaler bits.
+  51:i2cmaster.cpp **** 	twst = TW_STATUS & 0xF8;
+  58               		.loc 1 51 2 is_stmt 1 view .LVU14
+  59               		.loc 1 51 19 is_stmt 0 view .LVU15
+  60 001a 9091 B900 		lds r25,185
+  61               		.loc 1 51 7 view .LVU16
+  62 001e 987F      		andi r25,lo8(-8)
+  63               	.LVL1:
+  52:i2cmaster.cpp **** 	if ( (twst != TW_START) && (twst != TW_REP_START)) return 1;
+  64               		.loc 1 52 2 is_stmt 1 view .LVU17
+  65 0020 9830      		cpi r25,lo8(8)
+  66 0022 01F0      		breq .L4
+  67               		.loc 1 52 26 is_stmt 0 discriminator 1 view .LVU18
+  68 0024 9031      		cpi r25,lo8(16)
+  69 0026 01F4      		brne .L8
+  70               	.L4:
+  53:i2cmaster.cpp **** 
+  54:i2cmaster.cpp **** 	// send device address
+  55:i2cmaster.cpp **** 	TWDR = address;
+  71               		.loc 1 55 2 is_stmt 1 view .LVU19
+  72               		.loc 1 55 7 is_stmt 0 view .LVU20
+  73 0028 8093 BB00 		sts 187,r24
+  56:i2cmaster.cpp **** 	TWCR = (1<<TWINT) | (1<<TWEN);
+  74               		.loc 1 56 2 is_stmt 1 view .LVU21
+  75               		.loc 1 56 7 is_stmt 0 view .LVU22
+  76 002c 84E8      		ldi r24,lo8(-124)
+  77               	.LVL2:
+  78               		.loc 1 56 7 view .LVU23
+  79 002e 8093 BC00 		sts 188,r24
+  80               	.LVL3:
+  81               	.LBB4:
+  82               	.LBI4:
+  40:i2cmaster.cpp **** {
+  83               		.loc 1 40 15 is_stmt 1 view .LVU24
+  84               	.L6:
+  85               	.LBB5:
+  57:i2cmaster.cpp **** 
+  58:i2cmaster.cpp **** 	// wail until transmission completed and ACK/NACK has been received
+  59:i2cmaster.cpp **** 	while(!(TWCR & (1<<TWINT)));
+  86               		.loc 1 59 2 view .LVU25
+  87               		.loc 1 59 8 view .LVU26
+  88               		.loc 1 59 10 is_stmt 0 view .LVU27
+  89 0032 8091 BC00 		lds r24,188
+  90               		.loc 1 59 8 view .LVU28
+  91 0036 87FF      		sbrs r24,7
+  92 0038 00C0      		rjmp .L6
+  60:i2cmaster.cpp **** 
+  61:i2cmaster.cpp **** 	// check value of TWI Status Register. Mask prescaler bits.
+  62:i2cmaster.cpp **** 	twst = TW_STATUS & 0xF8;
+  93               		.loc 1 62 2 is_stmt 1 view .LVU29
+  94               		.loc 1 62 19 is_stmt 0 view .LVU30
+  95 003a 9091 B900 		lds r25,185
+  96               	.LVL4:
+  97               		.loc 1 62 7 view .LVU31
+  98 003e 987F      		andi r25,lo8(-8)
+  99               	.LVL5:
+  63:i2cmaster.cpp **** 	if ( (twst != TW_MT_SLA_ACK) && (twst != TW_MR_SLA_ACK) ) return 1;
+ 100               		.loc 1 63 2 is_stmt 1 view .LVU32
+ 101 0040 9831      		cpi r25,lo8(24)
+ 102 0042 01F0      		breq .L9
+ 103               		.loc 1 63 31 is_stmt 0 view .LVU33
+ 104 0044 81E0      		ldi r24,lo8(1)
+ 105 0046 9034      		cpi r25,lo8(64)
+ 106 0048 01F4      		brne .L2
+ 107               	.L9:
+  64:i2cmaster.cpp **** 
+  65:i2cmaster.cpp **** 	return 0;
+ 108               		.loc 1 65 9 view .LVU34
+ 109 004a 80E0      		ldi r24,0
+ 110               	.LVL6:
+ 111               	.L2:
+ 112               	/* epilogue start */
+ 113               		.loc 1 65 9 view .LVU35
+ 114               	.LBE5:
+ 115               	.LBE4:
+  66:i2cmaster.cpp **** 
+  67:i2cmaster.cpp **** }/* i2c_start */
+ 116               		.loc 1 67 1 view .LVU36
+ 117 004c 0895      		ret
+ 118               	.LVL7:
+ 119               	.L8:
+  52:i2cmaster.cpp **** 
+ 120               		.loc 1 52 60 view .LVU37
+ 121 004e 81E0      		ldi r24,lo8(1)
+ 122               	.LVL8:
+  52:i2cmaster.cpp **** 
+ 123               		.loc 1 52 60 view .LVU38
+ 124 0050 0895      		ret
+ 125               		.cfi_endproc
+ 126               	.LFE1:
+ 128               	.global	_Z14i2c_start_waith
+ 130               	_Z14i2c_start_waith:
+ 131               	.LVL9:
+ 132               	.LFB2:
+  68:i2cmaster.cpp **** 
+  69:i2cmaster.cpp **** 
+  70:i2cmaster.cpp **** /*************************************************************************
+  71:i2cmaster.cpp ****  Issues a start condition and sends address and transfer direction.
+  72:i2cmaster.cpp ****  If device is busy, use ack polling to wait until device is ready
+  73:i2cmaster.cpp ****  
+  74:i2cmaster.cpp ****  Input:   address and transfer direction of I2C device
+  75:i2cmaster.cpp **** *************************************************************************/
+  76:i2cmaster.cpp **** void i2c_start_wait(unsigned char address)
+  77:i2cmaster.cpp **** {
+ 133               		.loc 1 77 1 is_stmt 1 view -0
+ 134               		.cfi_startproc
+ 135               	/* prologue: function */
+ 136               	/* frame size = 0 */
+ 137               	/* stack size = 0 */
+ 138               	.L__stack_usage = 0
+  78:i2cmaster.cpp ****     uint8_t   twst;
+  79:i2cmaster.cpp **** 
+  80:i2cmaster.cpp **** 
+  81:i2cmaster.cpp ****     while ( 1 )
+  82:i2cmaster.cpp ****     {
+  83:i2cmaster.cpp **** 	    // send START condition
+  84:i2cmaster.cpp **** 	    TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
+ 139               		.loc 1 84 11 is_stmt 0 view .LVU40
+ 140 0052 24EA      		ldi r18,lo8(-92)
+  85:i2cmaster.cpp ****     
+  86:i2cmaster.cpp ****     	// wait until transmission completed
+  87:i2cmaster.cpp ****     	while(!(TWCR & (1<<TWINT)));
+  88:i2cmaster.cpp ****     
+  89:i2cmaster.cpp ****     	// check value of TWI Status Register. Mask prescaler bits.
+  90:i2cmaster.cpp ****     	twst = TW_STATUS & 0xF8;
+  91:i2cmaster.cpp ****     	if ( (twst != TW_START) && (twst != TW_REP_START)) continue;
+  92:i2cmaster.cpp ****     
+  93:i2cmaster.cpp ****     	// send device address
+  94:i2cmaster.cpp ****     	TWDR = address;
+  95:i2cmaster.cpp ****     	TWCR = (1<<TWINT) | (1<<TWEN);
+ 141               		.loc 1 95 11 view .LVU41
+ 142 0054 34E8      		ldi r19,lo8(-124)
+  96:i2cmaster.cpp ****     
+  97:i2cmaster.cpp ****     	// wail until transmission completed
+  98:i2cmaster.cpp ****     	while(!(TWCR & (1<<TWINT)));
+  99:i2cmaster.cpp ****     
+ 100:i2cmaster.cpp ****     	// check value of TWI Status Register. Mask prescaler bits.
+ 101:i2cmaster.cpp ****     	twst = TW_STATUS & 0xF8;
+ 102:i2cmaster.cpp ****     	if ( (twst == TW_MT_SLA_NACK )||(twst ==TW_MR_DATA_NACK) ) 
+ 103:i2cmaster.cpp ****     	{    	    
+ 104:i2cmaster.cpp ****     	    /* device busy, send stop condition to terminate write operation */
+ 105:i2cmaster.cpp **** 	        TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+ 143               		.loc 1 105 15 view .LVU42
+ 144 0056 44E9      		ldi r20,lo8(-108)
+ 145               	.L16:
+  78:i2cmaster.cpp **** 
+ 146               		.loc 1 78 5 is_stmt 1 view .LVU43
+  81:i2cmaster.cpp ****     {
+ 147               		.loc 1 81 5 view .LVU44
+  84:i2cmaster.cpp ****     
+ 148               		.loc 1 84 6 view .LVU45
+  84:i2cmaster.cpp ****     
+ 149               		.loc 1 84 11 is_stmt 0 view .LVU46
+ 150 0058 2093 BC00 		sts 188,r18
+ 151               	.L17:
+  87:i2cmaster.cpp ****     
+ 152               		.loc 1 87 6 is_stmt 1 view .LVU47
+  87:i2cmaster.cpp ****     
+ 153               		.loc 1 87 12 view .LVU48
+  87:i2cmaster.cpp ****     
+ 154               		.loc 1 87 14 is_stmt 0 view .LVU49
+ 155 005c 9091 BC00 		lds r25,188
+  87:i2cmaster.cpp ****     
+ 156               		.loc 1 87 12 view .LVU50
+ 157 0060 97FF      		sbrs r25,7
+ 158 0062 00C0      		rjmp .L17
+  90:i2cmaster.cpp ****     	if ( (twst != TW_START) && (twst != TW_REP_START)) continue;
+ 159               		.loc 1 90 6 is_stmt 1 view .LVU51
+  90:i2cmaster.cpp ****     	if ( (twst != TW_START) && (twst != TW_REP_START)) continue;
+ 160               		.loc 1 90 23 is_stmt 0 view .LVU52
+ 161 0064 9091 B900 		lds r25,185
+  90:i2cmaster.cpp ****     	if ( (twst != TW_START) && (twst != TW_REP_START)) continue;
+ 162               		.loc 1 90 11 view .LVU53
+ 163 0068 987F      		andi r25,lo8(-8)
+ 164               	.LVL10:
+  91:i2cmaster.cpp ****     
+ 165               		.loc 1 91 6 is_stmt 1 view .LVU54
+ 166 006a 9830      		cpi r25,lo8(8)
+ 167 006c 01F0      		breq .L18
+  91:i2cmaster.cpp ****     
+ 168               		.loc 1 91 30 is_stmt 0 discriminator 1 view .LVU55
+ 169 006e 9031      		cpi r25,lo8(16)
+ 170 0070 01F4      		brne .L16
+ 171               	.L18:
+  94:i2cmaster.cpp ****     	TWCR = (1<<TWINT) | (1<<TWEN);
+ 172               		.loc 1 94 6 is_stmt 1 view .LVU56
+  94:i2cmaster.cpp ****     	TWCR = (1<<TWINT) | (1<<TWEN);
+ 173               		.loc 1 94 11 is_stmt 0 view .LVU57
+ 174 0072 8093 BB00 		sts 187,r24
+  95:i2cmaster.cpp ****     
+ 175               		.loc 1 95 6 is_stmt 1 view .LVU58
+  95:i2cmaster.cpp ****     
+ 176               		.loc 1 95 11 is_stmt 0 view .LVU59
+ 177 0076 3093 BC00 		sts 188,r19
+ 178               	.LVL11:
+ 179               	.L20:
+  98:i2cmaster.cpp ****     
+ 180               		.loc 1 98 6 is_stmt 1 view .LVU60
+  98:i2cmaster.cpp ****     
+ 181               		.loc 1 98 12 view .LVU61
+  98:i2cmaster.cpp ****     
+ 182               		.loc 1 98 14 is_stmt 0 view .LVU62
+ 183 007a 9091 BC00 		lds r25,188
+  98:i2cmaster.cpp ****     
+ 184               		.loc 1 98 12 view .LVU63
+ 185 007e 97FF      		sbrs r25,7
+ 186 0080 00C0      		rjmp .L20
+ 101:i2cmaster.cpp ****     	if ( (twst == TW_MT_SLA_NACK )||(twst ==TW_MR_DATA_NACK) ) 
+ 187               		.loc 1 101 6 is_stmt 1 view .LVU64
+ 101:i2cmaster.cpp ****     	if ( (twst == TW_MT_SLA_NACK )||(twst ==TW_MR_DATA_NACK) ) 
+ 188               		.loc 1 101 23 is_stmt 0 view .LVU65
+ 189 0082 9091 B900 		lds r25,185
+ 101:i2cmaster.cpp ****     	if ( (twst == TW_MT_SLA_NACK )||(twst ==TW_MR_DATA_NACK) ) 
+ 190               		.loc 1 101 11 view .LVU66
+ 191 0086 987F      		andi r25,lo8(-8)
+ 192               	.LVL12:
+ 102:i2cmaster.cpp ****     	{    	    
+ 193               		.loc 1 102 6 is_stmt 1 view .LVU67
+ 194 0088 9032      		cpi r25,lo8(32)
+ 195 008a 01F0      		breq .L21
+ 102:i2cmaster.cpp ****     	{    	    
+ 196               		.loc 1 102 36 is_stmt 0 discriminator 1 view .LVU68
+ 197 008c 9835      		cpi r25,lo8(88)
+ 198 008e 01F4      		brne .L15
+ 199               	.L21:
+ 200               		.loc 1 105 10 is_stmt 1 view .LVU69
+ 201               		.loc 1 105 15 is_stmt 0 view .LVU70
+ 202 0090 4093 BC00 		sts 188,r20
+ 203               	.LVL13:
+ 204               	.L23:
+ 106:i2cmaster.cpp **** 	        
+ 107:i2cmaster.cpp **** 	        // wait until stop condition is executed and bus released
+ 108:i2cmaster.cpp **** 	        while(TWCR & (1<<TWSTO));
+ 205               		.loc 1 108 10 is_stmt 1 view .LVU71
+ 206               		.loc 1 108 32 view .LVU72
+ 207               		.loc 1 108 16 is_stmt 0 view .LVU73
+ 208 0094 9091 BC00 		lds r25,188
+ 209               		.loc 1 108 32 view .LVU74
+ 210 0098 94FD      		sbrc r25,4
+ 211 009a 00C0      		rjmp .L23
+ 212 009c 00C0      		rjmp .L16
+ 213               	.LVL14:
+ 214               	.L15:
+ 215               	/* epilogue start */
+ 109:i2cmaster.cpp **** 	        
+ 110:i2cmaster.cpp ****     	    continue;
+ 111:i2cmaster.cpp ****     	}
+ 112:i2cmaster.cpp ****     	//if( twst != TW_MT_SLA_ACK) return 1;
+ 113:i2cmaster.cpp ****     	break;
+ 114:i2cmaster.cpp ****      }
+ 115:i2cmaster.cpp **** 
+ 116:i2cmaster.cpp **** }/* i2c_start_wait */
+ 216               		.loc 1 116 1 view .LVU75
+ 217 009e 0895      		ret
+ 218               		.cfi_endproc
+ 219               	.LFE2:
+ 221               	.global	_Z13i2c_rep_starth
+ 223               	_Z13i2c_rep_starth:
+ 224               	.LVL15:
+ 225               	.LFB3:
+ 117:i2cmaster.cpp **** 
+ 118:i2cmaster.cpp **** 
+ 119:i2cmaster.cpp **** /*************************************************************************
+ 120:i2cmaster.cpp ****  Issues a repeated start condition and sends address and transfer direction 
+ 121:i2cmaster.cpp **** 
+ 122:i2cmaster.cpp ****  Input:   address and transfer direction of I2C device
+ 123:i2cmaster.cpp ****  
+ 124:i2cmaster.cpp ****  Return:  0 device accessible
+ 125:i2cmaster.cpp ****           1 failed to access device
+ 126:i2cmaster.cpp **** *************************************************************************/
+ 127:i2cmaster.cpp **** unsigned char i2c_rep_start(unsigned char address)
+ 128:i2cmaster.cpp **** {
+ 226               		.loc 1 128 1 is_stmt 1 view -0
+ 227               		.cfi_startproc
+ 228               	/* prologue: function */
+ 229               	/* frame size = 0 */
+ 230               	/* stack size = 0 */
+ 231               	.L__stack_usage = 0
+ 129:i2cmaster.cpp ****     return i2c_start( address );
+ 232               		.loc 1 129 5 view .LVU77
+ 233               		.loc 1 129 21 is_stmt 0 view .LVU78
+ 234 00a0 0C94 0000 		jmp _Z9i2c_starth
+ 235               	.LVL16:
+ 236               		.loc 1 129 21 view .LVU79
+ 237               		.cfi_endproc
+ 238               	.LFE3:
+ 240               	.global	_Z8i2c_stopv
+ 242               	_Z8i2c_stopv:
+ 243               	.LFB4:
+ 130:i2cmaster.cpp **** 
+ 131:i2cmaster.cpp **** }/* i2c_rep_start */
+ 132:i2cmaster.cpp **** 
+ 133:i2cmaster.cpp **** 
+ 134:i2cmaster.cpp **** /*************************************************************************
+ 135:i2cmaster.cpp ****  Terminates the data transfer and releases the I2C bus
+ 136:i2cmaster.cpp **** *************************************************************************/
+ 137:i2cmaster.cpp **** void i2c_stop(void)
+ 138:i2cmaster.cpp **** {
+ 244               		.loc 1 138 1 is_stmt 1 view -0
+ 245               		.cfi_startproc
+ 246               	/* prologue: function */
+ 247               	/* frame size = 0 */
+ 248               	/* stack size = 0 */
+ 249               	.L__stack_usage = 0
+ 139:i2cmaster.cpp ****     /* send stop condition */
+ 140:i2cmaster.cpp **** 	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO);
+ 250               		.loc 1 140 2 view .LVU81
+ 251               		.loc 1 140 7 is_stmt 0 view .LVU82
+ 252 00a4 84E9      		ldi r24,lo8(-108)
+ 253 00a6 8093 BC00 		sts 188,r24
+ 254               	.L35:
+ 141:i2cmaster.cpp **** 	
+ 142:i2cmaster.cpp **** 	// wait until stop condition is executed and bus released
+ 143:i2cmaster.cpp **** 	while(TWCR & (1<<TWSTO));
+ 255               		.loc 1 143 2 is_stmt 1 view .LVU83
+ 256               		.loc 1 143 24 view .LVU84
+ 257               		.loc 1 143 8 is_stmt 0 view .LVU85
+ 258 00aa 8091 BC00 		lds r24,188
+ 259               		.loc 1 143 24 view .LVU86
+ 260 00ae 84FD      		sbrc r24,4
+ 261 00b0 00C0      		rjmp .L35
+ 262               	/* epilogue start */
+ 144:i2cmaster.cpp **** 
+ 145:i2cmaster.cpp **** }/* i2c_stop */
+ 263               		.loc 1 145 1 view .LVU87
+ 264 00b2 0895      		ret
+ 265               		.cfi_endproc
+ 266               	.LFE4:
+ 268               	.global	_Z9i2c_writeh
+ 270               	_Z9i2c_writeh:
+ 271               	.LVL17:
+ 272               	.LFB5:
+ 146:i2cmaster.cpp **** 
+ 147:i2cmaster.cpp **** 
+ 148:i2cmaster.cpp **** /*************************************************************************
+ 149:i2cmaster.cpp ****   Send one byte to I2C device
+ 150:i2cmaster.cpp ****   
+ 151:i2cmaster.cpp ****   Input:    byte to be transfered
+ 152:i2cmaster.cpp ****   Return:   0 write successful 
+ 153:i2cmaster.cpp ****             1 write failed
+ 154:i2cmaster.cpp **** *************************************************************************/
+ 155:i2cmaster.cpp **** unsigned char i2c_write( unsigned char data )
+ 156:i2cmaster.cpp **** {	
+ 273               		.loc 1 156 1 is_stmt 1 view -0
+ 274               		.cfi_startproc
+ 275               	/* prologue: function */
+ 276               	/* frame size = 0 */
+ 277               	/* stack size = 0 */
+ 278               	.L__stack_usage = 0
+ 157:i2cmaster.cpp ****     uint8_t   twst;
+ 279               		.loc 1 157 5 view .LVU89
+ 158:i2cmaster.cpp ****     
+ 159:i2cmaster.cpp **** 	// send data to the previously addressed device
+ 160:i2cmaster.cpp **** 	TWDR = data;
+ 280               		.loc 1 160 2 view .LVU90
+ 281               		.loc 1 160 7 is_stmt 0 view .LVU91
+ 282 00b4 8093 BB00 		sts 187,r24
+ 161:i2cmaster.cpp **** 	TWCR = (1<<TWINT) | (1<<TWEN);
+ 283               		.loc 1 161 2 is_stmt 1 view .LVU92
+ 284               		.loc 1 161 7 is_stmt 0 view .LVU93
+ 285 00b8 84E8      		ldi r24,lo8(-124)
+ 286               	.LVL18:
+ 287               		.loc 1 161 7 view .LVU94
+ 288 00ba 8093 BC00 		sts 188,r24
+ 289               	.LVL19:
+ 290               	.L38:
+ 162:i2cmaster.cpp **** 
+ 163:i2cmaster.cpp **** 	// wait until transmission completed
+ 164:i2cmaster.cpp **** 	while(!(TWCR & (1<<TWINT)));
+ 291               		.loc 1 164 2 is_stmt 1 view .LVU95
+ 292               		.loc 1 164 8 view .LVU96
+ 293               		.loc 1 164 10 is_stmt 0 view .LVU97
+ 294 00be 8091 BC00 		lds r24,188
+ 295               		.loc 1 164 8 view .LVU98
+ 296 00c2 87FF      		sbrs r24,7
+ 297 00c4 00C0      		rjmp .L38
+ 165:i2cmaster.cpp **** 
+ 166:i2cmaster.cpp **** 	// check value of TWI Status Register. Mask prescaler bits
+ 167:i2cmaster.cpp **** 	twst = TW_STATUS & 0xF8;
+ 298               		.loc 1 167 2 is_stmt 1 view .LVU99
+ 299               		.loc 1 167 19 is_stmt 0 view .LVU100
+ 300 00c6 9091 B900 		lds r25,185
+ 301               	.LVL20:
+ 168:i2cmaster.cpp **** 	if( twst != TW_MT_DATA_ACK) return 1;
+ 302               		.loc 1 168 2 is_stmt 1 view .LVU101
+ 167:i2cmaster.cpp **** 	if( twst != TW_MT_DATA_ACK) return 1;
+ 303               		.loc 1 167 7 is_stmt 0 view .LVU102
+ 304 00ca 987F      		andi r25,lo8(-8)
+ 305               	.LVL21:
+ 306               		.loc 1 168 2 view .LVU103
+ 307 00cc 81E0      		ldi r24,lo8(1)
+ 308 00ce 9832      		cpi r25,lo8(40)
+ 309 00d0 01F4      		brne .L39
+ 310 00d2 80E0      		ldi r24,0
+ 311               	.L39:
+ 312               	/* epilogue start */
+ 169:i2cmaster.cpp **** 	return 0;
+ 170:i2cmaster.cpp **** 
+ 171:i2cmaster.cpp **** }/* i2c_write */
+ 313               		.loc 1 171 1 view .LVU104
+ 314 00d4 0895      		ret
+ 315               		.cfi_endproc
+ 316               	.LFE5:
+ 318               	.global	_Z11i2c_readAckv
+ 320               	_Z11i2c_readAckv:
+ 321               	.LFB6:
+ 172:i2cmaster.cpp **** 
+ 173:i2cmaster.cpp **** 
+ 174:i2cmaster.cpp **** /*************************************************************************
+ 175:i2cmaster.cpp ****  Read one byte from the I2C device, request more data from device 
+ 176:i2cmaster.cpp ****  
+ 177:i2cmaster.cpp ****  Return:  byte read from I2C device
+ 178:i2cmaster.cpp **** *************************************************************************/
+ 179:i2cmaster.cpp **** unsigned char i2c_readAck(void)
+ 180:i2cmaster.cpp **** {
+ 322               		.loc 1 180 1 is_stmt 1 view -0
+ 323               		.cfi_startproc
+ 324               	/* prologue: function */
+ 325               	/* frame size = 0 */
+ 326               	/* stack size = 0 */
+ 327               	.L__stack_usage = 0
+ 181:i2cmaster.cpp **** 	TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
+ 328               		.loc 1 181 2 view .LVU106
+ 329               		.loc 1 181 7 is_stmt 0 view .LVU107
+ 330 00d6 84EC      		ldi r24,lo8(-60)
+ 331 00d8 8093 BC00 		sts 188,r24
+ 332               	.L42:
+ 182:i2cmaster.cpp **** 	while(!(TWCR & (1<<TWINT)));    
+ 333               		.loc 1 182 2 is_stmt 1 view .LVU108
+ 334               		.loc 1 182 8 view .LVU109
+ 335               		.loc 1 182 10 is_stmt 0 view .LVU110
+ 336 00dc 8091 BC00 		lds r24,188
+ 337               		.loc 1 182 8 view .LVU111
+ 338 00e0 87FF      		sbrs r24,7
+ 339 00e2 00C0      		rjmp .L42
+ 183:i2cmaster.cpp **** 
+ 184:i2cmaster.cpp ****     return TWDR;
+ 340               		.loc 1 184 5 is_stmt 1 view .LVU112
+ 341               		.loc 1 184 12 is_stmt 0 view .LVU113
+ 342 00e4 8091 BB00 		lds r24,187
+ 343               	/* epilogue start */
+ 185:i2cmaster.cpp **** 
+ 186:i2cmaster.cpp **** }/* i2c_readAck */
+ 344               		.loc 1 186 1 view .LVU114
+ 345 00e8 0895      		ret
+ 346               		.cfi_endproc
+ 347               	.LFE6:
+ 349               	.global	_Z11i2c_readNakv
+ 351               	_Z11i2c_readNakv:
+ 352               	.LFB7:
+ 187:i2cmaster.cpp **** 
+ 188:i2cmaster.cpp **** 
+ 189:i2cmaster.cpp **** /*************************************************************************
+ 190:i2cmaster.cpp ****  Read one byte from the I2C device, read is followed by a stop condition 
+ 191:i2cmaster.cpp ****  
+ 192:i2cmaster.cpp ****  Return:  byte read from I2C device
+ 193:i2cmaster.cpp **** *************************************************************************/
+ 194:i2cmaster.cpp **** unsigned char i2c_readNak(void)
+ 195:i2cmaster.cpp **** {
+ 353               		.loc 1 195 1 is_stmt 1 view -0
+ 354               		.cfi_startproc
+ 355               	/* prologue: function */
+ 356               	/* frame size = 0 */
+ 357               	/* stack size = 0 */
+ 358               	.L__stack_usage = 0
+ 196:i2cmaster.cpp **** 	TWCR = (1<<TWINT) | (1<<TWEN);
+ 359               		.loc 1 196 2 view .LVU116
+ 360               		.loc 1 196 7 is_stmt 0 view .LVU117
+ 361 00ea 84E8      		ldi r24,lo8(-124)
+ 362 00ec 8093 BC00 		sts 188,r24
+ 363               	.L45:
+ 197:i2cmaster.cpp **** 	while(!(TWCR & (1<<TWINT)));
+ 364               		.loc 1 197 2 is_stmt 1 view .LVU118
+ 365               		.loc 1 197 8 view .LVU119
+ 366               		.loc 1 197 10 is_stmt 0 view .LVU120
+ 367 00f0 8091 BC00 		lds r24,188
+ 368               		.loc 1 197 8 view .LVU121
+ 369 00f4 87FF      		sbrs r24,7
+ 370 00f6 00C0      		rjmp .L45
+ 198:i2cmaster.cpp **** 	
+ 199:i2cmaster.cpp ****     return TWDR;
+ 371               		.loc 1 199 5 is_stmt 1 view .LVU122
+ 372               		.loc 1 199 12 is_stmt 0 view .LVU123
+ 373 00f8 8091 BB00 		lds r24,187
+ 374               	/* epilogue start */
+ 200:i2cmaster.cpp **** 
+ 201:i2cmaster.cpp **** }/* i2c_readNak */
+ 375               		.loc 1 201 1 view .LVU124
+ 376 00fc 0895      		ret
+ 377               		.cfi_endproc
+ 378               	.LFE7:
+ 380               	.Letext0:
+ 381               		.file 2 "/usr/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 i2cmaster.cpp
+     /tmp/cccEntN1.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cccEntN1.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cccEntN1.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cccEntN1.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cccEntN1.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cccEntN1.s:12     .text:0000000000000000 _Z8i2c_initv
+     /tmp/cccEntN1.s:36     .text:000000000000000c _Z9i2c_starth
+     /tmp/cccEntN1.s:130    .text:0000000000000052 _Z14i2c_start_waith
+     /tmp/cccEntN1.s:223    .text:00000000000000a0 _Z13i2c_rep_starth
+     /tmp/cccEntN1.s:242    .text:00000000000000a4 _Z8i2c_stopv
+     /tmp/cccEntN1.s:270    .text:00000000000000b4 _Z9i2c_writeh
+     /tmp/cccEntN1.s:320    .text:00000000000000d6 _Z11i2c_readAckv
+     /tmp/cccEntN1.s:351    .text:00000000000000ea _Z11i2c_readNakv
+
+NO UNDEFINED SYMBOLS

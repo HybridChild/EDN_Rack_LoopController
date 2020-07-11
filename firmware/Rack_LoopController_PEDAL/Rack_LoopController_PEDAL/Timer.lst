@@ -1,0 +1,422 @@
+   1               		.file	"Timer.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z11Timer0_Initv
+  12               	_Z11Timer0_Initv:
+  13               	.LFB0:
+  14               		.file 1 "Timer.cpp"
+   1:Timer.cpp     **** 
+   2:Timer.cpp     **** #include <avr/io.h>
+   3:Timer.cpp     **** #include <avr/interrupt.h>
+   4:Timer.cpp     **** #include "Timer.h"
+   5:Timer.cpp     **** #include "MasterCom.h"
+   6:Timer.cpp     **** #include "Footswitch.h"
+   7:Timer.cpp     **** 
+   8:Timer.cpp     **** 
+   9:Timer.cpp     **** void Timer0_Init()
+  10:Timer.cpp     **** {
+  15               		.loc 1 10 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  11:Timer.cpp     **** 	/* Setup Timer */
+  12:Timer.cpp     **** 	TCCR0A |= (1 << WGM01);		// Set Timer to CTC mode (Clear Timer on Compare match)
+  21               		.loc 1 12 2 view .LVU1
+  22               		.loc 1 12 9 is_stmt 0 view .LVU2
+  23 0000 84B5      		in r24,0x24
+  24 0002 8260      		ori r24,lo8(2)
+  25 0004 84BD      		out 0x24,r24
+  13:Timer.cpp     **** 	TCNT0 = 0;					// Clear counter register
+  26               		.loc 1 13 2 is_stmt 1 view .LVU3
+  27               		.loc 1 13 8 is_stmt 0 view .LVU4
+  28 0006 16BC      		out 0x26,__zero_reg__
+  14:Timer.cpp     **** 	OCR0A = 124;				// Set Output Compare value (62,5kHz / 125 = 500Hz (2ms))
+  29               		.loc 1 14 2 is_stmt 1 view .LVU5
+  30               		.loc 1 14 8 is_stmt 0 view .LVU6
+  31 0008 8CE7      		ldi r24,lo8(124)
+  32 000a 87BD      		out 0x27,r24
+  15:Timer.cpp     **** 	TIMSK0 |= (1 << OCIE0A);	// Output Compare A Match Interrupt Enable
+  33               		.loc 1 15 2 is_stmt 1 view .LVU7
+  34               		.loc 1 15 9 is_stmt 0 view .LVU8
+  35 000c EEE6      		ldi r30,lo8(110)
+  36 000e F0E0      		ldi r31,0
+  37 0010 8081      		ld r24,Z
+  38 0012 8260      		ori r24,lo8(2)
+  39 0014 8083      		st Z,r24
+  16:Timer.cpp     **** 	
+  17:Timer.cpp     **** 	/* Start Timer */
+  18:Timer.cpp     **** 	TCCR0B |= (1 << CS02);		// Set clock prescaler to 256 (16MHz / 256 = 62,5kHz)
+  40               		.loc 1 18 2 is_stmt 1 view .LVU9
+  41               		.loc 1 18 9 is_stmt 0 view .LVU10
+  42 0016 85B5      		in r24,0x25
+  43 0018 8460      		ori r24,lo8(4)
+  44 001a 85BD      		out 0x25,r24
+  45               	/* epilogue start */
+  19:Timer.cpp     **** }
+  46               		.loc 1 19 1 view .LVU11
+  47 001c 0895      		ret
+  48               		.cfi_endproc
+  49               	.LFE0:
+  51               	.global	_Z13Timer0_ms2cntm
+  53               	_Z13Timer0_ms2cntm:
+  54               	.LVL0:
+  55               	.LFB1:
+  20:Timer.cpp     **** 
+  21:Timer.cpp     **** uint32_t Timer0_ms2cnt(uint32_t ms)
+  22:Timer.cpp     **** {
+  56               		.loc 1 22 1 is_stmt 1 view -0
+  57               		.cfi_startproc
+  58               		.loc 1 22 1 is_stmt 0 view .LVU13
+  59 001e CF93      		push r28
+  60               	.LCFI0:
+  61               		.cfi_def_cfa_offset 3
+  62               		.cfi_offset 28, -2
+  63 0020 DF93      		push r29
+  64               	.LCFI1:
+  65               		.cfi_def_cfa_offset 4
+  66               		.cfi_offset 29, -3
+  67 0022 00D0      		rcall .
+  68 0024 00D0      		rcall .
+  69               	.LCFI2:
+  70               		.cfi_def_cfa_offset 8
+  71 0026 CDB7      		in r28,__SP_L__
+  72 0028 DEB7      		in r29,__SP_H__
+  73               	.LCFI3:
+  74               		.cfi_def_cfa_register 28
+  75               	/* prologue: function */
+  76               	/* frame size = 4 */
+  77               	/* stack size = 6 */
+  78               	.L__stack_usage = 6
+  23:Timer.cpp     **** 	ms *= 1000;
+  79               		.loc 1 23 2 is_stmt 1 view .LVU14
+  80               	.LVL1:
+  24:Timer.cpp     **** 	return (uint32_t)(ms / TIMER0_PERIOD_US);
+  81               		.loc 1 24 2 view .LVU15
+  23:Timer.cpp     **** 	ms *= 1000;
+  82               		.loc 1 23 5 is_stmt 0 view .LVU16
+  83 002a A8EE      		ldi r26,lo8(-24)
+  84 002c B3E0      		ldi r27,lo8(3)
+  85 002e 9B01      		movw r18,r22
+  86 0030 AC01      		movw r20,r24
+  87 0032 0E94 0000 		call __muluhisi3
+  88               		.loc 1 24 41 view .LVU17
+  89 0036 20ED      		ldi r18,lo8(-48)
+  90 0038 37E0      		ldi r19,lo8(7)
+  91 003a 40E0      		ldi r20,0
+  92 003c 50E0      		ldi r21,0
+  93 003e 0E94 0000 		call __udivmodsi4
+  25:Timer.cpp     **** }
+  94               		.loc 1 25 1 view .LVU18
+  95 0042 CA01      		movw r24,r20
+  96 0044 B901      		movw r22,r18
+  97               	/* epilogue start */
+  98 0046 0F90      		pop __tmp_reg__
+  99 0048 0F90      		pop __tmp_reg__
+ 100 004a 0F90      		pop __tmp_reg__
+ 101 004c 0F90      		pop __tmp_reg__
+ 102 004e DF91      		pop r29
+ 103 0050 CF91      		pop r28
+ 104 0052 0895      		ret
+ 105               		.cfi_endproc
+ 106               	.LFE1:
+ 108               	.global	__vector_14
+ 110               	__vector_14:
+ 111               	.LFB2:
+  26:Timer.cpp     **** 
+  27:Timer.cpp     **** /* Timer0 Compare A Match Interrupt Service Routine */
+  28:Timer.cpp     **** ISR(TIMER0_COMPA_vect)
+  29:Timer.cpp     **** {
+ 112               		.loc 1 29 1 is_stmt 1 view -0
+ 113               		.cfi_startproc
+ 114 0054 1F92 1FB6 		__gcc_isr 1
+ 114      1F92 1124 
+ 114      2F93 
+ 115 005e 8F93      		push r24
+ 116               	.LCFI4:
+ 117               		.cfi_def_cfa_offset 3
+ 118               		.cfi_offset 24, -2
+ 119 0060 9F93      		push r25
+ 120               	.LCFI5:
+ 121               		.cfi_def_cfa_offset 4
+ 122               		.cfi_offset 25, -3
+ 123               	/* prologue: Signal */
+ 124               	/* frame size = 0 */
+ 125               	/* stack size = 2...6 */
+ 126               	.L__stack_usage = 2 + __gcc_isr.n_pushed
+  30:Timer.cpp     **** 	/* Overflow counter for delaying transmit to Master */
+  31:Timer.cpp     **** 	if (MasterCom_DelayTXOvfCnt)
+ 127               		.loc 1 31 2 view .LVU20
+ 128               		.loc 1 31 29 is_stmt 0 view .LVU21
+ 129 0062 8091 0000 		lds r24,MasterCom_DelayTXOvfCnt
+ 130               		.loc 1 31 2 view .LVU22
+ 131 0066 8823      		tst r24
+ 132 0068 01F0      		breq .L5
+  32:Timer.cpp     **** 	{
+  33:Timer.cpp     **** 		if (++MasterCom_DelayTXOvfCnt > MASTERCOM_DELAY_TX_TIMEOUT)
+ 133               		.loc 1 33 3 is_stmt 1 view .LVU23
+ 134               		.loc 1 33 7 is_stmt 0 view .LVU24
+ 135 006a 8091 0000 		lds r24,MasterCom_DelayTXOvfCnt
+ 136 006e 8F5F      		subi r24,lo8(-(1))
+ 137               		.loc 1 33 33 view .LVU25
+ 138 0070 8093 0000 		sts MasterCom_DelayTXOvfCnt,r24
+ 139               		.loc 1 33 3 view .LVU26
+ 140 0074 8330      		cpi r24,lo8(3)
+ 141 0076 00F0      		brlo .L5
+  34:Timer.cpp     **** 		{
+  35:Timer.cpp     **** 			MasterCom_DelayTXOvfCnt = 0;	// Stop overflow counter
+ 142               		.loc 1 35 4 is_stmt 1 view .LVU27
+ 143               		.loc 1 35 28 is_stmt 0 view .LVU28
+ 144 0078 1092 0000 		sts MasterCom_DelayTXOvfCnt,__zero_reg__
+  36:Timer.cpp     **** 			MasterCom_DelayTxFlag = true;
+ 145               		.loc 1 36 4 is_stmt 1 view .LVU29
+ 146               		.loc 1 36 26 is_stmt 0 view .LVU30
+ 147 007c 81E0      		ldi r24,lo8(1)
+ 148 007e 8093 0000 		sts MasterCom_DelayTxFlag,r24
+ 149               	.L5:
+  37:Timer.cpp     **** 		}
+  38:Timer.cpp     **** 	}
+  39:Timer.cpp     **** 
+  40:Timer.cpp     **** 	/* Overflow counter for Master response timeout */
+  41:Timer.cpp     **** 	if (MasterCom_ResponseTimeoutOvfCnt)
+ 150               		.loc 1 41 2 is_stmt 1 view .LVU31
+ 151               		.loc 1 41 37 is_stmt 0 view .LVU32
+ 152 0082 8091 0000 		lds r24,MasterCom_ResponseTimeoutOvfCnt
+ 153 0086 9091 0000 		lds r25,MasterCom_ResponseTimeoutOvfCnt+1
+ 154               		.loc 1 41 2 view .LVU33
+ 155 008a 892B      		or r24,r25
+ 156 008c 01F0      		breq .L8
+  42:Timer.cpp     **** 	{
+  43:Timer.cpp     **** 		if (++MasterCom_ResponseTimeoutOvfCnt > MASTERCOM_RESPONSE_TIMEOUT)
+ 157               		.loc 1 43 3 is_stmt 1 view .LVU34
+ 158               		.loc 1 43 7 is_stmt 0 view .LVU35
+ 159 008e 8091 0000 		lds r24,MasterCom_ResponseTimeoutOvfCnt
+ 160 0092 9091 0000 		lds r25,MasterCom_ResponseTimeoutOvfCnt+1
+ 161 0096 0196      		adiw r24,1
+ 162               		.loc 1 43 41 view .LVU36
+ 163 0098 9093 0000 		sts MasterCom_ResponseTimeoutOvfCnt+1,r25
+ 164 009c 8093 0000 		sts MasterCom_ResponseTimeoutOvfCnt,r24
+ 165               		.loc 1 43 3 view .LVU37
+ 166 00a0 4197      		sbiw r24,17
+ 167 00a2 00F0      		brlo .L8
+  44:Timer.cpp     **** 		{
+  45:Timer.cpp     **** 			MasterCom_ResponseTimeoutOvfCnt = 1;	// Reset overflow counter
+ 168               		.loc 1 45 4 is_stmt 1 view .LVU38
+ 169               		.loc 1 45 36 is_stmt 0 view .LVU39
+ 170 00a4 81E0      		ldi r24,lo8(1)
+ 171 00a6 90E0      		ldi r25,0
+ 172 00a8 9093 0000 		sts MasterCom_ResponseTimeoutOvfCnt+1,r25
+ 173 00ac 8093 0000 		sts MasterCom_ResponseTimeoutOvfCnt,r24
+  46:Timer.cpp     **** 			MasterCom_ResponseTimeoutFlag = true;
+ 174               		.loc 1 46 4 is_stmt 1 view .LVU40
+ 175               		.loc 1 46 34 is_stmt 0 view .LVU41
+ 176 00b0 8093 0000 		sts MasterCom_ResponseTimeoutFlag,r24
+ 177               	.L8:
+  47:Timer.cpp     **** 		}
+  48:Timer.cpp     **** 	}
+  49:Timer.cpp     **** 	
+  50:Timer.cpp     **** 	/* Overflow counter for receiving full command frame */
+  51:Timer.cpp     **** 	if (MasterCom_FullFrameTimeoutOvfCnt)
+ 178               		.loc 1 51 2 is_stmt 1 view .LVU42
+ 179               		.loc 1 51 38 is_stmt 0 view .LVU43
+ 180 00b4 8091 0000 		lds r24,MasterCom_FullFrameTimeoutOvfCnt
+ 181 00b8 9091 0000 		lds r25,MasterCom_FullFrameTimeoutOvfCnt+1
+ 182               		.loc 1 51 2 view .LVU44
+ 183 00bc 892B      		or r24,r25
+ 184 00be 01F0      		breq .L11
+  52:Timer.cpp     **** 	{
+  53:Timer.cpp     **** 		if (++MasterCom_FullFrameTimeoutOvfCnt > MASTERCOM_FULL_FRAME_TIMEOUT)
+ 185               		.loc 1 53 3 is_stmt 1 view .LVU45
+ 186               		.loc 1 53 7 is_stmt 0 view .LVU46
+ 187 00c0 8091 0000 		lds r24,MasterCom_FullFrameTimeoutOvfCnt
+ 188 00c4 9091 0000 		lds r25,MasterCom_FullFrameTimeoutOvfCnt+1
+ 189 00c8 0196      		adiw r24,1
+ 190               		.loc 1 53 42 view .LVU47
+ 191 00ca 9093 0000 		sts MasterCom_FullFrameTimeoutOvfCnt+1,r25
+ 192 00ce 8093 0000 		sts MasterCom_FullFrameTimeoutOvfCnt,r24
+ 193               		.loc 1 53 3 view .LVU48
+ 194 00d2 0697      		sbiw r24,6
+ 195 00d4 00F0      		brlo .L11
+  54:Timer.cpp     **** 		{
+  55:Timer.cpp     **** 			MasterCom_FullFrameTimeoutOvfCnt = 0;	// Stop counter
+ 196               		.loc 1 55 4 is_stmt 1 view .LVU49
+ 197               		.loc 1 55 37 is_stmt 0 view .LVU50
+ 198 00d6 1092 0000 		sts MasterCom_FullFrameTimeoutOvfCnt+1,__zero_reg__
+ 199 00da 1092 0000 		sts MasterCom_FullFrameTimeoutOvfCnt,__zero_reg__
+  56:Timer.cpp     **** 			MasterCom_FullFrameTimeoutFlag = true;
+ 200               		.loc 1 56 4 is_stmt 1 view .LVU51
+ 201               		.loc 1 56 35 is_stmt 0 view .LVU52
+ 202 00de 81E0      		ldi r24,lo8(1)
+ 203 00e0 8093 0000 		sts MasterCom_FullFrameTimeoutFlag,r24
+ 204               	.L11:
+  57:Timer.cpp     **** 		}
+  58:Timer.cpp     **** 	}
+  59:Timer.cpp     **** 	
+  60:Timer.cpp     **** 	/* Overflow counter for handling Footswitch press timing */
+  61:Timer.cpp     **** 	if (Footswitch_TimerOvfCnt)
+ 205               		.loc 1 61 2 is_stmt 1 view .LVU53
+ 206               		.loc 1 61 28 is_stmt 0 view .LVU54
+ 207 00e4 8091 0000 		lds r24,Footswitch_TimerOvfCnt
+ 208 00e8 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
+ 209               		.loc 1 61 2 view .LVU55
+ 210 00ec 892B      		or r24,r25
+ 211 00ee 01F0      		breq .L3
+  62:Timer.cpp     **** 	{
+  63:Timer.cpp     **** 		Footswitch_TimerOvfCnt++;
+ 212               		.loc 1 63 3 is_stmt 1 view .LVU56
+ 213               		.loc 1 63 25 is_stmt 0 view .LVU57
+ 214 00f0 8091 0000 		lds r24,Footswitch_TimerOvfCnt
+ 215 00f4 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
+ 216 00f8 0196      		adiw r24,1
+ 217 00fa 9093 0000 		sts Footswitch_TimerOvfCnt+1,r25
+ 218 00fe 8093 0000 		sts Footswitch_TimerOvfCnt,r24
+  64:Timer.cpp     **** 			
+  65:Timer.cpp     **** 		if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_LONG_PRESS_TIMEOUT && Footswitch_PressState == PRESS
+ 219               		.loc 1 65 3 is_stmt 1 view .LVU58
+ 220               		.loc 1 65 30 is_stmt 0 view .LVU59
+ 221 0102 8091 0000 		lds r24,Footswitch_TimerOvfCnt
+ 222 0106 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
+ 223               		.loc 1 65 67 view .LVU60
+ 224 010a 813B      		cpi r24,-79
+ 225 010c 9440      		sbci r25,4
+ 226 010e 00F0      		brlo .L15
+ 227               		.loc 1 65 92 discriminator 1 view .LVU61
+ 228 0110 8091 0000 		lds r24,Footswitch_PressState
+ 229               		.loc 1 65 67 discriminator 1 view .LVU62
+ 230 0114 8430      		cpi r24,lo8(4)
+ 231 0116 01F4      		brne .L15
+  66:Timer.cpp     **** 		{
+  67:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 232               		.loc 1 67 4 is_stmt 1 view .LVU63
+ 233               		.loc 1 67 25 is_stmt 0 view .LVU64
+ 234 0118 81E0      		ldi r24,lo8(1)
+ 235 011a 8093 0000 		sts Footswitch_TimerFlag,r24
+  68:Timer.cpp     **** 			Footswitch_PressState = STILL_PRESSED;
+ 236               		.loc 1 68 4 is_stmt 1 view .LVU65
+ 237               		.loc 1 68 26 is_stmt 0 view .LVU66
+ 238 011e 85E0      		ldi r24,lo8(5)
+ 239 0120 8093 0000 		sts Footswitch_PressState,r24
+ 240               	.L3:
+ 241               	/* epilogue start */
+  69:Timer.cpp     **** 		}
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+  71:Timer.cpp     **** 		{
+  72:Timer.cpp     **** 			Footswitch_PressState = PRESSED;
+  73:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+  74:Timer.cpp     **** 		}
+  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
+  76:Timer.cpp     **** 		{
+  77:Timer.cpp     **** 			Footswitch_PressState = WAITING;
+  78:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+  79:Timer.cpp     **** 		}
+  80:Timer.cpp     **** 	}
+  81:Timer.cpp     **** }...
+ 242               		.loc 1 81 1 view .LVU67
+ 243 0124 9F91      		pop r25
+ 244 0126 8F91      		pop r24
+ 245 0128 2F91 1F90 		__gcc_isr 2
+ 245      1FBE 1F90 
+ 246 0130 1895      		reti
+ 247               	.L15:
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+ 248               		.loc 1 70 8 is_stmt 1 view .LVU68
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+ 249               		.loc 1 70 35 is_stmt 0 view .LVU69
+ 250 0132 8091 0000 		lds r24,Footswitch_TimerOvfCnt
+ 251 0136 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+ 252               		.loc 1 70 68 view .LVU70
+ 253 013a 8935      		cpi r24,89
+ 254 013c 9240      		sbci r25,2
+ 255 013e 00F0      		brlo .L16
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+ 256               		.loc 1 70 93 discriminator 1 view .LVU71
+ 257 0140 8091 0000 		lds r24,Footswitch_PressState
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+ 258               		.loc 1 70 68 discriminator 1 view .LVU72
+ 259 0144 8230      		cpi r24,lo8(2)
+ 260 0146 01F0      		breq .L17
+ 261               	.L16:
+  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
+ 262               		.loc 1 75 8 is_stmt 1 view .LVU73
+  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
+ 263               		.loc 1 75 35 is_stmt 0 view .LVU74
+ 264 0148 8091 0000 		lds r24,Footswitch_TimerOvfCnt
+ 265 014c 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
+  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
+ 266               		.loc 1 75 68 view .LVU75
+ 267 0150 8D38      		cpi r24,-115
+ 268 0152 9105      		cpc r25,__zero_reg__
+ 269 0154 00F0      		brlo .L3
+  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
+ 270               		.loc 1 75 93 discriminator 1 view .LVU76
+ 271 0156 8091 0000 		lds r24,Footswitch_PressState
+  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
+ 272               		.loc 1 75 68 discriminator 1 view .LVU77
+ 273 015a 8130      		cpi r24,lo8(1)
+ 274 015c 01F4      		brne .L3
+  77:Timer.cpp     **** 			Footswitch_PressState = WAITING;
+ 275               		.loc 1 77 4 is_stmt 1 view .LVU78
+  77:Timer.cpp     **** 			Footswitch_PressState = WAITING;
+ 276               		.loc 1 77 26 is_stmt 0 view .LVU79
+ 277 015e 92E0      		ldi r25,lo8(2)
+ 278 0160 9093 0000 		sts Footswitch_PressState,r25
+ 279 0164 00C0      		rjmp .L20
+ 280               	.L17:
+  72:Timer.cpp     **** 			Footswitch_PressState = PRESSED;
+ 281               		.loc 1 72 4 is_stmt 1 view .LVU80
+  72:Timer.cpp     **** 			Footswitch_PressState = PRESSED;
+ 282               		.loc 1 72 26 is_stmt 0 view .LVU81
+ 283 0166 84E0      		ldi r24,lo8(4)
+ 284 0168 8093 0000 		sts Footswitch_PressState,r24
+  73:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 285               		.loc 1 73 4 is_stmt 1 view .LVU82
+  73:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 286               		.loc 1 73 25 is_stmt 0 view .LVU83
+ 287 016c 81E0      		ldi r24,lo8(1)
+ 288               	.L20:
+  78:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 289               		.loc 1 78 4 is_stmt 1 view .LVU84
+  78:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 290               		.loc 1 78 25 is_stmt 0 view .LVU85
+ 291 016e 8093 0000 		sts Footswitch_TimerFlag,r24
+ 292               		.loc 1 81 1 view .LVU86
+ 293 0172 00C0      		rjmp .L3
+ 294               		__gcc_isr 0,r18
+ 295               		.cfi_endproc
+ 296               	.LFE2:
+ 298               	.Letext0:
+ 299               		.file 2 "/usr/avr/include/stdint.h"
+ 300               		.file 3 "MasterCom.h"
+ 301               		.file 4 "Footswitch.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 Timer.cpp
+     /tmp/ccRkIMgs.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccRkIMgs.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccRkIMgs.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccRkIMgs.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccRkIMgs.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccRkIMgs.s:12     .text:0000000000000000 _Z11Timer0_Initv
+     /tmp/ccRkIMgs.s:53     .text:000000000000001e _Z13Timer0_ms2cntm
+     /tmp/ccRkIMgs.s:110    .text:0000000000000054 __vector_14
+                            *ABS*:0000000000000003 __gcc_isr.n_pushed.001
+
+UNDEFINED SYMBOLS
+__muluhisi3
+__udivmodsi4
+MasterCom_DelayTXOvfCnt
+MasterCom_DelayTxFlag
+MasterCom_ResponseTimeoutOvfCnt
+MasterCom_ResponseTimeoutFlag
+MasterCom_FullFrameTimeoutOvfCnt
+MasterCom_FullFrameTimeoutFlag
+Footswitch_TimerOvfCnt
+Footswitch_PressState
+Footswitch_TimerFlag

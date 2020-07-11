@@ -1,0 +1,612 @@
+   1               		.file	"Timer.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z11Timer0_Initv
+  12               	_Z11Timer0_Initv:
+  13               	.LFB2:
+  14               		.file 1 "Timer.cpp"
+   1:Timer.cpp     **** 
+   2:Timer.cpp     **** #include <avr/io.h>
+   3:Timer.cpp     **** #include <avr/interrupt.h>
+   4:Timer.cpp     **** #include "Timer.h"
+   5:Timer.cpp     **** #include "RotaryEncoder.h"
+   6:Timer.cpp     **** #include "SP10281_3x7segment.h"
+   7:Timer.cpp     **** #include "MCP23017.h"
+   8:Timer.cpp     **** #include "PedalCom.h"
+   9:Timer.cpp     **** #include "System.h"
+  10:Timer.cpp     **** 
+  11:Timer.cpp     **** void Timer0_Init()
+  12:Timer.cpp     **** {
+  15               		.loc 1 12 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  13:Timer.cpp     **** 	/* Setup Timer */
+  14:Timer.cpp     **** 	TCCR0A |= (1 << WGM01);		// Set Timer to CTC mode (Clear Timer on Compare match)
+  21               		.loc 1 14 2 view .LVU1
+  22               		.loc 1 14 9 is_stmt 0 view .LVU2
+  23 0000 84B5      		in r24,0x24
+  24 0002 8260      		ori r24,lo8(2)
+  25 0004 84BD      		out 0x24,r24
+  15:Timer.cpp     **** 	TCNT0 = 0;					// Clear counter register
+  26               		.loc 1 15 2 is_stmt 1 view .LVU3
+  27               		.loc 1 15 8 is_stmt 0 view .LVU4
+  28 0006 16BC      		out 0x26,__zero_reg__
+  16:Timer.cpp     **** 	OCR0A = 155;				// Set Output Compare value (78125Hz / 156 = 500,8Hz (1,997ms))
+  29               		.loc 1 16 2 is_stmt 1 view .LVU5
+  30               		.loc 1 16 8 is_stmt 0 view .LVU6
+  31 0008 8BE9      		ldi r24,lo8(-101)
+  32 000a 87BD      		out 0x27,r24
+  17:Timer.cpp     **** 	TIMSK0 |= (1 << OCIE0A);	// Output Compare A Match Interrupt Enable
+  33               		.loc 1 17 2 is_stmt 1 view .LVU7
+  34               		.loc 1 17 9 is_stmt 0 view .LVU8
+  35 000c EEE6      		ldi r30,lo8(110)
+  36 000e F0E0      		ldi r31,0
+  37 0010 8081      		ld r24,Z
+  38 0012 8260      		ori r24,lo8(2)
+  39 0014 8083      		st Z,r24
+  18:Timer.cpp     **** 	
+  19:Timer.cpp     **** 	/* Start Timer */
+  20:Timer.cpp     **** 	TCCR0B |= (1 << CS02);		// Set clock prescaler to 256 (20MHz / 256 = 78125Hz)
+  40               		.loc 1 20 2 is_stmt 1 view .LVU9
+  41               		.loc 1 20 9 is_stmt 0 view .LVU10
+  42 0016 85B5      		in r24,0x25
+  43 0018 8460      		ori r24,lo8(4)
+  44 001a 85BD      		out 0x25,r24
+  45               	/* epilogue start */
+  21:Timer.cpp     **** }
+  46               		.loc 1 21 1 view .LVU11
+  47 001c 0895      		ret
+  48               		.cfi_endproc
+  49               	.LFE2:
+  51               	.global	_Z13Timer0_ms2cntm
+  53               	_Z13Timer0_ms2cntm:
+  54               	.LVL0:
+  55               	.LFB3:
+  22:Timer.cpp     **** 
+  23:Timer.cpp     **** uint32_t Timer0_ms2cnt(uint32_t ms)
+  24:Timer.cpp     **** {
+  56               		.loc 1 24 1 is_stmt 1 view -0
+  57               		.cfi_startproc
+  58               		.loc 1 24 1 is_stmt 0 view .LVU13
+  59 001e CF93      		push r28
+  60               	.LCFI0:
+  61               		.cfi_def_cfa_offset 3
+  62               		.cfi_offset 28, -2
+  63 0020 DF93      		push r29
+  64               	.LCFI1:
+  65               		.cfi_def_cfa_offset 4
+  66               		.cfi_offset 29, -3
+  67 0022 00D0      		rcall .
+  68 0024 00D0      		rcall .
+  69               	.LCFI2:
+  70               		.cfi_def_cfa_offset 8
+  71 0026 CDB7      		in r28,__SP_L__
+  72 0028 DEB7      		in r29,__SP_H__
+  73               	.LCFI3:
+  74               		.cfi_def_cfa_register 28
+  75               	/* prologue: function */
+  76               	/* frame size = 4 */
+  77               	/* stack size = 6 */
+  78               	.L__stack_usage = 6
+  25:Timer.cpp     **** 	ms *= 1000;
+  79               		.loc 1 25 2 is_stmt 1 view .LVU14
+  80               	.LVL1:
+  26:Timer.cpp     **** 	return (uint32_t)(ms / TIMER0_PERIOD_US);
+  81               		.loc 1 26 2 view .LVU15
+  25:Timer.cpp     **** 	ms *= 1000;
+  82               		.loc 1 25 5 is_stmt 0 view .LVU16
+  83 002a A8EE      		ldi r26,lo8(-24)
+  84 002c B3E0      		ldi r27,lo8(3)
+  85 002e 9B01      		movw r18,r22
+  86 0030 AC01      		movw r20,r24
+  87 0032 0E94 0000 		call __muluhisi3
+  88               		.loc 1 26 41 view .LVU17
+  89 0036 2DEC      		ldi r18,lo8(-51)
+  90 0038 37E0      		ldi r19,lo8(7)
+  91 003a 40E0      		ldi r20,0
+  92 003c 50E0      		ldi r21,0
+  93 003e 0E94 0000 		call __udivmodsi4
+  27:Timer.cpp     **** }
+  94               		.loc 1 27 1 view .LVU18
+  95 0042 CA01      		movw r24,r20
+  96 0044 B901      		movw r22,r18
+  97               	/* epilogue start */
+  98 0046 0F90      		pop __tmp_reg__
+  99 0048 0F90      		pop __tmp_reg__
+ 100 004a 0F90      		pop __tmp_reg__
+ 101 004c 0F90      		pop __tmp_reg__
+ 102 004e DF91      		pop r29
+ 103 0050 CF91      		pop r28
+ 104 0052 0895      		ret
+ 105               		.cfi_endproc
+ 106               	.LFE3:
+ 108               	.global	__vector_16
+ 110               	__vector_16:
+ 111               	.LFB4:
+  28:Timer.cpp     **** 
+  29:Timer.cpp     **** /* Timer0 Compare A Match Interrupt Service Routine */
+  30:Timer.cpp     **** ISR(TIMER0_COMPA_vect)
+  31:Timer.cpp     **** {
+ 112               		.loc 1 31 1 is_stmt 1 view -0
+ 113               		.cfi_startproc
+ 114 0054 1F92 1FB6 		__gcc_isr 1
+ 114      1F92 1124 
+ 114      2F93 
+ 115 005e 3F93      		push r19
+ 116               	.LCFI4:
+ 117               		.cfi_def_cfa_offset 3
+ 118               		.cfi_offset 19, -2
+ 119 0060 8F93      		push r24
+ 120               	.LCFI5:
+ 121               		.cfi_def_cfa_offset 4
+ 122               		.cfi_offset 24, -3
+ 123 0062 9F93      		push r25
+ 124               	.LCFI6:
+ 125               		.cfi_def_cfa_offset 5
+ 126               		.cfi_offset 25, -4
+ 127               	/* prologue: Signal */
+ 128               	/* frame size = 0 */
+ 129               	/* stack size = 3...7 */
+ 130               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+  32:Timer.cpp     **** 	/* Overflow counter to reset parameter if user doesn't commit */
+  33:Timer.cpp     **** 	if (System_TempSelectOvfCnt)
+ 131               		.loc 1 33 2 view .LVU20
+ 132               		.loc 1 33 29 is_stmt 0 view .LVU21
+ 133 0064 8091 0000 		lds r24,System_TempSelectOvfCnt
+ 134 0068 9091 0000 		lds r25,System_TempSelectOvfCnt+1
+ 135               		.loc 1 33 2 view .LVU22
+ 136 006c 892B      		or r24,r25
+ 137 006e 01F0      		breq .L5
+  34:Timer.cpp     **** 	{
+  35:Timer.cpp     **** 		if (++System_TempSelectOvfCnt > SYSTEM_TEMP_SELECT_TIMEOUT)
+ 138               		.loc 1 35 3 is_stmt 1 view .LVU23
+ 139               		.loc 1 35 7 is_stmt 0 view .LVU24
+ 140 0070 8091 0000 		lds r24,System_TempSelectOvfCnt
+ 141 0074 9091 0000 		lds r25,System_TempSelectOvfCnt+1
+ 142 0078 0196      		adiw r24,1
+ 143               		.loc 1 35 33 view .LVU25
+ 144 007a 9093 0000 		sts System_TempSelectOvfCnt+1,r25
+ 145 007e 8093 0000 		sts System_TempSelectOvfCnt,r24
+ 146               		.loc 1 35 3 view .LVU26
+ 147 0082 8D3D      		cpi r24,-35
+ 148 0084 9540      		sbci r25,5
+ 149 0086 00F0      		brlo .L5
+  36:Timer.cpp     **** 		{
+  37:Timer.cpp     **** 			System_TempSelectOvfCnt = 0;
+ 150               		.loc 1 37 4 is_stmt 1 view .LVU27
+ 151               		.loc 1 37 28 is_stmt 0 view .LVU28
+ 152 0088 1092 0000 		sts System_TempSelectOvfCnt+1,__zero_reg__
+ 153 008c 1092 0000 		sts System_TempSelectOvfCnt,__zero_reg__
+  38:Timer.cpp     **** 			System_TempSelectFlag = true;
+ 154               		.loc 1 38 4 is_stmt 1 view .LVU29
+ 155               		.loc 1 38 26 is_stmt 0 view .LVU30
+ 156 0090 81E0      		ldi r24,lo8(1)
+ 157 0092 8093 0000 		sts System_TempSelectFlag,r24
+ 158               	.L5:
+  39:Timer.cpp     **** 		}
+  40:Timer.cpp     **** 	}
+  41:Timer.cpp     **** 	
+  42:Timer.cpp     **** 	/* Overflow counter to shortly blank LEDs to mark selection */
+  43:Timer.cpp     **** 	if (System_MarkSelectionOvfCnt)
+ 159               		.loc 1 43 2 is_stmt 1 view .LVU31
+ 160               		.loc 1 43 32 is_stmt 0 view .LVU32
+ 161 0096 8091 0000 		lds r24,System_MarkSelectionOvfCnt
+ 162 009a 9091 0000 		lds r25,System_MarkSelectionOvfCnt+1
+ 163               		.loc 1 43 2 view .LVU33
+ 164 009e 892B      		or r24,r25
+ 165 00a0 01F0      		breq .L8
+  44:Timer.cpp     **** 	{
+  45:Timer.cpp     **** 		if (++System_MarkSelectionOvfCnt > SYSTEM_MARK_SELECTION_TIMEOUT)
+ 166               		.loc 1 45 3 is_stmt 1 view .LVU34
+ 167               		.loc 1 45 7 is_stmt 0 view .LVU35
+ 168 00a2 8091 0000 		lds r24,System_MarkSelectionOvfCnt
+ 169 00a6 9091 0000 		lds r25,System_MarkSelectionOvfCnt+1
+ 170 00aa 0196      		adiw r24,1
+ 171               		.loc 1 45 36 view .LVU36
+ 172 00ac 9093 0000 		sts System_MarkSelectionOvfCnt+1,r25
+ 173 00b0 8093 0000 		sts System_MarkSelectionOvfCnt,r24
+ 174               		.loc 1 45 3 view .LVU37
+ 175 00b4 8739      		cpi r24,-105
+ 176 00b6 9105      		cpc r25,__zero_reg__
+ 177 00b8 00F0      		brlo .L8
+  46:Timer.cpp     **** 		{
+  47:Timer.cpp     **** 			System_MarkSelectionOvfCnt = 0;		// Stop counter
+ 178               		.loc 1 47 4 is_stmt 1 view .LVU38
+ 179               		.loc 1 47 31 is_stmt 0 view .LVU39
+ 180 00ba 1092 0000 		sts System_MarkSelectionOvfCnt+1,__zero_reg__
+ 181 00be 1092 0000 		sts System_MarkSelectionOvfCnt,__zero_reg__
+  48:Timer.cpp     **** 			System_MarkSelectionFlag = true;
+ 182               		.loc 1 48 4 is_stmt 1 view .LVU40
+ 183               		.loc 1 48 29 is_stmt 0 view .LVU41
+ 184 00c2 81E0      		ldi r24,lo8(1)
+ 185 00c4 8093 0000 		sts System_MarkSelectionFlag,r24
+ 186               	.L8:
+  49:Timer.cpp     **** 		}
+  50:Timer.cpp     **** 	}
+  51:Timer.cpp     **** 	
+  52:Timer.cpp     **** 	/* Overflow counter for delaying transmit to Pedal */
+  53:Timer.cpp     **** 	if (PedalCom_DelayTXOvfCnt)
+ 187               		.loc 1 53 2 is_stmt 1 view .LVU42
+ 188               		.loc 1 53 28 is_stmt 0 view .LVU43
+ 189 00c8 8091 0000 		lds r24,PedalCom_DelayTXOvfCnt
+ 190               		.loc 1 53 2 view .LVU44
+ 191 00cc 8823      		tst r24
+ 192 00ce 01F0      		breq .L11
+  54:Timer.cpp     **** 	{
+  55:Timer.cpp     **** 		if (++PedalCom_DelayTXOvfCnt > PEDALCOM_DELAY_TX_TIMEOUT)
+ 193               		.loc 1 55 3 is_stmt 1 view .LVU45
+ 194               		.loc 1 55 7 is_stmt 0 view .LVU46
+ 195 00d0 8091 0000 		lds r24,PedalCom_DelayTXOvfCnt
+ 196 00d4 8F5F      		subi r24,lo8(-(1))
+ 197               		.loc 1 55 32 view .LVU47
+ 198 00d6 8093 0000 		sts PedalCom_DelayTXOvfCnt,r24
+ 199               		.loc 1 55 3 view .LVU48
+ 200 00da 8330      		cpi r24,lo8(3)
+ 201 00dc 00F0      		brlo .L11
+  56:Timer.cpp     **** 		{
+  57:Timer.cpp     **** 			PedalCom_DelayTXOvfCnt = 0;	// Stop counter
+ 202               		.loc 1 57 4 is_stmt 1 view .LVU49
+ 203               		.loc 1 57 27 is_stmt 0 view .LVU50
+ 204 00de 1092 0000 		sts PedalCom_DelayTXOvfCnt,__zero_reg__
+  58:Timer.cpp     **** 			PedalCom_DelayTxFlag = true;
+ 205               		.loc 1 58 4 is_stmt 1 view .LVU51
+ 206               		.loc 1 58 25 is_stmt 0 view .LVU52
+ 207 00e2 81E0      		ldi r24,lo8(1)
+ 208 00e4 8093 0000 		sts PedalCom_DelayTxFlag,r24
+ 209               	.L11:
+  59:Timer.cpp     **** 		}
+  60:Timer.cpp     **** 	}
+  61:Timer.cpp     **** 
+  62:Timer.cpp     **** 	/* Overflow counter for Pedal heartbeat */
+  63:Timer.cpp     **** 	if (++PedalCom_HeartbeatOvfCnt > PEDALCOM_HEARTBEAT_TIMEOUT)
+ 210               		.loc 1 63 2 is_stmt 1 view .LVU53
+ 211               		.loc 1 63 6 is_stmt 0 view .LVU54
+ 212 00e8 8091 0000 		lds r24,PedalCom_HeartbeatOvfCnt
+ 213 00ec 9091 0000 		lds r25,PedalCom_HeartbeatOvfCnt+1
+ 214 00f0 0196      		adiw r24,1
+ 215               		.loc 1 63 33 view .LVU55
+ 216 00f2 9093 0000 		sts PedalCom_HeartbeatOvfCnt+1,r25
+ 217 00f6 8093 0000 		sts PedalCom_HeartbeatOvfCnt,r24
+ 218               		.loc 1 63 2 view .LVU56
+ 219 00fa 8D3D      		cpi r24,-35
+ 220 00fc 9540      		sbci r25,5
+ 221 00fe 00F0      		brlo .L13
+  64:Timer.cpp     **** 	{
+  65:Timer.cpp     **** 		PedalCom_HeartbeatOvfCnt = 1;	// Reset counter
+ 222               		.loc 1 65 3 is_stmt 1 view .LVU57
+ 223               		.loc 1 65 28 is_stmt 0 view .LVU58
+ 224 0100 81E0      		ldi r24,lo8(1)
+ 225 0102 90E0      		ldi r25,0
+ 226 0104 9093 0000 		sts PedalCom_HeartbeatOvfCnt+1,r25
+ 227 0108 8093 0000 		sts PedalCom_HeartbeatOvfCnt,r24
+  66:Timer.cpp     **** 		PedalCom_HeartbeatFlag = true;
+ 228               		.loc 1 66 3 is_stmt 1 view .LVU59
+ 229               		.loc 1 66 26 is_stmt 0 view .LVU60
+ 230 010c 8093 0000 		sts PedalCom_HeartbeatFlag,r24
+ 231               	.L13:
+  67:Timer.cpp     **** 	}
+  68:Timer.cpp     **** 	
+  69:Timer.cpp     **** 	/* Overflow counter for Pedal response timeout */
+  70:Timer.cpp     **** 	if (PedalCom_ResponseTimeoutOvfCnt)
+ 232               		.loc 1 70 2 is_stmt 1 view .LVU61
+ 233               		.loc 1 70 36 is_stmt 0 view .LVU62
+ 234 0110 8091 0000 		lds r24,PedalCom_ResponseTimeoutOvfCnt
+ 235 0114 9091 0000 		lds r25,PedalCom_ResponseTimeoutOvfCnt+1
+ 236               		.loc 1 70 2 view .LVU63
+ 237 0118 892B      		or r24,r25
+ 238 011a 01F0      		breq .L15
+  71:Timer.cpp     **** 	{
+  72:Timer.cpp     **** 		if (++PedalCom_ResponseTimeoutOvfCnt > PEDALCOM_RESPONSE_TIMEOUT)
+ 239               		.loc 1 72 3 is_stmt 1 view .LVU64
+ 240               		.loc 1 72 7 is_stmt 0 view .LVU65
+ 241 011c 8091 0000 		lds r24,PedalCom_ResponseTimeoutOvfCnt
+ 242 0120 9091 0000 		lds r25,PedalCom_ResponseTimeoutOvfCnt+1
+ 243 0124 0196      		adiw r24,1
+ 244               		.loc 1 72 40 view .LVU66
+ 245 0126 9093 0000 		sts PedalCom_ResponseTimeoutOvfCnt+1,r25
+ 246 012a 8093 0000 		sts PedalCom_ResponseTimeoutOvfCnt,r24
+ 247               		.loc 1 72 3 view .LVU67
+ 248 012e 4197      		sbiw r24,17
+ 249 0130 00F0      		brlo .L15
+  73:Timer.cpp     **** 		{
+  74:Timer.cpp     **** 			PedalCom_ResponseTimeoutOvfCnt = 0;	// Stop counter
+ 250               		.loc 1 74 4 is_stmt 1 view .LVU68
+ 251               		.loc 1 74 35 is_stmt 0 view .LVU69
+ 252 0132 1092 0000 		sts PedalCom_ResponseTimeoutOvfCnt+1,__zero_reg__
+ 253 0136 1092 0000 		sts PedalCom_ResponseTimeoutOvfCnt,__zero_reg__
+  75:Timer.cpp     **** 			PedalCom_ResponseTimeoutFlag = true;
+ 254               		.loc 1 75 4 is_stmt 1 view .LVU70
+ 255               		.loc 1 75 33 is_stmt 0 view .LVU71
+ 256 013a 81E0      		ldi r24,lo8(1)
+ 257 013c 8093 0000 		sts PedalCom_ResponseTimeoutFlag,r24
+ 258               	.L15:
+  76:Timer.cpp     **** 		}
+  77:Timer.cpp     **** 	}
+  78:Timer.cpp     **** 	
+  79:Timer.cpp     **** 	/* Overflow counter for receiving full command frame */
+  80:Timer.cpp     **** 	if (PedalCom_FullFrameTimeoutOvfCnt)
+ 259               		.loc 1 80 2 is_stmt 1 view .LVU72
+ 260               		.loc 1 80 37 is_stmt 0 view .LVU73
+ 261 0140 8091 0000 		lds r24,PedalCom_FullFrameTimeoutOvfCnt
+ 262 0144 9091 0000 		lds r25,PedalCom_FullFrameTimeoutOvfCnt+1
+ 263               		.loc 1 80 2 view .LVU74
+ 264 0148 892B      		or r24,r25
+ 265 014a 01F0      		breq .L18
+  81:Timer.cpp     **** 	{
+  82:Timer.cpp     **** 		if (++PedalCom_FullFrameTimeoutOvfCnt > PEDALCOM_FULL_FRAME_TIMEOUT)
+ 266               		.loc 1 82 3 is_stmt 1 view .LVU75
+ 267               		.loc 1 82 7 is_stmt 0 view .LVU76
+ 268 014c 8091 0000 		lds r24,PedalCom_FullFrameTimeoutOvfCnt
+ 269 0150 9091 0000 		lds r25,PedalCom_FullFrameTimeoutOvfCnt+1
+ 270 0154 0196      		adiw r24,1
+ 271               		.loc 1 82 41 view .LVU77
+ 272 0156 9093 0000 		sts PedalCom_FullFrameTimeoutOvfCnt+1,r25
+ 273 015a 8093 0000 		sts PedalCom_FullFrameTimeoutOvfCnt,r24
+ 274               		.loc 1 82 3 view .LVU78
+ 275 015e 0697      		sbiw r24,6
+ 276 0160 00F0      		brlo .L18
+  83:Timer.cpp     **** 		{
+  84:Timer.cpp     **** 			PedalCom_FullFrameTimeoutOvfCnt = 0;	// Stop counter
+ 277               		.loc 1 84 4 is_stmt 1 view .LVU79
+ 278               		.loc 1 84 36 is_stmt 0 view .LVU80
+ 279 0162 1092 0000 		sts PedalCom_FullFrameTimeoutOvfCnt+1,__zero_reg__
+ 280 0166 1092 0000 		sts PedalCom_FullFrameTimeoutOvfCnt,__zero_reg__
+  85:Timer.cpp     **** 			PedalCom_FullFrameTimeoutFlag = true;
+ 281               		.loc 1 85 4 is_stmt 1 view .LVU81
+ 282               		.loc 1 85 34 is_stmt 0 view .LVU82
+ 283 016a 81E0      		ldi r24,lo8(1)
+ 284 016c 8093 0000 		sts PedalCom_FullFrameTimeoutFlag,r24
+ 285               	.L18:
+  86:Timer.cpp     **** 		}
+  87:Timer.cpp     **** 	}
+  88:Timer.cpp     **** 	
+  89:Timer.cpp     **** 	/* Overflow counter for multiplexing 3x7-segment display */
+  90:Timer.cpp     **** 	if (++SP10281_OvfCnt >= SP10281_OVF_RESET)
+ 286               		.loc 1 90 2 is_stmt 1 view .LVU83
+ 287               		.loc 1 90 6 is_stmt 0 view .LVU84
+ 288 0170 8091 0000 		lds r24,SP10281_OvfCnt
+ 289 0174 8F5F      		subi r24,lo8(-(1))
+ 290               		.loc 1 90 23 view .LVU85
+ 291 0176 8093 0000 		sts SP10281_OvfCnt,r24
+ 292               		.loc 1 90 2 view .LVU86
+ 293 017a 8330      		cpi r24,lo8(3)
+ 294 017c 00F0      		brlo .L20
+  91:Timer.cpp     **** 	{
+  92:Timer.cpp     **** 		SP10281_OvfCnt = 0;		// Stop counter
+ 295               		.loc 1 92 3 is_stmt 1 view .LVU87
+ 296               		.loc 1 92 18 is_stmt 0 view .LVU88
+ 297 017e 1092 0000 		sts SP10281_OvfCnt,__zero_reg__
+  93:Timer.cpp     **** 		SP10281_OvfFlag = 1;
+ 298               		.loc 1 93 3 is_stmt 1 view .LVU89
+ 299               		.loc 1 93 19 is_stmt 0 view .LVU90
+ 300 0182 81E0      		ldi r24,lo8(1)
+ 301 0184 8093 0000 		sts SP10281_OvfFlag,r24
+ 302               	.L20:
+  94:Timer.cpp     **** 	}
+  95:Timer.cpp     **** 	
+  96:Timer.cpp     **** 	/* Overflow counter for blinking UI LEDs */
+  97:Timer.cpp     **** 	if (++(MCP_Output::AutoToggle_OvfCnt) > MCP_Output::AutoToggle_Timeout)
+ 303               		.loc 1 97 2 is_stmt 1 view .LVU91
+ 304               		.loc 1 97 6 is_stmt 0 view .LVU92
+ 305 0188 8091 0000 		lds r24,_ZN10MCP_Output17AutoToggle_OvfCntE
+ 306 018c 9091 0000 		lds r25,_ZN10MCP_Output17AutoToggle_OvfCntE+1
+ 307 0190 0196      		adiw r24,1
+ 308               		.loc 1 97 40 view .LVU93
+ 309 0192 9093 0000 		sts _ZN10MCP_Output17AutoToggle_OvfCntE+1,r25
+ 310 0196 8093 0000 		sts _ZN10MCP_Output17AutoToggle_OvfCntE,r24
+ 311               		.loc 1 97 54 view .LVU94
+ 312 019a 2091 0000 		lds r18,_ZN10MCP_Output18AutoToggle_TimeoutE
+ 313 019e 3091 0000 		lds r19,_ZN10MCP_Output18AutoToggle_TimeoutE+1
+ 314               		.loc 1 97 2 view .LVU95
+ 315 01a2 2817      		cp r18,r24
+ 316 01a4 3907      		cpc r19,r25
+ 317 01a6 00F4      		brsh .L22
+  98:Timer.cpp     **** 	{
+  99:Timer.cpp     **** 		MCP_Output::AutoToggle_OvfCnt = 0;		// Reset counter
+ 318               		.loc 1 99 3 is_stmt 1 view .LVU96
+ 319               		.loc 1 99 33 is_stmt 0 view .LVU97
+ 320 01a8 1092 0000 		sts _ZN10MCP_Output17AutoToggle_OvfCntE+1,__zero_reg__
+ 321 01ac 1092 0000 		sts _ZN10MCP_Output17AutoToggle_OvfCntE,__zero_reg__
+ 100:Timer.cpp     **** 		
+ 101:Timer.cpp     **** 		if (MCP_Output::AutoToggle_PortA || MCP_Output::AutoToggle_PortB)
+ 322               		.loc 1 101 3 is_stmt 1 view .LVU98
+ 323               		.loc 1 101 51 is_stmt 0 view .LVU99
+ 324 01b0 8091 0000 		lds r24,_ZN10MCP_Output16AutoToggle_PortAE
+ 325               		.loc 1 101 36 view .LVU100
+ 326 01b4 8111      		cpse r24,__zero_reg__
+ 327 01b6 00C0      		rjmp .L23
+ 328               		.loc 1 101 51 discriminator 2 view .LVU101
+ 329 01b8 8091 0000 		lds r24,_ZN10MCP_Output16AutoToggle_PortBE
+ 330               		.loc 1 101 36 discriminator 2 view .LVU102
+ 331 01bc 8823      		tst r24
+ 332 01be 01F0      		breq .L22
+ 333               	.L23:
+ 102:Timer.cpp     **** 		{
+ 103:Timer.cpp     **** 			MCP_Output::AutoToggle_Flag = 1;
+ 334               		.loc 1 103 4 is_stmt 1 view .LVU103
+ 335               		.loc 1 103 32 is_stmt 0 view .LVU104
+ 336 01c0 81E0      		ldi r24,lo8(1)
+ 337 01c2 8093 0000 		sts _ZN10MCP_Output15AutoToggle_FlagE,r24
+ 338               	.L22:
+ 104:Timer.cpp     **** 		}
+ 105:Timer.cpp     **** 	}
+ 106:Timer.cpp     **** 	
+ 107:Timer.cpp     **** 	/* Overflow counter for rotary encoder handling */
+ 108:Timer.cpp     **** 	if (RotaryEncoder_OvfCnt)
+ 339               		.loc 1 108 2 is_stmt 1 view .LVU105
+ 340               		.loc 1 108 26 is_stmt 0 view .LVU106
+ 341 01c6 8091 0000 		lds r24,RotaryEncoder_OvfCnt
+ 342 01ca 9091 0000 		lds r25,RotaryEncoder_OvfCnt+1
+ 343               		.loc 1 108 2 view .LVU107
+ 344 01ce 892B      		or r24,r25
+ 345 01d0 01F0      		breq .L3
+ 109:Timer.cpp     **** 	{
+ 110:Timer.cpp     **** 		RotaryEncoder_OvfCnt++;
+ 346               		.loc 1 110 3 is_stmt 1 view .LVU108
+ 347               		.loc 1 110 23 is_stmt 0 view .LVU109
+ 348 01d2 8091 0000 		lds r24,RotaryEncoder_OvfCnt
+ 349 01d6 9091 0000 		lds r25,RotaryEncoder_OvfCnt+1
+ 350 01da 0196      		adiw r24,1
+ 351 01dc 9093 0000 		sts RotaryEncoder_OvfCnt+1,r25
+ 352 01e0 8093 0000 		sts RotaryEncoder_OvfCnt,r24
+ 111:Timer.cpp     **** 		
+ 112:Timer.cpp     **** 		if (RotaryEncoder_OvfCnt > ROT_ENC_LONG_PRESS_OVF)
+ 353               		.loc 1 112 3 is_stmt 1 view .LVU110
+ 354               		.loc 1 112 28 is_stmt 0 view .LVU111
+ 355 01e4 8091 0000 		lds r24,RotaryEncoder_OvfCnt
+ 356 01e8 9091 0000 		lds r25,RotaryEncoder_OvfCnt+1
+ 357               		.loc 1 112 3 view .LVU112
+ 358 01ec 8935      		cpi r24,89
+ 359 01ee 9240      		sbci r25,2
+ 360 01f0 00F0      		brlo .L27
+ 113:Timer.cpp     **** 		{
+ 114:Timer.cpp     **** 			/* If button is still pressed */
+ 115:Timer.cpp     **** 			if ( GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK )
+ 361               		.loc 1 115 4 is_stmt 1 view .LVU113
+ 362 01f2 1A9B      		sbis 0x3,2
+ 363 01f4 00C0      		rjmp .L28
+ 116:Timer.cpp     **** 			{
+ 117:Timer.cpp     **** 				RotEnc_State = LONG_PRESS;
+ 364               		.loc 1 117 5 view .LVU114
+ 365               		.loc 1 117 18 is_stmt 0 view .LVU115
+ 366 01f6 85E0      		ldi r24,lo8(5)
+ 367               	.L36:
+ 118:Timer.cpp     **** 			}
+ 119:Timer.cpp     **** 			else
+ 120:Timer.cpp     **** 			{
+ 121:Timer.cpp     **** 				RotEnc_State = IDLE;
+ 122:Timer.cpp     **** 			}
+ 123:Timer.cpp     **** 			
+ 124:Timer.cpp     **** 			RotaryEncoder_OvfCnt = 0;		// Stop overflow counter
+ 125:Timer.cpp     **** 		}
+ 126:Timer.cpp     **** 		else if (RotaryEncoder_OvfCnt > ROT_ENC_PRESS_OVF && RotEnc_State == IDLE)
+ 127:Timer.cpp     **** 		{
+ 128:Timer.cpp     **** 			/* If button is no longer pressed */
+ 129:Timer.cpp     **** 			if ( !(GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK) )
+ 130:Timer.cpp     **** 			{
+ 131:Timer.cpp     **** 				RotEnc_State = SHORT_PRESS;
+ 368               		.loc 1 131 18 view .LVU116
+ 369 01f8 8093 0000 		sts RotEnc_State,r24
+ 370 01fc 00C0      		rjmp .L35
+ 371               	.L28:
+ 121:Timer.cpp     **** 			}
+ 372               		.loc 1 121 5 is_stmt 1 view .LVU117
+ 121:Timer.cpp     **** 			}
+ 373               		.loc 1 121 18 is_stmt 0 view .LVU118
+ 374 01fe 1092 0000 		sts RotEnc_State,__zero_reg__
+ 124:Timer.cpp     **** 		}
+ 375               		.loc 1 124 4 is_stmt 1 view .LVU119
+ 376               	.L35:
+ 132:Timer.cpp     **** 				RotaryEncoder_OvfCnt = 0;	// Stop overflow counter
+ 377               		.loc 1 132 5 view .LVU120
+ 378               		.loc 1 132 26 is_stmt 0 view .LVU121
+ 379 0202 1092 0000 		sts RotaryEncoder_OvfCnt+1,__zero_reg__
+ 380 0206 1092 0000 		sts RotaryEncoder_OvfCnt,__zero_reg__
+ 381               	.L3:
+ 382               	/* epilogue start */
+ 133:Timer.cpp     **** 			}
+ 134:Timer.cpp     **** 			else
+ 135:Timer.cpp     **** 			RotEnc_State = PRESSED;
+ 136:Timer.cpp     **** 
+ 137:Timer.cpp     **** 		}
+ 138:Timer.cpp     **** 	}
+ 139:Timer.cpp     **** }...
+ 383               		.loc 1 139 1 view .LVU122
+ 384 020a 9F91      		pop r25
+ 385 020c 8F91      		pop r24
+ 386 020e 3F91      		pop r19
+ 387 0210 2F91 1F90 		__gcc_isr 2
+ 387      1FBE 1F90 
+ 388 0218 1895      		reti
+ 389               	.L27:
+ 126:Timer.cpp     **** 		else if (RotaryEncoder_OvfCnt > ROT_ENC_PRESS_OVF && RotEnc_State == IDLE)
+ 390               		.loc 1 126 8 is_stmt 1 view .LVU123
+ 126:Timer.cpp     **** 		else if (RotaryEncoder_OvfCnt > ROT_ENC_PRESS_OVF && RotEnc_State == IDLE)
+ 391               		.loc 1 126 33 is_stmt 0 view .LVU124
+ 392 021a 8091 0000 		lds r24,RotaryEncoder_OvfCnt
+ 393 021e 9091 0000 		lds r25,RotaryEncoder_OvfCnt+1
+ 126:Timer.cpp     **** 		else if (RotaryEncoder_OvfCnt > ROT_ENC_PRESS_OVF && RotEnc_State == IDLE)
+ 394               		.loc 1 126 53 view .LVU125
+ 395 0222 CD97      		sbiw r24,61
+ 396 0224 00F0      		brlo .L3
+ 126:Timer.cpp     **** 		else if (RotaryEncoder_OvfCnt > ROT_ENC_PRESS_OVF && RotEnc_State == IDLE)
+ 397               		.loc 1 126 69 discriminator 1 view .LVU126
+ 398 0226 8091 0000 		lds r24,RotEnc_State
+ 126:Timer.cpp     **** 		else if (RotaryEncoder_OvfCnt > ROT_ENC_PRESS_OVF && RotEnc_State == IDLE)
+ 399               		.loc 1 126 53 discriminator 1 view .LVU127
+ 400 022a 8111      		cpse r24,__zero_reg__
+ 401 022c 00C0      		rjmp .L3
+ 129:Timer.cpp     **** 			if ( !(GPIO_ROT_ENC_PIN & GPIO_ROT_ENC_PRESS_MASK) )
+ 402               		.loc 1 129 4 is_stmt 1 view .LVU128
+ 403 022e 1A99      		sbic 0x3,2
+ 404 0230 00C0      		rjmp .L31
+ 131:Timer.cpp     **** 				RotEnc_State = SHORT_PRESS;
+ 405               		.loc 1 131 5 view .LVU129
+ 131:Timer.cpp     **** 				RotEnc_State = SHORT_PRESS;
+ 406               		.loc 1 131 18 is_stmt 0 view .LVU130
+ 407 0232 83E0      		ldi r24,lo8(3)
+ 408 0234 00C0      		rjmp .L36
+ 409               	.L31:
+ 135:Timer.cpp     **** 			RotEnc_State = PRESSED;
+ 410               		.loc 1 135 4 is_stmt 1 view .LVU131
+ 135:Timer.cpp     **** 			RotEnc_State = PRESSED;
+ 411               		.loc 1 135 17 is_stmt 0 view .LVU132
+ 412 0236 84E0      		ldi r24,lo8(4)
+ 413 0238 8093 0000 		sts RotEnc_State,r24
+ 414               		.loc 1 139 1 view .LVU133
+ 415 023c 00C0      		rjmp .L3
+ 416               		__gcc_isr 0,r18
+ 417               		.cfi_endproc
+ 418               	.LFE4:
+ 420               	.Letext0:
+ 421               		.file 2 "/usr/avr/include/stdint.h"
+ 422               		.file 3 "RotaryEncoder.h"
+ 423               		.file 4 "SP10281_3x7segment.h"
+ 424               		.file 5 "PedalCom.h"
+ 425               		.file 6 "MIDI.h"
+ 426               		.file 7 "System.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 Timer.cpp
+     /tmp/ccl8LFjW.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccl8LFjW.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccl8LFjW.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccl8LFjW.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccl8LFjW.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccl8LFjW.s:12     .text:0000000000000000 _Z11Timer0_Initv
+     /tmp/ccl8LFjW.s:53     .text:000000000000001e _Z13Timer0_ms2cntm
+     /tmp/ccl8LFjW.s:110    .text:0000000000000054 __vector_16
+                            *ABS*:0000000000000003 __gcc_isr.n_pushed.001
+
+UNDEFINED SYMBOLS
+__muluhisi3
+__udivmodsi4
+System_TempSelectOvfCnt
+System_TempSelectFlag
+System_MarkSelectionOvfCnt
+System_MarkSelectionFlag
+PedalCom_DelayTXOvfCnt
+PedalCom_DelayTxFlag
+PedalCom_HeartbeatOvfCnt
+PedalCom_HeartbeatFlag
+PedalCom_ResponseTimeoutOvfCnt
+PedalCom_ResponseTimeoutFlag
+PedalCom_FullFrameTimeoutOvfCnt
+PedalCom_FullFrameTimeoutFlag
+SP10281_OvfCnt
+SP10281_OvfFlag
+_ZN10MCP_Output17AutoToggle_OvfCntE
+_ZN10MCP_Output18AutoToggle_TimeoutE
+_ZN10MCP_Output16AutoToggle_PortAE
+_ZN10MCP_Output16AutoToggle_PortBE
+_ZN10MCP_Output15AutoToggle_FlagE
+RotaryEncoder_OvfCnt
+RotEnc_State
