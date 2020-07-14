@@ -26,8 +26,7 @@ void System_HandleFootswitchInput(Footswitch_State state, uint8_t sw)
 	{
 		MasterCom_QueueCommand(FootswitchLongLongPress, 1, (uint8_t *)&sw);
 		
-		/* Only write Tuner in 7-segment display if Not in tuner mode AND if not Loop Ctrl bottom row footswitch was pressed */
-		if ((SystemState != TUNER) && !(SystemState == RUN_LOOP_CTRL && (sw & 0x0F)))
+		if (SystemState != TUNER)
 		{
 			Segment7_WriteAll('T', 'u', 'n', 'r', 0, 0, 0, 0);
 		}

@@ -25,8 +25,7 @@ void Footswitch_Init()
 {	
 	DDRC &= ~(1 << PORTC1);		// Set PortC 1 as input
 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
-	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
-	
+
 	Footswitch_EnableInterrupt();
 }
 
@@ -34,88 +33,67 @@ void Footswitch_PressDetected()
 {
 	uint8_t tmp = 0;
 	
-	tmp = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTFB);		// Read what pin caused the interrupt
+	// Read what pin caused the interrupt
+	tmp = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTFB);
 	
-	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTCAPB);	// Read state of Port when interrupt occurred (Clear interrupt B)
-	
+	// Read state of Port when interrupt occurred (Clear interrupt B)
+	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTCAPB);
+
 	if (Footswitch_PortState != 0x00)		// Footswitch pressed
 	{
 		Footswitch_InterruptMask = tmp;
 		Footswitch_PressState = PRESS_SENSED;
 		Footswitch_TimerOvfCnt = 1;		// Start Timer
 	}
-	else	// Footswitch released
+	else									// Footswitch released
 	{
-		if (Footswitch_PressState == PRESSED)
+		if (Footswitch_PressState == PRESS_SENSED)
+		{
+			Footswitch_PressState = SHORT_PRESS;
+		}
+		else if (Footswitch_PressState == PRESSED)
 		{
 			Footswitch_PressState = LONG_PRESS;
 		}
-		
-		Footswitch_EnableInterrupt();
-	}	
+
+		Footswitch_TimerOvfCnt = 0;	// Stop timer
+	}
+
+	Footswitch_EnableInterrupt();
 }
 
 void Footswitch_HandleTimer()
 {
-	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, GPIOB);		// Read current state of Port
-	
-	if (Footswitch_PressState == WAITING)
+	/* Assume switch is still pressed */
+
+	if (Footswitch_PressState == PRESSED)
 	{
-		/* Check if switch is no longer pressed */
-		if (Footswitch_PortState != Footswitch_InterruptMask)
+		/* Write appropriate message in 7-segment display based on system state */
+		if (SystemState == EDITING)
 		{
-			Footswitch_PressState = SHORT_PRESS;
-			Footswitch_TimerOvfCnt = 0;	// Stop timer
 		}
-	}
-	else if (Footswitch_PressState == PRESSED)
-	{
-		/* Check if switch is no longer pressed */
-		if (Footswitch_PortState != Footswitch_InterruptMask)
+		else if (SystemState == RUN_PRESET_CTRL)
 		{
-			Footswitch_TimerOvfCnt = 0;	// Stop timer
-			Footswitch_PressState = SHORT_PRESS;
+			Segment7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
 		}
-		else
+		else if (SystemState == RUN_LOOP_CTRL)
 		{
-			/* Enable interrupt so Long Press will be trigged as soon as the user lifts his/her foot from the switch */
-			Footswitch_EnableInterrupt();
-			
-			/* Write appropriate message in 7-segment display based on system state */
-			if (SystemState == EDITING)
+			if (Footswitch_InterruptMask & 0xF0)
 			{
+				Segment7_WriteAll('P', 'r', 'e', ' ', 0, 0, 0, 0);
 			}
-			else if (SystemState == RUN_PRESET_CTRL)
+			else
 			{
-				Segment7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
+				Segment7_WriteAll('^', '^', '^', '^', 0, 0, 0, 0);
 			}
-			else if (SystemState == RUN_LOOP_CTRL)
-			{
-				if (Footswitch_InterruptMask & 0xF0)
-				{
-					Segment7_WriteAll('P', 'r', 'e', ' ', 0, 0, 0, 0);
-				}
-				else
-				{
-					Segment7_WriteAll('^', '^', '^', '^', 0, 0, 0, 0);
-				}
-			}
-			else if (SystemState == TUNER)
-			{
-			}
+		}
+		else if (SystemState == TUNER)
+		{
 		}
 	}
 	else if (Footswitch_PressState == STILL_PRESSED)
 	{
-		/* Check if switch is no longer pressed */
-		if (Footswitch_PortState != Footswitch_InterruptMask)
-		{
-			Footswitch_PressState = LONG_PRESS;
-		}
-		else
-		{
-			Footswitch_PressState = LONG_LONG_PRESS;
-		}
+		Footswitch_PressState = LONG_LONG_PRESS;
 		
 		Footswitch_TimerOvfCnt = 0;	// Stop timer
 	}

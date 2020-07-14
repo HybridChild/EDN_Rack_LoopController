@@ -154,7 +154,7 @@
   30:Timer.cpp     **** 	/* Overflow counter for delaying transmit to Master */
   31:Timer.cpp     **** 	if (MasterCom_DelayTXOvfCnt)
  127               		.loc 1 31 2 view .LVU20
- 128               		.loc 1 31 29 is_stmt 0 view .LVU21
+ 128               		.loc 1 31 6 is_stmt 0 view .LVU21
  129 0062 8091 0000 		lds r24,MasterCom_DelayTXOvfCnt
  130               		.loc 1 31 2 view .LVU22
  131 0066 8823      		tst r24
@@ -187,7 +187,7 @@
   40:Timer.cpp     **** 	/* Overflow counter for Master response timeout */
   41:Timer.cpp     **** 	if (MasterCom_ResponseTimeoutOvfCnt)
  150               		.loc 1 41 2 is_stmt 1 view .LVU31
- 151               		.loc 1 41 37 is_stmt 0 view .LVU32
+ 151               		.loc 1 41 6 is_stmt 0 view .LVU32
  152 0082 8091 0000 		lds r24,MasterCom_ResponseTimeoutOvfCnt
  153 0086 9091 0000 		lds r25,MasterCom_ResponseTimeoutOvfCnt+1
  154               		.loc 1 41 2 view .LVU33
@@ -225,7 +225,7 @@
   50:Timer.cpp     **** 	/* Overflow counter for receiving full command frame */
   51:Timer.cpp     **** 	if (MasterCom_FullFrameTimeoutOvfCnt)
  178               		.loc 1 51 2 is_stmt 1 view .LVU42
- 179               		.loc 1 51 38 is_stmt 0 view .LVU43
+ 179               		.loc 1 51 6 is_stmt 0 view .LVU43
  180 00b4 8091 0000 		lds r24,MasterCom_FullFrameTimeoutOvfCnt
  181 00b8 9091 0000 		lds r25,MasterCom_FullFrameTimeoutOvfCnt+1
  182               		.loc 1 51 2 view .LVU44
@@ -262,7 +262,7 @@
   60:Timer.cpp     **** 	/* Overflow counter for handling Footswitch press timing */
   61:Timer.cpp     **** 	if (Footswitch_TimerOvfCnt)
  205               		.loc 1 61 2 is_stmt 1 view .LVU53
- 206               		.loc 1 61 28 is_stmt 0 view .LVU54
+ 206               		.loc 1 61 6 is_stmt 0 view .LVU54
  207 00e4 8091 0000 		lds r24,Footswitch_TimerOvfCnt
  208 00e8 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
  209               		.loc 1 61 2 view .LVU55
@@ -284,7 +284,7 @@
  221 0102 8091 0000 		lds r24,Footswitch_TimerOvfCnt
  222 0106 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
  223               		.loc 1 65 67 view .LVU60
- 224 010a 813B      		cpi r24,-79
+ 224 010a 8D34      		cpi r24,77
  225 010c 9440      		sbci r25,4
  226 010e 00F0      		brlo .L15
  227               		.loc 1 65 92 discriminator 1 view .LVU61
@@ -293,119 +293,78 @@
  230 0114 8430      		cpi r24,lo8(4)
  231 0116 01F4      		brne .L15
   66:Timer.cpp     **** 		{
-  67:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+  67:Timer.cpp     **** 			Footswitch_PressState = STILL_PRESSED;
  232               		.loc 1 67 4 is_stmt 1 view .LVU63
- 233               		.loc 1 67 25 is_stmt 0 view .LVU64
- 234 0118 81E0      		ldi r24,lo8(1)
- 235 011a 8093 0000 		sts Footswitch_TimerFlag,r24
-  68:Timer.cpp     **** 			Footswitch_PressState = STILL_PRESSED;
+ 233               		.loc 1 67 26 is_stmt 0 view .LVU64
+ 234 0118 85E0      		ldi r24,lo8(5)
+ 235 011a 8093 0000 		sts Footswitch_PressState,r24
+  68:Timer.cpp     **** 			Footswitch_TimerFlag = true;
  236               		.loc 1 68 4 is_stmt 1 view .LVU65
- 237               		.loc 1 68 26 is_stmt 0 view .LVU66
- 238 011e 85E0      		ldi r24,lo8(5)
- 239 0120 8093 0000 		sts Footswitch_PressState,r24
- 240               	.L3:
- 241               	/* epilogue start */
+ 237               		.loc 1 68 25 is_stmt 0 view .LVU66
+ 238 011e 81E0      		ldi r24,lo8(1)
+ 239               	.L17:
   69:Timer.cpp     **** 		}
-  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
+  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == PRES
   71:Timer.cpp     **** 		{
   72:Timer.cpp     **** 			Footswitch_PressState = PRESSED;
   73:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 240               		.loc 1 73 4 is_stmt 1 view .LVU67
+ 241               		.loc 1 73 25 is_stmt 0 view .LVU68
+ 242 0120 8093 0000 		sts Footswitch_TimerFlag,r24
+ 243               	.L3:
+ 244               	/* epilogue start */
   74:Timer.cpp     **** 		}
-  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
-  76:Timer.cpp     **** 		{
-  77:Timer.cpp     **** 			Footswitch_PressState = WAITING;
-  78:Timer.cpp     **** 			Footswitch_TimerFlag = true;
-  79:Timer.cpp     **** 		}
-  80:Timer.cpp     **** 	}
-  81:Timer.cpp     **** }...
- 242               		.loc 1 81 1 view .LVU67
- 243 0124 9F91      		pop r25
- 244 0126 8F91      		pop r24
- 245 0128 2F91 1F90 		__gcc_isr 2
- 245      1FBE 1F90 
- 246 0130 1895      		reti
- 247               	.L15:
-  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
- 248               		.loc 1 70 8 is_stmt 1 view .LVU68
-  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
- 249               		.loc 1 70 35 is_stmt 0 view .LVU69
- 250 0132 8091 0000 		lds r24,Footswitch_TimerOvfCnt
- 251 0136 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
-  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
- 252               		.loc 1 70 68 view .LVU70
- 253 013a 8935      		cpi r24,89
- 254 013c 9240      		sbci r25,2
- 255 013e 00F0      		brlo .L16
-  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
- 256               		.loc 1 70 93 discriminator 1 view .LVU71
- 257 0140 8091 0000 		lds r24,Footswitch_PressState
-  70:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAIT
- 258               		.loc 1 70 68 discriminator 1 view .LVU72
- 259 0144 8230      		cpi r24,lo8(2)
- 260 0146 01F0      		breq .L17
- 261               	.L16:
-  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
- 262               		.loc 1 75 8 is_stmt 1 view .LVU73
-  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
- 263               		.loc 1 75 35 is_stmt 0 view .LVU74
- 264 0148 8091 0000 		lds r24,Footswitch_TimerOvfCnt
- 265 014c 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
-  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
- 266               		.loc 1 75 68 view .LVU75
- 267 0150 8D38      		cpi r24,-115
- 268 0152 9105      		cpc r25,__zero_reg__
- 269 0154 00F0      		brlo .L3
-  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
- 270               		.loc 1 75 93 discriminator 1 view .LVU76
- 271 0156 8091 0000 		lds r24,Footswitch_PressState
-  75:Timer.cpp     **** 		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRES
- 272               		.loc 1 75 68 discriminator 1 view .LVU77
- 273 015a 8130      		cpi r24,lo8(1)
- 274 015c 01F4      		brne .L3
-  77:Timer.cpp     **** 			Footswitch_PressState = WAITING;
- 275               		.loc 1 77 4 is_stmt 1 view .LVU78
-  77:Timer.cpp     **** 			Footswitch_PressState = WAITING;
- 276               		.loc 1 77 26 is_stmt 0 view .LVU79
- 277 015e 92E0      		ldi r25,lo8(2)
- 278 0160 9093 0000 		sts Footswitch_PressState,r25
- 279 0164 00C0      		rjmp .L20
- 280               	.L17:
-  72:Timer.cpp     **** 			Footswitch_PressState = PRESSED;
- 281               		.loc 1 72 4 is_stmt 1 view .LVU80
-  72:Timer.cpp     **** 			Footswitch_PressState = PRESSED;
- 282               		.loc 1 72 26 is_stmt 0 view .LVU81
- 283 0166 84E0      		ldi r24,lo8(4)
- 284 0168 8093 0000 		sts Footswitch_PressState,r24
-  73:Timer.cpp     **** 			Footswitch_TimerFlag = true;
- 285               		.loc 1 73 4 is_stmt 1 view .LVU82
-  73:Timer.cpp     **** 			Footswitch_TimerFlag = true;
- 286               		.loc 1 73 25 is_stmt 0 view .LVU83
- 287 016c 81E0      		ldi r24,lo8(1)
- 288               	.L20:
-  78:Timer.cpp     **** 			Footswitch_TimerFlag = true;
- 289               		.loc 1 78 4 is_stmt 1 view .LVU84
-  78:Timer.cpp     **** 			Footswitch_TimerFlag = true;
- 290               		.loc 1 78 25 is_stmt 0 view .LVU85
- 291 016e 8093 0000 		sts Footswitch_TimerFlag,r24
- 292               		.loc 1 81 1 view .LVU86
- 293 0172 00C0      		rjmp .L3
- 294               		__gcc_isr 0,r18
- 295               		.cfi_endproc
- 296               	.LFE2:
- 298               	.Letext0:
- 299               		.file 2 "/usr/avr/include/stdint.h"
- 300               		.file 3 "MasterCom.h"
- 301               		.file 4 "Footswitch.h"
+  75:Timer.cpp     **** 	}
+  76:Timer.cpp     **** }
+ 245               		.loc 1 76 1 view .LVU69
+ 246 0124 9F91      		pop r25
+ 247 0126 8F91      		pop r24
+ 248 0128 2F91 1F90 		__gcc_isr 2
+ 248      1FBE 1F90 
+ 249 0130 1895      		reti
+ 250               	.L15:
+  70:Timer.cpp     **** 		{
+ 251               		.loc 1 70 8 is_stmt 1 view .LVU70
+  70:Timer.cpp     **** 		{
+ 252               		.loc 1 70 35 is_stmt 0 view .LVU71
+ 253 0132 8091 0000 		lds r24,Footswitch_TimerOvfCnt
+ 254 0136 9091 0000 		lds r25,Footswitch_TimerOvfCnt+1
+  70:Timer.cpp     **** 		{
+ 255               		.loc 1 70 68 view .LVU72
+ 256 013a 8732      		cpi r24,39
+ 257 013c 9240      		sbci r25,2
+ 258 013e 00F0      		brlo .L3
+  70:Timer.cpp     **** 		{
+ 259               		.loc 1 70 93 discriminator 1 view .LVU73
+ 260 0140 8091 0000 		lds r24,Footswitch_PressState
+  70:Timer.cpp     **** 		{
+ 261               		.loc 1 70 68 discriminator 1 view .LVU74
+ 262 0144 8130      		cpi r24,lo8(1)
+ 263 0146 01F4      		brne .L3
+  72:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 264               		.loc 1 72 4 is_stmt 1 view .LVU75
+  72:Timer.cpp     **** 			Footswitch_TimerFlag = true;
+ 265               		.loc 1 72 26 is_stmt 0 view .LVU76
+ 266 0148 94E0      		ldi r25,lo8(4)
+ 267 014a 9093 0000 		sts Footswitch_PressState,r25
+ 268 014e 00C0      		rjmp .L17
+ 269               		__gcc_isr 0,r18
+ 270               		.cfi_endproc
+ 271               	.LFE2:
+ 273               	.Letext0:
+ 274               		.file 2 "/usr/avr/include/stdint.h"
+ 275               		.file 3 "MasterCom.h"
+ 276               		.file 4 "Footswitch.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 Timer.cpp
-     /tmp/ccRkIMgs.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccRkIMgs.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccRkIMgs.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccRkIMgs.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccRkIMgs.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccRkIMgs.s:12     .text:0000000000000000 _Z11Timer0_Initv
-     /tmp/ccRkIMgs.s:53     .text:000000000000001e _Z13Timer0_ms2cntm
-     /tmp/ccRkIMgs.s:110    .text:0000000000000054 __vector_14
+     /tmp/ccB6ydnH.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccB6ydnH.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccB6ydnH.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccB6ydnH.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccB6ydnH.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccB6ydnH.s:12     .text:0000000000000000 _Z11Timer0_Initv
+     /tmp/ccB6ydnH.s:53     .text:000000000000001e _Z13Timer0_ms2cntm
+     /tmp/ccB6ydnH.s:110    .text:0000000000000054 __vector_14
                             *ABS*:0000000000000003 __gcc_isr.n_pushed.001
 
 UNDEFINED SYMBOLS

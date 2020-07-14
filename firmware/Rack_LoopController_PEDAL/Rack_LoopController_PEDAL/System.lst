@@ -83,7 +83,7 @@
   65               		.loc 1 19 25 view .LVU5
   66 0020 81EB      		ldi r24,lo8(-79)
   67               	.LVL2:
-  68               	.L11:
+  68               	.L10:
   20:System.cpp    **** 	}
   21:System.cpp    **** 	else if (state == LONG_PRESS)
   22:System.cpp    **** 	{
@@ -98,14 +98,13 @@
   26:System.cpp    **** 	{
   27:System.cpp    **** 		MasterCom_QueueCommand(FootswitchLongLongPress, 1, (uint8_t *)&sw);
   28:System.cpp    **** 		
-  29:System.cpp    **** 		/* Only write Tuner in 7-segment display if Not in tuner mode AND if not Loop Ctrl bottom row foo
-  30:System.cpp    **** 		if ((SystemState != TUNER) && !(SystemState == RUN_LOOP_CTRL && (sw & 0x0F)))
-  31:System.cpp    **** 		{
-  32:System.cpp    **** 			Segment7_WriteAll('T', 'u', 'n', 'r', 0, 0, 0, 0);
-  33:System.cpp    **** 		}
-  34:System.cpp    **** 	}
-  35:System.cpp    **** }
-  74               		.loc 1 35 1 view .LVU7
+  29:System.cpp    **** 		if (SystemState != TUNER)
+  30:System.cpp    **** 		{
+  31:System.cpp    **** 			Segment7_WriteAll('T', 'u', 'n', 'r', 0, 0, 0, 0);
+  32:System.cpp    **** 		}
+  33:System.cpp    **** 	}
+  34:System.cpp    **** }
+  74               		.loc 1 34 1 view .LVU7
   75 0026 0F90      		pop __tmp_reg__
   76 0028 DF91      		pop r29
   77 002a CF91      		pop r28
@@ -135,7 +134,7 @@
   97               	.LVL6:
   23:System.cpp    **** 	}
   98               		.loc 1 23 25 view .LVU12
-  99 0044 00C0      		rjmp .L11
+  99 0044 00C0      		rjmp .L10
  100               	.LVL7:
  101               	.L4:
   25:System.cpp    **** 	{
@@ -159,349 +158,336 @@
  115               		.loc 1 27 25 view .LVU17
  116 0054 0E94 0000 		call _Z22MasterCom_QueueCommand3CMDhPh
  117               	.LVL10:
-  30:System.cpp    **** 		{
- 118               		.loc 1 30 3 is_stmt 1 view .LVU18
-  30:System.cpp    **** 		{
- 119               		.loc 1 30 20 is_stmt 0 view .LVU19
+  29:System.cpp    **** 		{
+ 118               		.loc 1 29 3 is_stmt 1 view .LVU18
+  29:System.cpp    **** 		{
+ 119               		.loc 1 29 19 is_stmt 0 view .LVU19
  120 0058 8091 0000 		lds r24,SystemState
-  30:System.cpp    **** 		{
- 121               		.loc 1 30 30 view .LVU20
+  29:System.cpp    **** 		{
+ 121               		.loc 1 29 3 view .LVU20
  122 005c 8330      		cpi r24,lo8(3)
  123 005e 01F0      		breq .L1
-  30:System.cpp    **** 		{
- 124               		.loc 1 30 47 discriminator 1 view .LVU21
- 125 0060 8091 0000 		lds r24,SystemState
-  30:System.cpp    **** 		{
- 126               		.loc 1 30 30 discriminator 1 view .LVU22
- 127 0064 8230      		cpi r24,lo8(2)
- 128 0066 01F4      		brne .L7
-  30:System.cpp    **** 		{
- 129               		.loc 1 30 33 discriminator 4 view .LVU23
- 130 0068 8981      		ldd r24,Y+1
- 131 006a 8F70      		andi r24,lo8(15)
- 132 006c 01F4      		brne .L1
- 133               	.L7:
-  32:System.cpp    **** 		}
- 134               		.loc 1 32 4 is_stmt 1 view .LVU24
-  32:System.cpp    **** 		}
- 135               		.loc 1 32 21 is_stmt 0 view .LVU25
- 136 006e A12C      		mov r10,__zero_reg__
- 137 0070 C12C      		mov r12,__zero_reg__
- 138 0072 E12C      		mov r14,__zero_reg__
- 139 0074 00E0      		ldi r16,0
- 140 0076 22E7      		ldi r18,lo8(114)
- 141 0078 4EE6      		ldi r20,lo8(110)
- 142 007a 65E7      		ldi r22,lo8(117)
- 143 007c 84E5      		ldi r24,lo8(84)
- 144 007e 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
- 145               	.LVL11:
- 146               		.loc 1 35 1 view .LVU26
- 147 0082 00C0      		rjmp .L1
- 148               		.cfi_endproc
- 149               	.LFE0:
- 151               	.global	_Z26System_HandleMasterCommand3CMDhPh
- 153               	_Z26System_HandleMasterCommand3CMDhPh:
- 154               	.LVL12:
- 155               	.LFB1:
-  36:System.cpp    **** 
-  37:System.cpp    **** unsigned char System_HandleMasterCommand(CMD cmd, uint8_t length, uint8_t *dat)
-  38:System.cpp    **** {
- 156               		.loc 1 38 1 is_stmt 1 view -0
- 157               		.cfi_startproc
- 158               		.loc 1 38 1 is_stmt 0 view .LVU28
- 159 0084 AF92      		push r10
- 160               	.LCFI8:
- 161               		.cfi_def_cfa_offset 3
- 162               		.cfi_offset 10, -2
- 163 0086 CF92      		push r12
- 164               	.LCFI9:
- 165               		.cfi_def_cfa_offset 4
- 166               		.cfi_offset 12, -3
- 167 0088 EF92      		push r14
- 168               	.LCFI10:
- 169               		.cfi_def_cfa_offset 5
- 170               		.cfi_offset 14, -4
- 171 008a 0F93      		push r16
- 172               	.LCFI11:
- 173               		.cfi_def_cfa_offset 6
- 174               		.cfi_offset 16, -5
- 175 008c CF93      		push r28
- 176               	.LCFI12:
- 177               		.cfi_def_cfa_offset 7
- 178               		.cfi_offset 28, -6
- 179 008e DF93      		push r29
- 180               	.LCFI13:
- 181               		.cfi_def_cfa_offset 8
- 182               		.cfi_offset 29, -7
- 183               	/* prologue: function */
- 184               	/* frame size = 0 */
- 185               	/* stack size = 6 */
- 186               	.L__stack_usage = 6
- 187 0090 EA01      		movw r28,r20
-  39:System.cpp    **** 	unsigned char response = ACK_BYTE;
- 188               		.loc 1 39 2 is_stmt 1 view .LVU29
- 189               	.LVL13:
-  40:System.cpp    **** 	
-  41:System.cpp    **** 	if (cmd == UpdateSystemState && length == 1)
- 190               		.loc 1 41 2 view .LVU30
- 191 0092 853D      		cpi r24,lo8(-43)
- 192 0094 01F4      		brne .L13
- 193               		.loc 1 41 31 is_stmt 0 discriminator 1 view .LVU31
- 194 0096 6130      		cpi r22,lo8(1)
- 195 0098 01F0      		breq .+2
- 196 009a 00C0      		rjmp .L25
-  42:System.cpp    **** 	{
-  43:System.cpp    **** 		if (dat[0] == 4)
- 197               		.loc 1 43 3 is_stmt 1 view .LVU32
- 198               		.loc 1 43 12 is_stmt 0 view .LVU33
- 199 009c 8881      		ld r24,Y
- 200               	.LVL14:
- 201               		.loc 1 43 3 view .LVU34
- 202 009e 8430      		cpi r24,lo8(4)
- 203 00a0 01F4      		brne .L15
-  44:System.cpp    **** 		{
-  45:System.cpp    **** 			SystemState = RUN_PRESET_CTRL;
- 204               		.loc 1 45 4 is_stmt 1 view .LVU35
- 205               		.loc 1 45 16 is_stmt 0 view .LVU36
- 206 00a2 6093 0000 		sts SystemState,r22
- 207               	.LVL15:
- 208               	.L26:
+  31:System.cpp    **** 		}
+ 124               		.loc 1 31 4 is_stmt 1 view .LVU21
+  31:System.cpp    **** 		}
+ 125               		.loc 1 31 21 is_stmt 0 view .LVU22
+ 126 0060 A12C      		mov r10,__zero_reg__
+ 127 0062 C12C      		mov r12,__zero_reg__
+ 128 0064 E12C      		mov r14,__zero_reg__
+ 129 0066 00E0      		ldi r16,0
+ 130 0068 22E7      		ldi r18,lo8(114)
+ 131 006a 4EE6      		ldi r20,lo8(110)
+ 132 006c 65E7      		ldi r22,lo8(117)
+ 133 006e 84E5      		ldi r24,lo8(84)
+ 134 0070 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
+ 135               	.LVL11:
+ 136               		.loc 1 34 1 view .LVU23
+ 137 0074 00C0      		rjmp .L1
+ 138               		.cfi_endproc
+ 139               	.LFE0:
+ 141               	.global	_Z26System_HandleMasterCommand3CMDhPh
+ 143               	_Z26System_HandleMasterCommand3CMDhPh:
+ 144               	.LVL12:
+ 145               	.LFB1:
+  35:System.cpp    **** 
+  36:System.cpp    **** unsigned char System_HandleMasterCommand(CMD cmd, uint8_t length, uint8_t *dat)
+  37:System.cpp    **** {
+ 146               		.loc 1 37 1 is_stmt 1 view -0
+ 147               		.cfi_startproc
+ 148               		.loc 1 37 1 is_stmt 0 view .LVU25
+ 149 0076 AF92      		push r10
+ 150               	.LCFI8:
+ 151               		.cfi_def_cfa_offset 3
+ 152               		.cfi_offset 10, -2
+ 153 0078 CF92      		push r12
+ 154               	.LCFI9:
+ 155               		.cfi_def_cfa_offset 4
+ 156               		.cfi_offset 12, -3
+ 157 007a EF92      		push r14
+ 158               	.LCFI10:
+ 159               		.cfi_def_cfa_offset 5
+ 160               		.cfi_offset 14, -4
+ 161 007c 0F93      		push r16
+ 162               	.LCFI11:
+ 163               		.cfi_def_cfa_offset 6
+ 164               		.cfi_offset 16, -5
+ 165 007e CF93      		push r28
+ 166               	.LCFI12:
+ 167               		.cfi_def_cfa_offset 7
+ 168               		.cfi_offset 28, -6
+ 169 0080 DF93      		push r29
+ 170               	.LCFI13:
+ 171               		.cfi_def_cfa_offset 8
+ 172               		.cfi_offset 29, -7
+ 173               	/* prologue: function */
+ 174               	/* frame size = 0 */
+ 175               	/* stack size = 6 */
+ 176               	.L__stack_usage = 6
+ 177 0082 EA01      		movw r28,r20
+  38:System.cpp    **** 	unsigned char response = ACK_BYTE;
+ 178               		.loc 1 38 2 is_stmt 1 view .LVU26
+ 179               	.LVL13:
   39:System.cpp    **** 	
- 209               		.loc 1 39 16 view .LVU37
- 210 00a6 8CEA      		ldi r24,lo8(-84)
- 211               	.LVL16:
- 212               	.L12:
- 213               	/* epilogue start */
-  46:System.cpp    **** 		}
-  47:System.cpp    **** 		else if (dat[0] == 6)
-  48:System.cpp    **** 		{
-  49:System.cpp    **** 			SystemState = RUN_LOOP_CTRL;
-  50:System.cpp    **** 		}
-  51:System.cpp    **** 		else if (dat[0] == 8)
-  52:System.cpp    **** 		{
-  53:System.cpp    **** 			SystemState = TUNER;
-  54:System.cpp    **** 		}
-  55:System.cpp    **** 		else
-  56:System.cpp    **** 		{
-  57:System.cpp    **** 			SystemState = EDITING;
-  58:System.cpp    **** 		}
-  59:System.cpp    **** 	}
-  60:System.cpp    **** 	else if (cmd == Update7segments && length == 4)
-  61:System.cpp    **** 	{
-  62:System.cpp    **** 		Segment7_WriteAll((char)dat[0], (char)dat[1], (char)dat[2], (char)dat[3], 0, 0, 0, 0);
-  63:System.cpp    **** 	}
-  64:System.cpp    **** 	else if (cmd == UpdatePresetLoopLEDs && length == 1)
-  65:System.cpp    **** 	{
-  66:System.cpp    **** 		MCP23017_WriteReg(MCP23017_ADDR_SWITCH_INDICATOR, OLATA, dat[0]);
-  67:System.cpp    **** 	}
-  68:System.cpp    **** 	else if (cmd == UpdateTunerLEDs && length == 2)
-  69:System.cpp    **** 	{
-  70:System.cpp    **** 		MCP23017_WriteReg(MCP23017_ADDR_TUNER_DISPLAY, OLATA, dat[0]);
-  71:System.cpp    **** 				
-  72:System.cpp    **** 		if (dat[1])
-  73:System.cpp    **** 		{
-  74:System.cpp    **** 			TUNER_GREEN_LED_PORT |= TUNER_GREEN_LED_MASK;
-  75:System.cpp    **** 		}
-  76:System.cpp    **** 		else
-  77:System.cpp    **** 		{
-  78:System.cpp    **** 			TUNER_GREEN_LED_PORT &= ~TUNER_GREEN_LED_MASK;
-  79:System.cpp    **** 		}
-  80:System.cpp    **** 	}
-  81:System.cpp    **** 	else
-  82:System.cpp    **** 	{
-  83:System.cpp    **** 		response = NACK_BYTE;
-  84:System.cpp    **** 	}
-  85:System.cpp    **** 	
-  86:System.cpp    **** 	return response;
-  87:System.cpp    **** }
- 214               		.loc 1 87 1 view .LVU38
- 215 00a8 DF91      		pop r29
- 216 00aa CF91      		pop r28
- 217               	.LVL17:
- 218               		.loc 1 87 1 view .LVU39
- 219 00ac 0F91      		pop r16
- 220 00ae EF90      		pop r14
- 221 00b0 CF90      		pop r12
- 222 00b2 AF90      		pop r10
- 223 00b4 0895      		ret
- 224               	.LVL18:
- 225               	.L15:
+  40:System.cpp    **** 	if (cmd == UpdateSystemState && length == 1)
+ 180               		.loc 1 40 2 view .LVU27
+ 181 0084 853D      		cpi r24,lo8(-43)
+ 182 0086 01F4      		brne .L12
+ 183               		.loc 1 40 31 is_stmt 0 discriminator 1 view .LVU28
+ 184 0088 6130      		cpi r22,lo8(1)
+ 185 008a 01F0      		breq .+2
+ 186 008c 00C0      		rjmp .L24
+  41:System.cpp    **** 	{
+  42:System.cpp    **** 		if (dat[0] == 4)
+ 187               		.loc 1 42 3 is_stmt 1 view .LVU29
+ 188               		.loc 1 42 12 is_stmt 0 view .LVU30
+ 189 008e 8881      		ld r24,Y
+ 190               	.LVL14:
+ 191               		.loc 1 42 3 view .LVU31
+ 192 0090 8430      		cpi r24,lo8(4)
+ 193 0092 01F4      		brne .L14
+  43:System.cpp    **** 		{
+  44:System.cpp    **** 			SystemState = RUN_PRESET_CTRL;
+ 194               		.loc 1 44 4 is_stmt 1 view .LVU32
+ 195               		.loc 1 44 16 is_stmt 0 view .LVU33
+ 196 0094 6093 0000 		sts SystemState,r22
+ 197               	.LVL15:
+ 198               	.L25:
+  38:System.cpp    **** 	
+ 199               		.loc 1 38 16 view .LVU34
+ 200 0098 8CEA      		ldi r24,lo8(-84)
+ 201               	.LVL16:
+ 202               	.L11:
+ 203               	/* epilogue start */
+  45:System.cpp    **** 		}
+  46:System.cpp    **** 		else if (dat[0] == 6)
   47:System.cpp    **** 		{
- 226               		.loc 1 47 8 is_stmt 1 view .LVU40
- 227 00b6 8630      		cpi r24,lo8(6)
- 228 00b8 01F4      		brne .L16
+  48:System.cpp    **** 			SystemState = RUN_LOOP_CTRL;
   49:System.cpp    **** 		}
- 229               		.loc 1 49 4 view .LVU41
-  49:System.cpp    **** 		}
- 230               		.loc 1 49 16 is_stmt 0 view .LVU42
- 231 00ba 82E0      		ldi r24,lo8(2)
- 232               	.L27:
-  53:System.cpp    **** 		}
- 233               		.loc 1 53 16 view .LVU43
- 234 00bc 8093 0000 		sts SystemState,r24
- 235 00c0 00C0      		rjmp .L26
- 236               	.L16:
+  50:System.cpp    **** 		else if (dat[0] == 8)
   51:System.cpp    **** 		{
- 237               		.loc 1 51 8 is_stmt 1 view .LVU44
- 238 00c2 8830      		cpi r24,lo8(8)
- 239 00c4 01F4      		brne .L17
+  52:System.cpp    **** 			SystemState = TUNER;
   53:System.cpp    **** 		}
- 240               		.loc 1 53 4 view .LVU45
-  53:System.cpp    **** 		}
- 241               		.loc 1 53 16 is_stmt 0 view .LVU46
- 242 00c6 83E0      		ldi r24,lo8(3)
- 243 00c8 00C0      		rjmp .L27
- 244               	.L17:
+  54:System.cpp    **** 		else
+  55:System.cpp    **** 		{
+  56:System.cpp    **** 			SystemState = EDITING;
   57:System.cpp    **** 		}
- 245               		.loc 1 57 4 is_stmt 1 view .LVU47
-  57:System.cpp    **** 		}
- 246               		.loc 1 57 16 is_stmt 0 view .LVU48
- 247 00ca 1092 0000 		sts SystemState,__zero_reg__
- 248 00ce 00C0      		rjmp .L26
- 249               	.LVL19:
- 250               	.L13:
+  58:System.cpp    **** 	}
+  59:System.cpp    **** 	else if (cmd == Update7segments && length == 4)
   60:System.cpp    **** 	{
- 251               		.loc 1 60 7 is_stmt 1 view .LVU49
- 252 00d0 873D      		cpi r24,lo8(-41)
- 253 00d2 01F4      		brne .L18
-  60:System.cpp    **** 	{
- 254               		.loc 1 60 34 is_stmt 0 discriminator 1 view .LVU50
- 255 00d4 6430      		cpi r22,lo8(4)
- 256 00d6 01F4      		brne .L25
+  61:System.cpp    **** 		Segment7_WriteAll((char)dat[0], (char)dat[1], (char)dat[2], (char)dat[3], 0, 0, 0, 0);
   62:System.cpp    **** 	}
- 257               		.loc 1 62 3 is_stmt 1 view .LVU51
-  62:System.cpp    **** 	}
- 258               		.loc 1 62 20 is_stmt 0 view .LVU52
- 259 00d8 A12C      		mov r10,__zero_reg__
- 260 00da C12C      		mov r12,__zero_reg__
- 261 00dc E12C      		mov r14,__zero_reg__
- 262 00de 00E0      		ldi r16,0
- 263 00e0 2B81      		ldd r18,Y+3
- 264 00e2 4A81      		ldd r20,Y+2
- 265               	.LVL20:
-  62:System.cpp    **** 	}
- 266               		.loc 1 62 20 view .LVU53
- 267 00e4 6981      		ldd r22,Y+1
- 268               	.LVL21:
-  62:System.cpp    **** 	}
- 269               		.loc 1 62 20 view .LVU54
- 270 00e6 8881      		ld r24,Y
- 271               	.LVL22:
-  62:System.cpp    **** 	}
- 272               		.loc 1 62 20 view .LVU55
- 273 00e8 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
- 274               	.LVL23:
- 275 00ec 00C0      		rjmp .L26
- 276               	.LVL24:
- 277               	.L18:
+  63:System.cpp    **** 	else if (cmd == UpdatePresetLoopLEDs && length == 1)
   64:System.cpp    **** 	{
- 278               		.loc 1 64 7 is_stmt 1 view .LVU56
- 279 00ee 803D      		cpi r24,lo8(-48)
- 280 00f0 01F4      		brne .L19
-  64:System.cpp    **** 	{
- 281               		.loc 1 64 39 is_stmt 0 discriminator 1 view .LVU57
- 282 00f2 6130      		cpi r22,lo8(1)
- 283 00f4 01F4      		brne .L25
+  65:System.cpp    **** 		MCP23017_WriteReg(MCP23017_ADDR_SWITCH_INDICATOR, OLATA, dat[0]);
   66:System.cpp    **** 	}
- 284               		.loc 1 66 3 is_stmt 1 view .LVU58
-  66:System.cpp    **** 	}
- 285               		.loc 1 66 20 is_stmt 0 view .LVU59
- 286 00f6 4881      		ld r20,Y
- 287               	.LVL25:
-  66:System.cpp    **** 	}
- 288               		.loc 1 66 20 view .LVU60
- 289 00f8 64E1      		ldi r22,lo8(20)
- 290               	.LVL26:
-  66:System.cpp    **** 	}
- 291               		.loc 1 66 20 view .LVU61
- 292 00fa 80E0      		ldi r24,0
- 293               	.LVL27:
-  66:System.cpp    **** 	}
- 294               		.loc 1 66 20 view .LVU62
- 295 00fc 0E94 0000 		call _Z17MCP23017_WriteReghhh
- 296               	.LVL28:
- 297 0100 00C0      		rjmp .L26
- 298               	.LVL29:
- 299               	.L19:
+  67:System.cpp    **** 	else if (cmd == UpdateTunerLEDs && length == 2)
   68:System.cpp    **** 	{
- 300               		.loc 1 68 7 is_stmt 1 view .LVU63
- 301 0102 833D      		cpi r24,lo8(-45)
- 302 0104 01F4      		brne .L25
-  68:System.cpp    **** 	{
- 303               		.loc 1 68 34 is_stmt 0 discriminator 1 view .LVU64
- 304 0106 6230      		cpi r22,lo8(2)
- 305 0108 01F4      		brne .L25
+  69:System.cpp    **** 		MCP23017_WriteReg(MCP23017_ADDR_TUNER_DISPLAY, OLATA, dat[0]);
   70:System.cpp    **** 				
- 306               		.loc 1 70 3 is_stmt 1 view .LVU65
-  70:System.cpp    **** 				
- 307               		.loc 1 70 20 is_stmt 0 view .LVU66
- 308 010a 4881      		ld r20,Y
- 309               	.LVL30:
-  70:System.cpp    **** 				
- 310               		.loc 1 70 20 view .LVU67
- 311 010c 64E1      		ldi r22,lo8(20)
- 312               	.LVL31:
-  70:System.cpp    **** 				
- 313               		.loc 1 70 20 view .LVU68
- 314 010e 84E0      		ldi r24,lo8(4)
- 315               	.LVL32:
-  70:System.cpp    **** 				
- 316               		.loc 1 70 20 view .LVU69
- 317 0110 0E94 0000 		call _Z17MCP23017_WriteReghhh
- 318               	.LVL33:
+  71:System.cpp    **** 		if (dat[1])
   72:System.cpp    **** 		{
- 319               		.loc 1 72 3 is_stmt 1 view .LVU70
- 320 0114 8981      		ldd r24,Y+1
- 321 0116 8823      		tst r24
- 322 0118 01F0      		breq .L20
+  73:System.cpp    **** 			TUNER_GREEN_LED_PORT |= TUNER_GREEN_LED_MASK;
   74:System.cpp    **** 		}
- 323               		.loc 1 74 4 view .LVU71
-  74:System.cpp    **** 		}
- 324               		.loc 1 74 25 is_stmt 0 view .LVU72
- 325 011a 289A      		sbi 0x5,0
- 326 011c 00C0      		rjmp .L26
- 327               	.L20:
+  75:System.cpp    **** 		else
+  76:System.cpp    **** 		{
+  77:System.cpp    **** 			TUNER_GREEN_LED_PORT &= ~TUNER_GREEN_LED_MASK;
   78:System.cpp    **** 		}
- 328               		.loc 1 78 4 is_stmt 1 view .LVU73
-  78:System.cpp    **** 		}
- 329               		.loc 1 78 25 is_stmt 0 view .LVU74
- 330 011e 2898      		cbi 0x5,0
- 331 0120 00C0      		rjmp .L26
- 332               	.LVL34:
- 333               	.L25:
+  79:System.cpp    **** 	}
+  80:System.cpp    **** 	else
+  81:System.cpp    **** 	{
+  82:System.cpp    **** 		response = NACK_BYTE;
   83:System.cpp    **** 	}
- 334               		.loc 1 83 12 view .LVU75
- 335 0122 8AE2      		ldi r24,lo8(42)
- 336               	.LVL35:
+  84:System.cpp    **** 	
+  85:System.cpp    **** 	return response;
   86:System.cpp    **** }
- 337               		.loc 1 86 2 is_stmt 1 view .LVU76
-  86:System.cpp    **** }
- 338               		.loc 1 86 9 is_stmt 0 view .LVU77
- 339 0124 00C0      		rjmp .L12
- 340               		.cfi_endproc
- 341               	.LFE1:
- 343               	.global	SystemState
- 344               		.section .bss
- 347               	SystemState:
- 348 0000 00        		.zero	1
- 349               		.text
- 350               	.Letext0:
- 351               		.file 2 "/usr/avr/include/stdint.h"
- 352               		.file 3 "Footswitch.h"
- 353               		.file 4 "MasterCom.h"
- 354               		.file 5 "System.h"
- 355               		.file 6 "Segment7.h"
- 356               		.file 7 "MCP23017.h"
+ 204               		.loc 1 86 1 view .LVU35
+ 205 009a DF91      		pop r29
+ 206 009c CF91      		pop r28
+ 207               	.LVL17:
+ 208               		.loc 1 86 1 view .LVU36
+ 209 009e 0F91      		pop r16
+ 210 00a0 EF90      		pop r14
+ 211 00a2 CF90      		pop r12
+ 212 00a4 AF90      		pop r10
+ 213 00a6 0895      		ret
+ 214               	.LVL18:
+ 215               	.L14:
+  46:System.cpp    **** 		{
+ 216               		.loc 1 46 8 is_stmt 1 view .LVU37
+ 217 00a8 8630      		cpi r24,lo8(6)
+ 218 00aa 01F4      		brne .L15
+  48:System.cpp    **** 		}
+ 219               		.loc 1 48 4 view .LVU38
+  48:System.cpp    **** 		}
+ 220               		.loc 1 48 16 is_stmt 0 view .LVU39
+ 221 00ac 82E0      		ldi r24,lo8(2)
+ 222               	.L26:
+  52:System.cpp    **** 		}
+ 223               		.loc 1 52 16 view .LVU40
+ 224 00ae 8093 0000 		sts SystemState,r24
+ 225 00b2 00C0      		rjmp .L25
+ 226               	.L15:
+  50:System.cpp    **** 		{
+ 227               		.loc 1 50 8 is_stmt 1 view .LVU41
+ 228 00b4 8830      		cpi r24,lo8(8)
+ 229 00b6 01F4      		brne .L16
+  52:System.cpp    **** 		}
+ 230               		.loc 1 52 4 view .LVU42
+  52:System.cpp    **** 		}
+ 231               		.loc 1 52 16 is_stmt 0 view .LVU43
+ 232 00b8 83E0      		ldi r24,lo8(3)
+ 233 00ba 00C0      		rjmp .L26
+ 234               	.L16:
+  56:System.cpp    **** 		}
+ 235               		.loc 1 56 4 is_stmt 1 view .LVU44
+  56:System.cpp    **** 		}
+ 236               		.loc 1 56 16 is_stmt 0 view .LVU45
+ 237 00bc 1092 0000 		sts SystemState,__zero_reg__
+ 238 00c0 00C0      		rjmp .L25
+ 239               	.LVL19:
+ 240               	.L12:
+  59:System.cpp    **** 	{
+ 241               		.loc 1 59 7 is_stmt 1 view .LVU46
+ 242 00c2 873D      		cpi r24,lo8(-41)
+ 243 00c4 01F4      		brne .L17
+  59:System.cpp    **** 	{
+ 244               		.loc 1 59 34 is_stmt 0 discriminator 1 view .LVU47
+ 245 00c6 6430      		cpi r22,lo8(4)
+ 246 00c8 01F4      		brne .L24
+  61:System.cpp    **** 	}
+ 247               		.loc 1 61 3 is_stmt 1 view .LVU48
+  61:System.cpp    **** 	}
+ 248               		.loc 1 61 20 is_stmt 0 view .LVU49
+ 249 00ca A12C      		mov r10,__zero_reg__
+ 250 00cc C12C      		mov r12,__zero_reg__
+ 251 00ce E12C      		mov r14,__zero_reg__
+ 252 00d0 00E0      		ldi r16,0
+ 253 00d2 2B81      		ldd r18,Y+3
+ 254 00d4 4A81      		ldd r20,Y+2
+ 255               	.LVL20:
+  61:System.cpp    **** 	}
+ 256               		.loc 1 61 20 view .LVU50
+ 257 00d6 6981      		ldd r22,Y+1
+ 258               	.LVL21:
+  61:System.cpp    **** 	}
+ 259               		.loc 1 61 20 view .LVU51
+ 260 00d8 8881      		ld r24,Y
+ 261               	.LVL22:
+  61:System.cpp    **** 	}
+ 262               		.loc 1 61 20 view .LVU52
+ 263 00da 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
+ 264               	.LVL23:
+ 265 00de 00C0      		rjmp .L25
+ 266               	.LVL24:
+ 267               	.L17:
+  63:System.cpp    **** 	{
+ 268               		.loc 1 63 7 is_stmt 1 view .LVU53
+ 269 00e0 803D      		cpi r24,lo8(-48)
+ 270 00e2 01F4      		brne .L18
+  63:System.cpp    **** 	{
+ 271               		.loc 1 63 39 is_stmt 0 discriminator 1 view .LVU54
+ 272 00e4 6130      		cpi r22,lo8(1)
+ 273 00e6 01F4      		brne .L24
+  65:System.cpp    **** 	}
+ 274               		.loc 1 65 3 is_stmt 1 view .LVU55
+  65:System.cpp    **** 	}
+ 275               		.loc 1 65 20 is_stmt 0 view .LVU56
+ 276 00e8 4881      		ld r20,Y
+ 277               	.LVL25:
+  65:System.cpp    **** 	}
+ 278               		.loc 1 65 20 view .LVU57
+ 279 00ea 64E1      		ldi r22,lo8(20)
+ 280               	.LVL26:
+  65:System.cpp    **** 	}
+ 281               		.loc 1 65 20 view .LVU58
+ 282 00ec 80E0      		ldi r24,0
+ 283               	.LVL27:
+  65:System.cpp    **** 	}
+ 284               		.loc 1 65 20 view .LVU59
+ 285 00ee 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 286               	.LVL28:
+ 287 00f2 00C0      		rjmp .L25
+ 288               	.LVL29:
+ 289               	.L18:
+  67:System.cpp    **** 	{
+ 290               		.loc 1 67 7 is_stmt 1 view .LVU60
+ 291 00f4 833D      		cpi r24,lo8(-45)
+ 292 00f6 01F4      		brne .L24
+  67:System.cpp    **** 	{
+ 293               		.loc 1 67 34 is_stmt 0 discriminator 1 view .LVU61
+ 294 00f8 6230      		cpi r22,lo8(2)
+ 295 00fa 01F4      		brne .L24
+  69:System.cpp    **** 				
+ 296               		.loc 1 69 3 is_stmt 1 view .LVU62
+  69:System.cpp    **** 				
+ 297               		.loc 1 69 20 is_stmt 0 view .LVU63
+ 298 00fc 4881      		ld r20,Y
+ 299               	.LVL30:
+  69:System.cpp    **** 				
+ 300               		.loc 1 69 20 view .LVU64
+ 301 00fe 64E1      		ldi r22,lo8(20)
+ 302               	.LVL31:
+  69:System.cpp    **** 				
+ 303               		.loc 1 69 20 view .LVU65
+ 304 0100 84E0      		ldi r24,lo8(4)
+ 305               	.LVL32:
+  69:System.cpp    **** 				
+ 306               		.loc 1 69 20 view .LVU66
+ 307 0102 0E94 0000 		call _Z17MCP23017_WriteReghhh
+ 308               	.LVL33:
+  71:System.cpp    **** 		{
+ 309               		.loc 1 71 3 is_stmt 1 view .LVU67
+ 310 0106 8981      		ldd r24,Y+1
+ 311 0108 8823      		tst r24
+ 312 010a 01F0      		breq .L19
+  73:System.cpp    **** 		}
+ 313               		.loc 1 73 4 view .LVU68
+  73:System.cpp    **** 		}
+ 314               		.loc 1 73 25 is_stmt 0 view .LVU69
+ 315 010c 289A      		sbi 0x5,0
+ 316 010e 00C0      		rjmp .L25
+ 317               	.L19:
+  77:System.cpp    **** 		}
+ 318               		.loc 1 77 4 is_stmt 1 view .LVU70
+  77:System.cpp    **** 		}
+ 319               		.loc 1 77 25 is_stmt 0 view .LVU71
+ 320 0110 2898      		cbi 0x5,0
+ 321 0112 00C0      		rjmp .L25
+ 322               	.LVL34:
+ 323               	.L24:
+  82:System.cpp    **** 	}
+ 324               		.loc 1 82 12 view .LVU72
+ 325 0114 8AE2      		ldi r24,lo8(42)
+ 326               	.LVL35:
+  85:System.cpp    **** }
+ 327               		.loc 1 85 2 is_stmt 1 view .LVU73
+  85:System.cpp    **** }
+ 328               		.loc 1 85 9 is_stmt 0 view .LVU74
+ 329 0116 00C0      		rjmp .L11
+ 330               		.cfi_endproc
+ 331               	.LFE1:
+ 333               	.global	SystemState
+ 334               		.section .bss
+ 337               	SystemState:
+ 338 0000 00        		.zero	1
+ 339               		.text
+ 340               	.Letext0:
+ 341               		.file 2 "Footswitch.h"
+ 342               		.file 3 "System.h"
+ 343               		.file 4 "/usr/avr/include/stdint.h"
+ 344               		.file 5 "Segment7.h"
+ 345               		.file 6 "MCP23017.h"
+ 346               		.file 7 "MasterCom.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 System.cpp
-     /tmp/ccgUafzT.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccgUafzT.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccgUafzT.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccgUafzT.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccgUafzT.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccgUafzT.s:12     .text:0000000000000000 _Z28System_HandleFootswitchInput16Footswitch_Stateh
-     /tmp/ccgUafzT.s:347    .bss:0000000000000000 SystemState
-     /tmp/ccgUafzT.s:153    .text:0000000000000084 _Z26System_HandleMasterCommand3CMDhPh
+     /tmp/cckTrTcY.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cckTrTcY.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cckTrTcY.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cckTrTcY.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cckTrTcY.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cckTrTcY.s:12     .text:0000000000000000 _Z28System_HandleFootswitchInput16Footswitch_Stateh
+     /tmp/cckTrTcY.s:337    .bss:0000000000000000 SystemState
+     /tmp/cckTrTcY.s:143    .text:0000000000000076 _Z26System_HandleMasterCommand3CMDhPh
 
 UNDEFINED SYMBOLS
 _Z22MasterCom_QueueCommand3CMDhPh

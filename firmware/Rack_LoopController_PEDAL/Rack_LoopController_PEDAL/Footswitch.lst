@@ -7,9 +7,9 @@
    7               		.text
    8               	.Ltext0:
    9               		.cfi_sections	.debug_frame
-  10               	.global	_Z22Footswitch_HandlePressv
-  12               	_Z22Footswitch_HandlePressv:
-  13               	.LFB3:
+  10               	.global	_Z22Footswitch_HandleTimerv
+  12               	_Z22Footswitch_HandleTimerv:
+  13               	.LFB2:
   14               		.file 1 "Footswitch.cpp"
    1:Footswitch.cpp **** /*
    2:Footswitch.cpp ****  * Footswitch.cpp
@@ -38,639 +38,522 @@
   25:Footswitch.cpp **** {	
   26:Footswitch.cpp **** 	DDRC &= ~(1 << PORTC1);		// Set PortC 1 as input
   27:Footswitch.cpp **** 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
-  28:Footswitch.cpp **** 	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
-  29:Footswitch.cpp **** 	
-  30:Footswitch.cpp **** 	Footswitch_EnableInterrupt();
-  31:Footswitch.cpp **** }
-  32:Footswitch.cpp **** 
-  33:Footswitch.cpp **** void Footswitch_PressDetected()
-  34:Footswitch.cpp **** {
-  35:Footswitch.cpp **** 	uint8_t tmp = 0;
-  36:Footswitch.cpp **** 	
-  37:Footswitch.cpp **** 	tmp = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTFB);		// Read what pin caused the interr
-  38:Footswitch.cpp **** 	
-  39:Footswitch.cpp **** 	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTCAPB);	// Read state of
-  40:Footswitch.cpp **** 	
-  41:Footswitch.cpp **** 	if (Footswitch_PortState != 0x00)		// Footswitch pressed
-  42:Footswitch.cpp **** 	{
-  43:Footswitch.cpp **** 		Footswitch_InterruptMask = tmp;
-  44:Footswitch.cpp **** 		Footswitch_PressState = PRESS_SENSED;
-  45:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 1;		// Start Timer
-  46:Footswitch.cpp **** 	}
-  47:Footswitch.cpp **** 	else	// Footswitch released
-  48:Footswitch.cpp **** 	{
-  49:Footswitch.cpp **** 		if (Footswitch_PressState == PRESSED)
-  50:Footswitch.cpp **** 		{
-  51:Footswitch.cpp **** 			Footswitch_PressState = LONG_PRESS;
-  52:Footswitch.cpp **** 		}
-  53:Footswitch.cpp **** 		
-  54:Footswitch.cpp **** 		Footswitch_EnableInterrupt();
-  55:Footswitch.cpp **** 	}	
-  56:Footswitch.cpp **** }
-  57:Footswitch.cpp **** 
-  58:Footswitch.cpp **** void Footswitch_HandleTimer()
-  59:Footswitch.cpp **** {
-  60:Footswitch.cpp **** 	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, GPIOB);		// Read current s
-  61:Footswitch.cpp **** 	
-  62:Footswitch.cpp **** 	if (Footswitch_PressState == WAITING)
-  63:Footswitch.cpp **** 	{
-  64:Footswitch.cpp **** 		/* Check if switch is no longer pressed */
-  65:Footswitch.cpp **** 		if (Footswitch_PortState != Footswitch_InterruptMask)
-  66:Footswitch.cpp **** 		{
-  67:Footswitch.cpp **** 			Footswitch_PressState = SHORT_PRESS;
-  68:Footswitch.cpp **** 			Footswitch_TimerOvfCnt = 0;	// Stop timer
-  69:Footswitch.cpp **** 		}
-  70:Footswitch.cpp **** 	}
-  71:Footswitch.cpp **** 	else if (Footswitch_PressState == PRESSED)
-  72:Footswitch.cpp **** 	{
-  73:Footswitch.cpp **** 		/* Check if switch is no longer pressed */
-  74:Footswitch.cpp **** 		if (Footswitch_PortState != Footswitch_InterruptMask)
-  75:Footswitch.cpp **** 		{
-  76:Footswitch.cpp **** 			Footswitch_TimerOvfCnt = 0;	// Stop timer
-  77:Footswitch.cpp **** 			Footswitch_PressState = SHORT_PRESS;
-  78:Footswitch.cpp **** 		}
-  79:Footswitch.cpp **** 		else
-  80:Footswitch.cpp **** 		{
-  81:Footswitch.cpp **** 			/* Enable interrupt so Long Press will be trigged as soon as the user lifts his/her foot from th
-  82:Footswitch.cpp **** 			Footswitch_EnableInterrupt();
-  83:Footswitch.cpp **** 			
-  84:Footswitch.cpp **** 			/* Write appropriate message in 7-segment display based on system state */
-  85:Footswitch.cpp **** 			if (SystemState == EDITING)
-  86:Footswitch.cpp **** 			{
-  87:Footswitch.cpp **** 			}
-  88:Footswitch.cpp **** 			else if (SystemState == RUN_PRESET_CTRL)
-  89:Footswitch.cpp **** 			{
-  90:Footswitch.cpp **** 				Segment7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
-  91:Footswitch.cpp **** 			}
-  92:Footswitch.cpp **** 			else if (SystemState == RUN_LOOP_CTRL)
-  93:Footswitch.cpp **** 			{
-  94:Footswitch.cpp **** 				if (Footswitch_InterruptMask & 0xF0)
-  95:Footswitch.cpp **** 				{
-  96:Footswitch.cpp **** 					Segment7_WriteAll('P', 'r', 'e', ' ', 0, 0, 0, 0);
-  97:Footswitch.cpp **** 				}
-  98:Footswitch.cpp **** 				else
-  99:Footswitch.cpp **** 				{
- 100:Footswitch.cpp **** 					Segment7_WriteAll('^', '^', '^', '^', 0, 0, 0, 0);
- 101:Footswitch.cpp **** 				}
- 102:Footswitch.cpp **** 			}
- 103:Footswitch.cpp **** 			else if (SystemState == TUNER)
- 104:Footswitch.cpp **** 			{
- 105:Footswitch.cpp **** 			}
- 106:Footswitch.cpp **** 		}
- 107:Footswitch.cpp **** 	}
- 108:Footswitch.cpp **** 	else if (Footswitch_PressState == STILL_PRESSED)
- 109:Footswitch.cpp **** 	{
- 110:Footswitch.cpp **** 		/* Check if switch is no longer pressed */
- 111:Footswitch.cpp **** 		if (Footswitch_PortState != Footswitch_InterruptMask)
- 112:Footswitch.cpp **** 		{
- 113:Footswitch.cpp **** 			Footswitch_PressState = LONG_PRESS;
- 114:Footswitch.cpp **** 		}
- 115:Footswitch.cpp **** 		else
- 116:Footswitch.cpp **** 		{
- 117:Footswitch.cpp **** 			Footswitch_PressState = LONG_LONG_PRESS;
- 118:Footswitch.cpp **** 		}
- 119:Footswitch.cpp **** 		
- 120:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 0;	// Stop timer
- 121:Footswitch.cpp **** 	}
- 122:Footswitch.cpp **** }
- 123:Footswitch.cpp **** 
- 124:Footswitch.cpp **** void Footswitch_HandlePress()
- 125:Footswitch.cpp **** {	
-  15               		.loc 1 125 1 view -0
-  16               		.cfi_startproc
-  17               	/* prologue: function */
-  18               	/* frame size = 0 */
-  19               	/* stack size = 0 */
-  20               	.L__stack_usage = 0
- 126:Footswitch.cpp **** 	System_HandleFootswitchInput(Footswitch_PressState, Footswitch_InterruptMask);
-  21               		.loc 1 126 2 view .LVU1
-  22               		.loc 1 126 30 is_stmt 0 view .LVU2
-  23 0000 6091 0000 		lds r22,Footswitch_InterruptMask
-  24 0004 8091 0000 		lds r24,Footswitch_PressState
-  25 0008 0C94 0000 		jmp _Z28System_HandleFootswitchInput16Footswitch_Stateh
-  26               	.LVL0:
-  27               		.cfi_endproc
-  28               	.LFE3:
-  30               	.global	_Z26Footswitch_EnableInterruptv
-  32               	_Z26Footswitch_EnableInterruptv:
-  33               	.LFB4:
- 127:Footswitch.cpp **** }
- 128:Footswitch.cpp **** 
- 129:Footswitch.cpp **** void Footswitch_EnableInterrupt()
- 130:Footswitch.cpp **** {
-  34               		.loc 1 130 1 is_stmt 1 view -0
-  35               		.cfi_startproc
-  36               	/* prologue: function */
-  37               	/* frame size = 0 */
-  38               	/* stack size = 0 */
-  39               	.L__stack_usage = 0
- 131:Footswitch.cpp **** 	PCIFR |= (1 << PCIF1);		// Clear Pin Change Interrupt Flag 1
-  40               		.loc 1 131 2 view .LVU4
-  41               		.loc 1 131 8 is_stmt 0 view .LVU5
-  42 000c D99A      		sbi 0x1b,1
- 132:Footswitch.cpp **** 	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
-  43               		.loc 1 132 2 is_stmt 1 view .LVU6
-  44               		.loc 1 132 8 is_stmt 0 view .LVU7
-  45 000e E8E6      		ldi r30,lo8(104)
-  46 0010 F0E0      		ldi r31,0
-  47 0012 8081      		ld r24,Z
-  48 0014 8260      		ori r24,lo8(2)
-  49 0016 8083      		st Z,r24
-  50               	/* epilogue start */
- 133:Footswitch.cpp **** }
-  51               		.loc 1 133 1 view .LVU8
-  52 0018 0895      		ret
-  53               		.cfi_endproc
-  54               	.LFE4:
-  56               	.global	_Z15Footswitch_Initv
-  58               	_Z15Footswitch_Initv:
-  59               	.LFB0:
-  25:Footswitch.cpp **** 	DDRC &= ~(1 << PORTC1);		// Set PortC 1 as input
-  60               		.loc 1 25 1 is_stmt 1 view -0
-  61               		.cfi_startproc
-  62               	/* prologue: function */
-  63               	/* frame size = 0 */
-  64               	/* stack size = 0 */
-  65               	.L__stack_usage = 0
-  26:Footswitch.cpp **** 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
-  66               		.loc 1 26 2 view .LVU10
-  26:Footswitch.cpp **** 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
-  67               		.loc 1 26 7 is_stmt 0 view .LVU11
-  68 001a 3998      		cbi 0x7,1
-  27:Footswitch.cpp **** 	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
-  69               		.loc 1 27 2 is_stmt 1 view .LVU12
-  27:Footswitch.cpp **** 	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
-  70               		.loc 1 27 9 is_stmt 0 view .LVU13
-  71 001c ECE6      		ldi r30,lo8(108)
-  72 001e F0E0      		ldi r31,0
-  73 0020 8081      		ld r24,Z
-  74 0022 8260      		ori r24,lo8(2)
-  75 0024 8083      		st Z,r24
-  28:Footswitch.cpp **** 	
-  76               		.loc 1 28 2 is_stmt 1 view .LVU14
-  28:Footswitch.cpp **** 	
-  77               		.loc 1 28 8 is_stmt 0 view .LVU15
-  78 0026 E8E6      		ldi r30,lo8(104)
-  79 0028 F0E0      		ldi r31,0
-  80 002a 8081      		ld r24,Z
-  81 002c 8260      		ori r24,lo8(2)
-  82 002e 8083      		st Z,r24
+  28:Footswitch.cpp **** 
+  29:Footswitch.cpp **** 	Footswitch_EnableInterrupt();
   30:Footswitch.cpp **** }
-  83               		.loc 1 30 2 is_stmt 1 view .LVU16
-  30:Footswitch.cpp **** }
-  84               		.loc 1 30 28 is_stmt 0 view .LVU17
-  85 0030 0C94 0000 		jmp _Z26Footswitch_EnableInterruptv
-  86               	.LVL1:
-  87               		.cfi_endproc
-  88               	.LFE0:
-  90               	.global	_Z24Footswitch_PressDetectedv
-  92               	_Z24Footswitch_PressDetectedv:
-  93               	.LFB1:
+  31:Footswitch.cpp **** 
+  32:Footswitch.cpp **** void Footswitch_PressDetected()
+  33:Footswitch.cpp **** {
   34:Footswitch.cpp **** 	uint8_t tmp = 0;
-  94               		.loc 1 34 1 is_stmt 1 view -0
-  95               		.cfi_startproc
-  96 0034 CF93      		push r28
-  97               	.LCFI0:
-  98               		.cfi_def_cfa_offset 3
-  99               		.cfi_offset 28, -2
- 100               	/* prologue: function */
- 101               	/* frame size = 0 */
- 102               	/* stack size = 1 */
- 103               	.L__stack_usage = 1
   35:Footswitch.cpp **** 	
- 104               		.loc 1 35 2 view .LVU19
- 105               	.LVL2:
+  36:Footswitch.cpp **** 	// Read what pin caused the interrupt
+  37:Footswitch.cpp **** 	tmp = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTFB);
+  38:Footswitch.cpp **** 	
+  39:Footswitch.cpp **** 	// Read state of Port when interrupt occurred (Clear interrupt B)
+  40:Footswitch.cpp **** 	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, INTCAPB);
+  41:Footswitch.cpp **** 
+  42:Footswitch.cpp **** 	if (Footswitch_PortState != 0x00)		// Footswitch pressed
+  43:Footswitch.cpp **** 	{
+  44:Footswitch.cpp **** 		Footswitch_InterruptMask = tmp;
+  45:Footswitch.cpp **** 		Footswitch_PressState = PRESS_SENSED;
+  46:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 1;		// Start Timer
+  47:Footswitch.cpp **** 	}
+  48:Footswitch.cpp **** 	else									// Footswitch released
+  49:Footswitch.cpp **** 	{
+  50:Footswitch.cpp **** 		if (Footswitch_PressState == PRESS_SENSED)
+  51:Footswitch.cpp **** 		{
+  52:Footswitch.cpp **** 			Footswitch_PressState = SHORT_PRESS;
+  53:Footswitch.cpp **** 		}
+  54:Footswitch.cpp **** 		else if (Footswitch_PressState == PRESSED)
+  55:Footswitch.cpp **** 		{
+  56:Footswitch.cpp **** 			Footswitch_PressState = LONG_PRESS;
+  57:Footswitch.cpp **** 		}
+  58:Footswitch.cpp **** 
+  59:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 0;	// Stop timer
+  60:Footswitch.cpp **** 	}
+  61:Footswitch.cpp **** 
+  62:Footswitch.cpp **** 	Footswitch_EnableInterrupt();
+  63:Footswitch.cpp **** }
+  64:Footswitch.cpp **** 
+  65:Footswitch.cpp **** void Footswitch_HandleTimer()
+  66:Footswitch.cpp **** {
+  15               		.loc 1 66 1 view -0
+  16               		.cfi_startproc
+  17 0000 AF92      		push r10
+  18               	.LCFI0:
+  19               		.cfi_def_cfa_offset 3
+  20               		.cfi_offset 10, -2
+  21 0002 CF92      		push r12
+  22               	.LCFI1:
+  23               		.cfi_def_cfa_offset 4
+  24               		.cfi_offset 12, -3
+  25 0004 EF92      		push r14
+  26               	.LCFI2:
+  27               		.cfi_def_cfa_offset 5
+  28               		.cfi_offset 14, -4
+  29 0006 0F93      		push r16
+  30               	.LCFI3:
+  31               		.cfi_def_cfa_offset 6
+  32               		.cfi_offset 16, -5
+  33               	/* prologue: function */
+  34               	/* frame size = 0 */
+  35               	/* stack size = 4 */
+  36               	.L__stack_usage = 4
+  67:Footswitch.cpp **** 	/* Assume switch is still pressed */
+  68:Footswitch.cpp **** 
+  69:Footswitch.cpp **** 	if (Footswitch_PressState == PRESSED)
+  37               		.loc 1 69 2 view .LVU1
+  38               		.loc 1 69 28 is_stmt 0 view .LVU2
+  39 0008 8091 0000 		lds r24,Footswitch_PressState
+  40               		.loc 1 69 2 view .LVU3
+  41 000c 8430      		cpi r24,lo8(4)
+  42 000e 01F4      		brne .L2
+  70:Footswitch.cpp **** 	{
+  71:Footswitch.cpp **** 		/* Write appropriate message in 7-segment display based on system state */
+  72:Footswitch.cpp **** 		if (SystemState == EDITING)
+  43               		.loc 1 72 3 is_stmt 1 view .LVU4
+  44               		.loc 1 72 19 is_stmt 0 view .LVU5
+  45 0010 8091 0000 		lds r24,SystemState
+  46               		.loc 1 72 3 view .LVU6
+  47 0014 8823      		tst r24
+  48 0016 01F0      		breq .L1
+  73:Footswitch.cpp **** 		{
+  74:Footswitch.cpp **** 		}
+  75:Footswitch.cpp **** 		else if (SystemState == RUN_PRESET_CTRL)
+  49               		.loc 1 75 8 is_stmt 1 view .LVU7
+  50               		.loc 1 75 24 is_stmt 0 view .LVU8
+  51 0018 8091 0000 		lds r24,SystemState
+  52               		.loc 1 75 8 view .LVU9
+  53 001c 8130      		cpi r24,lo8(1)
+  54 001e 01F4      		brne .L4
+  76:Footswitch.cpp **** 		{
+  77:Footswitch.cpp **** 			Segment7_WriteAll('L', 'o', 'o', 'P', 0, 0, 0, 0);
+  55               		.loc 1 77 4 is_stmt 1 view .LVU10
+  56               		.loc 1 77 21 is_stmt 0 view .LVU11
+  57 0020 A12C      		mov r10,__zero_reg__
+  58 0022 C12C      		mov r12,__zero_reg__
+  59 0024 E12C      		mov r14,__zero_reg__
+  60 0026 00E0      		ldi r16,0
+  61 0028 20E5      		ldi r18,lo8(80)
+  62 002a 4FE6      		ldi r20,lo8(111)
+  63 002c 6FE6      		ldi r22,lo8(111)
+  64 002e 8CE4      		ldi r24,lo8(76)
+  65               	.L10:
+  78:Footswitch.cpp **** 		}
+  79:Footswitch.cpp **** 		else if (SystemState == RUN_LOOP_CTRL)
+  80:Footswitch.cpp **** 		{
+  81:Footswitch.cpp **** 			if (Footswitch_InterruptMask & 0xF0)
+  82:Footswitch.cpp **** 			{
+  83:Footswitch.cpp **** 				Segment7_WriteAll('P', 'r', 'e', ' ', 0, 0, 0, 0);
+  66               		.loc 1 83 22 view .LVU12
+  67 0030 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
+  68               	.LVL0:
+  69               	.L1:
+  70               	/* epilogue start */
+  84:Footswitch.cpp **** 			}
+  85:Footswitch.cpp **** 			else
+  86:Footswitch.cpp **** 			{
+  87:Footswitch.cpp **** 				Segment7_WriteAll('^', '^', '^', '^', 0, 0, 0, 0);
+  88:Footswitch.cpp **** 			}
+  89:Footswitch.cpp **** 		}
+  90:Footswitch.cpp **** 		else if (SystemState == TUNER)
+  91:Footswitch.cpp **** 		{
+  92:Footswitch.cpp **** 		}
+  93:Footswitch.cpp **** 	}
+  94:Footswitch.cpp **** 	else if (Footswitch_PressState == STILL_PRESSED)
+  95:Footswitch.cpp **** 	{
+  96:Footswitch.cpp **** 		Footswitch_PressState = LONG_LONG_PRESS;
+  97:Footswitch.cpp **** 		
+  98:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 0;	// Stop timer
+  99:Footswitch.cpp **** 	}
+ 100:Footswitch.cpp **** }
+  71               		.loc 1 100 1 view .LVU13
+  72 0034 0F91      		pop r16
+  73 0036 EF90      		pop r14
+  74 0038 CF90      		pop r12
+  75 003a AF90      		pop r10
+  76 003c 0895      		ret
+  77               	.L4:
+  79:Footswitch.cpp **** 		{
+  78               		.loc 1 79 8 is_stmt 1 view .LVU14
+  79:Footswitch.cpp **** 		{
+  79               		.loc 1 79 24 is_stmt 0 view .LVU15
+  80 003e 8091 0000 		lds r24,SystemState
+  79:Footswitch.cpp **** 		{
+  81               		.loc 1 79 8 view .LVU16
+  82 0042 8230      		cpi r24,lo8(2)
+  83 0044 01F4      		brne .L5
+  81:Footswitch.cpp **** 			{
+  84               		.loc 1 81 4 is_stmt 1 view .LVU17
+  81:Footswitch.cpp **** 			{
+  85               		.loc 1 81 33 is_stmt 0 view .LVU18
+  86 0046 8091 0000 		lds r24,Footswitch_InterruptMask
+  81:Footswitch.cpp **** 			{
+  87               		.loc 1 81 4 view .LVU19
+  88 004a 807F      		andi r24,lo8(-16)
+  83:Footswitch.cpp **** 			}
+  89               		.loc 1 83 22 view .LVU20
+  90 004c A12C      		mov r10,__zero_reg__
+  91 004e C12C      		mov r12,__zero_reg__
+  92 0050 E12C      		mov r14,__zero_reg__
+  93 0052 00E0      		ldi r16,0
+  81:Footswitch.cpp **** 			{
+  94               		.loc 1 81 4 view .LVU21
+  95 0054 01F0      		breq .L6
+  83:Footswitch.cpp **** 			}
+  96               		.loc 1 83 5 is_stmt 1 view .LVU22
+  83:Footswitch.cpp **** 			}
+  97               		.loc 1 83 22 is_stmt 0 view .LVU23
+  98 0056 20E2      		ldi r18,lo8(32)
+  99 0058 45E6      		ldi r20,lo8(101)
+ 100 005a 62E7      		ldi r22,lo8(114)
+ 101 005c 80E5      		ldi r24,lo8(80)
+ 102 005e 00C0      		rjmp .L10
+ 103               	.L6:
+  87:Footswitch.cpp **** 			}
+ 104               		.loc 1 87 5 is_stmt 1 view .LVU24
+  87:Footswitch.cpp **** 			}
+ 105               		.loc 1 87 22 is_stmt 0 view .LVU25
+ 106 0060 2EE5      		ldi r18,lo8(94)
+ 107 0062 4EE5      		ldi r20,lo8(94)
+ 108 0064 6EE5      		ldi r22,lo8(94)
+ 109 0066 8EE5      		ldi r24,lo8(94)
+ 110 0068 00C0      		rjmp .L10
+ 111               	.L5:
+  90:Footswitch.cpp **** 		{
+ 112               		.loc 1 90 8 is_stmt 1 view .LVU26
+  90:Footswitch.cpp **** 		{
+ 113               		.loc 1 90 24 is_stmt 0 view .LVU27
+ 114 006a 8091 0000 		lds r24,SystemState
+ 115 006e 00C0      		rjmp .L1
+ 116               	.L2:
+  94:Footswitch.cpp **** 	{
+ 117               		.loc 1 94 7 is_stmt 1 view .LVU28
+  94:Footswitch.cpp **** 	{
+ 118               		.loc 1 94 33 is_stmt 0 view .LVU29
+ 119 0070 8091 0000 		lds r24,Footswitch_PressState
+  94:Footswitch.cpp **** 	{
+ 120               		.loc 1 94 7 view .LVU30
+ 121 0074 8530      		cpi r24,lo8(5)
+ 122 0076 01F4      		brne .L1
+  96:Footswitch.cpp **** 		
+ 123               		.loc 1 96 3 is_stmt 1 view .LVU31
+  96:Footswitch.cpp **** 		
+ 124               		.loc 1 96 25 is_stmt 0 view .LVU32
+ 125 0078 87E0      		ldi r24,lo8(7)
+ 126 007a 8093 0000 		sts Footswitch_PressState,r24
+  98:Footswitch.cpp **** 	}
+ 127               		.loc 1 98 3 is_stmt 1 view .LVU33
+  98:Footswitch.cpp **** 	}
+ 128               		.loc 1 98 26 is_stmt 0 view .LVU34
+ 129 007e 1092 0000 		sts Footswitch_TimerOvfCnt+1,__zero_reg__
+ 130 0082 1092 0000 		sts Footswitch_TimerOvfCnt,__zero_reg__
+ 131               		.loc 1 100 1 view .LVU35
+ 132 0086 00C0      		rjmp .L1
+ 133               		.cfi_endproc
+ 134               	.LFE2:
+ 136               	.global	_Z22Footswitch_HandlePressv
+ 138               	_Z22Footswitch_HandlePressv:
+ 139               	.LFB3:
+ 101:Footswitch.cpp **** 
+ 102:Footswitch.cpp **** void Footswitch_HandlePress()
+ 103:Footswitch.cpp **** {	
+ 140               		.loc 1 103 1 is_stmt 1 view -0
+ 141               		.cfi_startproc
+ 142               	/* prologue: function */
+ 143               	/* frame size = 0 */
+ 144               	/* stack size = 0 */
+ 145               	.L__stack_usage = 0
+ 104:Footswitch.cpp **** 	System_HandleFootswitchInput(Footswitch_PressState, Footswitch_InterruptMask);
+ 146               		.loc 1 104 2 view .LVU37
+ 147               		.loc 1 104 30 is_stmt 0 view .LVU38
+ 148 0088 6091 0000 		lds r22,Footswitch_InterruptMask
+ 149 008c 8091 0000 		lds r24,Footswitch_PressState
+ 150 0090 0C94 0000 		jmp _Z28System_HandleFootswitchInput16Footswitch_Stateh
+ 151               	.LVL1:
+ 152               		.cfi_endproc
+ 153               	.LFE3:
+ 155               	.global	_Z26Footswitch_EnableInterruptv
+ 157               	_Z26Footswitch_EnableInterruptv:
+ 158               	.LFB4:
+ 105:Footswitch.cpp **** }
+ 106:Footswitch.cpp **** 
+ 107:Footswitch.cpp **** void Footswitch_EnableInterrupt()
+ 108:Footswitch.cpp **** {
+ 159               		.loc 1 108 1 is_stmt 1 view -0
+ 160               		.cfi_startproc
+ 161               	/* prologue: function */
+ 162               	/* frame size = 0 */
+ 163               	/* stack size = 0 */
+ 164               	.L__stack_usage = 0
+ 109:Footswitch.cpp **** 	PCIFR |= (1 << PCIF1);		// Clear Pin Change Interrupt Flag 1
+ 165               		.loc 1 109 2 view .LVU40
+ 166               		.loc 1 109 8 is_stmt 0 view .LVU41
+ 167 0094 D99A      		sbi 0x1b,1
+ 110:Footswitch.cpp **** 	PCICR |= (1 << PCIE1);		// Enable Pin Change Interrupt 1 (PCINT[14:8])
+ 168               		.loc 1 110 2 is_stmt 1 view .LVU42
+ 169               		.loc 1 110 8 is_stmt 0 view .LVU43
+ 170 0096 E8E6      		ldi r30,lo8(104)
+ 171 0098 F0E0      		ldi r31,0
+ 172 009a 8081      		ld r24,Z
+ 173 009c 8260      		ori r24,lo8(2)
+ 174 009e 8083      		st Z,r24
+ 175               	/* epilogue start */
+ 111:Footswitch.cpp **** }
+ 176               		.loc 1 111 1 view .LVU44
+ 177 00a0 0895      		ret
+ 178               		.cfi_endproc
+ 179               	.LFE4:
+ 181               	.global	_Z15Footswitch_Initv
+ 183               	_Z15Footswitch_Initv:
+ 184               	.LFB0:
+  25:Footswitch.cpp **** 	DDRC &= ~(1 << PORTC1);		// Set PortC 1 as input
+ 185               		.loc 1 25 1 is_stmt 1 view -0
+ 186               		.cfi_startproc
+ 187               	/* prologue: function */
+ 188               	/* frame size = 0 */
+ 189               	/* stack size = 0 */
+ 190               	.L__stack_usage = 0
+  26:Footswitch.cpp **** 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
+ 191               		.loc 1 26 2 view .LVU46
+  26:Footswitch.cpp **** 	PCMSK1 |= (1 << PCINT9);	// Enable PCINT[9] PortC1 for interrupt
+ 192               		.loc 1 26 7 is_stmt 0 view .LVU47
+ 193 00a2 3998      		cbi 0x7,1
+  27:Footswitch.cpp **** 
+ 194               		.loc 1 27 2 is_stmt 1 view .LVU48
+  27:Footswitch.cpp **** 
+ 195               		.loc 1 27 9 is_stmt 0 view .LVU49
+ 196 00a4 ECE6      		ldi r30,lo8(108)
+ 197 00a6 F0E0      		ldi r31,0
+ 198 00a8 8081      		ld r24,Z
+ 199 00aa 8260      		ori r24,lo8(2)
+ 200 00ac 8083      		st Z,r24
+  29:Footswitch.cpp **** }
+ 201               		.loc 1 29 2 is_stmt 1 view .LVU50
+  29:Footswitch.cpp **** }
+ 202               		.loc 1 29 28 is_stmt 0 view .LVU51
+ 203 00ae 0C94 0000 		jmp _Z26Footswitch_EnableInterruptv
+ 204               	.LVL2:
+ 205               		.cfi_endproc
+ 206               	.LFE0:
+ 208               	.global	_Z24Footswitch_PressDetectedv
+ 210               	_Z24Footswitch_PressDetectedv:
+ 211               	.LFB1:
+  33:Footswitch.cpp **** 	uint8_t tmp = 0;
+ 212               		.loc 1 33 1 is_stmt 1 view -0
+ 213               		.cfi_startproc
+ 214 00b2 CF93      		push r28
+ 215               	.LCFI4:
+ 216               		.cfi_def_cfa_offset 3
+ 217               		.cfi_offset 28, -2
+ 218               	/* prologue: function */
+ 219               	/* frame size = 0 */
+ 220               	/* stack size = 1 */
+ 221               	.L__stack_usage = 1
+  34:Footswitch.cpp **** 	
+ 222               		.loc 1 34 2 view .LVU53
+ 223               	.LVL3:
   37:Footswitch.cpp **** 	
- 106               		.loc 1 37 2 view .LVU20
+ 224               		.loc 1 37 2 view .LVU54
   37:Footswitch.cpp **** 	
- 107               		.loc 1 37 24 is_stmt 0 view .LVU21
- 108 0036 6FE0      		ldi r22,lo8(15)
- 109 0038 80E0      		ldi r24,0
- 110 003a 0E94 0000 		call _Z16MCP23017_ReadReghh
- 111               	.LVL3:
- 112 003e C82F      		mov r28,r24
- 113               	.LVL4:
-  39:Footswitch.cpp **** 	
- 114               		.loc 1 39 2 is_stmt 1 view .LVU22
-  39:Footswitch.cpp **** 	
- 115               		.loc 1 39 41 is_stmt 0 view .LVU23
- 116 0040 61E1      		ldi r22,lo8(17)
- 117 0042 80E0      		ldi r24,0
- 118               	.LVL5:
-  39:Footswitch.cpp **** 	
- 119               		.loc 1 39 41 view .LVU24
- 120 0044 0E94 0000 		call _Z16MCP23017_ReadReghh
- 121               	.LVL6:
-  39:Footswitch.cpp **** 	
- 122               		.loc 1 39 23 view .LVU25
- 123 0048 8093 0000 		sts Footswitch_PortState,r24
-  41:Footswitch.cpp **** 	{
- 124               		.loc 1 41 2 is_stmt 1 view .LVU26
-  41:Footswitch.cpp **** 	{
- 125               		.loc 1 41 27 is_stmt 0 view .LVU27
- 126 004c 8091 0000 		lds r24,Footswitch_PortState
-  41:Footswitch.cpp **** 	{
- 127               		.loc 1 41 2 view .LVU28
- 128 0050 8823      		tst r24
- 129 0052 01F0      		breq .L5
-  43:Footswitch.cpp **** 		Footswitch_PressState = PRESS_SENSED;
- 130               		.loc 1 43 3 is_stmt 1 view .LVU29
-  43:Footswitch.cpp **** 		Footswitch_PressState = PRESS_SENSED;
- 131               		.loc 1 43 28 is_stmt 0 view .LVU30
- 132 0054 C093 0000 		sts Footswitch_InterruptMask,r28
-  44:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 1;		// Start Timer
- 133               		.loc 1 44 3 is_stmt 1 view .LVU31
-  44:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 1;		// Start Timer
- 134               		.loc 1 44 25 is_stmt 0 view .LVU32
- 135 0058 81E0      		ldi r24,lo8(1)
- 136 005a 8093 0000 		sts Footswitch_PressState,r24
-  45:Footswitch.cpp **** 	}
- 137               		.loc 1 45 3 is_stmt 1 view .LVU33
-  45:Footswitch.cpp **** 	}
- 138               		.loc 1 45 26 is_stmt 0 view .LVU34
- 139 005e 81E0      		ldi r24,lo8(1)
- 140 0060 90E0      		ldi r25,0
- 141 0062 9093 0000 		sts Footswitch_TimerOvfCnt+1,r25
- 142 0066 8093 0000 		sts Footswitch_TimerOvfCnt,r24
- 143               	/* epilogue start */
-  56:Footswitch.cpp **** 
- 144               		.loc 1 56 1 view .LVU35
- 145 006a CF91      		pop r28
- 146               	.LVL7:
-  56:Footswitch.cpp **** 
- 147               		.loc 1 56 1 view .LVU36
- 148 006c 0895      		ret
- 149               	.LVL8:
- 150               	.L5:
-  49:Footswitch.cpp **** 		{
- 151               		.loc 1 49 3 is_stmt 1 view .LVU37
-  49:Footswitch.cpp **** 		{
- 152               		.loc 1 49 29 is_stmt 0 view .LVU38
- 153 006e 8091 0000 		lds r24,Footswitch_PressState
-  49:Footswitch.cpp **** 		{
- 154               		.loc 1 49 3 view .LVU39
- 155 0072 8430      		cpi r24,lo8(4)
- 156 0074 01F4      		brne .L7
-  51:Footswitch.cpp **** 		}
- 157               		.loc 1 51 4 is_stmt 1 view .LVU40
-  51:Footswitch.cpp **** 		}
- 158               		.loc 1 51 26 is_stmt 0 view .LVU41
- 159 0076 86E0      		ldi r24,lo8(6)
- 160 0078 8093 0000 		sts Footswitch_PressState,r24
- 161               	.L7:
-  54:Footswitch.cpp **** 	}	
- 162               		.loc 1 54 3 is_stmt 1 view .LVU42
- 163               	/* epilogue start */
-  56:Footswitch.cpp **** 
- 164               		.loc 1 56 1 is_stmt 0 view .LVU43
- 165 007c CF91      		pop r28
- 166               	.LVL9:
-  54:Footswitch.cpp **** 	}	
- 167               		.loc 1 54 29 view .LVU44
- 168 007e 0C94 0000 		jmp _Z26Footswitch_EnableInterruptv
- 169               	.LVL10:
- 170               		.cfi_endproc
- 171               	.LFE1:
- 173               	.global	_Z22Footswitch_HandleTimerv
- 175               	_Z22Footswitch_HandleTimerv:
- 176               	.LFB2:
-  59:Footswitch.cpp **** 	Footswitch_PortState = MCP23017_ReadReg(MCP23017_ADDR_SWITCH_INDICATOR, GPIOB);		// Read current s
- 177               		.loc 1 59 1 is_stmt 1 view -0
- 178               		.cfi_startproc
- 179 0082 AF92      		push r10
- 180               	.LCFI1:
- 181               		.cfi_def_cfa_offset 3
- 182               		.cfi_offset 10, -2
- 183 0084 CF92      		push r12
- 184               	.LCFI2:
- 185               		.cfi_def_cfa_offset 4
- 186               		.cfi_offset 12, -3
- 187 0086 EF92      		push r14
- 188               	.LCFI3:
- 189               		.cfi_def_cfa_offset 5
- 190               		.cfi_offset 14, -4
- 191 0088 0F93      		push r16
- 192               	.LCFI4:
- 193               		.cfi_def_cfa_offset 6
- 194               		.cfi_offset 16, -5
- 195               	/* prologue: function */
- 196               	/* frame size = 0 */
- 197               	/* stack size = 4 */
- 198               	.L__stack_usage = 4
-  60:Footswitch.cpp **** 	
- 199               		.loc 1 60 2 view .LVU46
-  60:Footswitch.cpp **** 	
- 200               		.loc 1 60 41 is_stmt 0 view .LVU47
- 201 008a 63E1      		ldi r22,lo8(19)
- 202 008c 80E0      		ldi r24,0
- 203 008e 0E94 0000 		call _Z16MCP23017_ReadReghh
- 204               	.LVL11:
-  60:Footswitch.cpp **** 	
- 205               		.loc 1 60 23 view .LVU48
- 206 0092 8093 0000 		sts Footswitch_PortState,r24
-  62:Footswitch.cpp **** 	{
- 207               		.loc 1 62 2 is_stmt 1 view .LVU49
-  62:Footswitch.cpp **** 	{
- 208               		.loc 1 62 28 is_stmt 0 view .LVU50
- 209 0096 8091 0000 		lds r24,Footswitch_PressState
-  62:Footswitch.cpp **** 	{
- 210               		.loc 1 62 2 view .LVU51
- 211 009a 8230      		cpi r24,lo8(2)
- 212 009c 01F4      		brne .L10
-  65:Footswitch.cpp **** 		{
- 213               		.loc 1 65 3 is_stmt 1 view .LVU52
-  65:Footswitch.cpp **** 		{
- 214               		.loc 1 65 28 is_stmt 0 view .LVU53
- 215 009e 9091 0000 		lds r25,Footswitch_PortState
- 216 00a2 8091 0000 		lds r24,Footswitch_InterruptMask
-  65:Footswitch.cpp **** 		{
- 217               		.loc 1 65 3 view .LVU54
- 218 00a6 9817      		cp r25,r24
- 219 00a8 01F0      		breq .L9
-  67:Footswitch.cpp **** 			Footswitch_TimerOvfCnt = 0;	// Stop timer
- 220               		.loc 1 67 4 is_stmt 1 view .LVU55
-  67:Footswitch.cpp **** 			Footswitch_TimerOvfCnt = 0;	// Stop timer
- 221               		.loc 1 67 26 is_stmt 0 view .LVU56
- 222 00aa 83E0      		ldi r24,lo8(3)
- 223               	.L24:
- 117:Footswitch.cpp **** 		}
- 224               		.loc 1 117 26 view .LVU57
- 225 00ac 8093 0000 		sts Footswitch_PressState,r24
+ 225               		.loc 1 37 24 is_stmt 0 view .LVU55
+ 226 00b4 6FE0      		ldi r22,lo8(15)
+ 227 00b6 80E0      		ldi r24,0
+ 228 00b8 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 229               	.LVL4:
+ 230 00bc C82F      		mov r28,r24
+ 231               	.LVL5:
+  40:Footswitch.cpp **** 
+ 232               		.loc 1 40 2 is_stmt 1 view .LVU56
+  40:Footswitch.cpp **** 
+ 233               		.loc 1 40 41 is_stmt 0 view .LVU57
+ 234 00be 61E1      		ldi r22,lo8(17)
+ 235 00c0 80E0      		ldi r24,0
+ 236               	.LVL6:
+  40:Footswitch.cpp **** 
+ 237               		.loc 1 40 41 view .LVU58
+ 238 00c2 0E94 0000 		call _Z16MCP23017_ReadReghh
+ 239               	.LVL7:
+  40:Footswitch.cpp **** 
+ 240               		.loc 1 40 23 view .LVU59
+ 241 00c6 8093 0000 		sts Footswitch_PortState,r24
+  42:Footswitch.cpp **** 	{
+ 242               		.loc 1 42 2 is_stmt 1 view .LVU60
+  42:Footswitch.cpp **** 	{
+ 243               		.loc 1 42 27 is_stmt 0 view .LVU61
+ 244 00ca 8091 0000 		lds r24,Footswitch_PortState
+  42:Footswitch.cpp **** 	{
+ 245               		.loc 1 42 2 view .LVU62
+ 246 00ce 8823      		tst r24
+ 247 00d0 01F0      		breq .L15
+  44:Footswitch.cpp **** 		Footswitch_PressState = PRESS_SENSED;
+ 248               		.loc 1 44 3 is_stmt 1 view .LVU63
+  44:Footswitch.cpp **** 		Footswitch_PressState = PRESS_SENSED;
+ 249               		.loc 1 44 28 is_stmt 0 view .LVU64
+ 250 00d2 C093 0000 		sts Footswitch_InterruptMask,r28
+  45:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 1;		// Start Timer
+ 251               		.loc 1 45 3 is_stmt 1 view .LVU65
+  45:Footswitch.cpp **** 		Footswitch_TimerOvfCnt = 1;		// Start Timer
+ 252               		.loc 1 45 25 is_stmt 0 view .LVU66
+ 253 00d6 81E0      		ldi r24,lo8(1)
+ 254 00d8 8093 0000 		sts Footswitch_PressState,r24
+  46:Footswitch.cpp **** 	}
+ 255               		.loc 1 46 3 is_stmt 1 view .LVU67
+  46:Footswitch.cpp **** 	}
+ 256               		.loc 1 46 26 is_stmt 0 view .LVU68
+ 257 00dc 81E0      		ldi r24,lo8(1)
+ 258 00de 90E0      		ldi r25,0
+ 259 00e0 9093 0000 		sts Footswitch_TimerOvfCnt+1,r25
+ 260 00e4 8093 0000 		sts Footswitch_TimerOvfCnt,r24
+ 261               	.L16:
+  62:Footswitch.cpp **** }
+ 262               		.loc 1 62 2 is_stmt 1 view .LVU69
+ 263               	/* epilogue start */
+  63:Footswitch.cpp **** 
+ 264               		.loc 1 63 1 is_stmt 0 view .LVU70
+ 265 00e8 CF91      		pop r28
+ 266               	.LVL8:
+  62:Footswitch.cpp **** }
+ 267               		.loc 1 62 28 view .LVU71
+ 268 00ea 0C94 0000 		jmp _Z26Footswitch_EnableInterruptv
+ 269               	.LVL9:
+ 270               	.L15:
+  50:Footswitch.cpp **** 		{
+ 271               		.loc 1 50 3 is_stmt 1 view .LVU72
+  50:Footswitch.cpp **** 		{
+ 272               		.loc 1 50 29 is_stmt 0 view .LVU73
+ 273 00ee 8091 0000 		lds r24,Footswitch_PressState
+  50:Footswitch.cpp **** 		{
+ 274               		.loc 1 50 3 view .LVU74
+ 275 00f2 8130      		cpi r24,lo8(1)
+ 276 00f4 01F4      		brne .L17
+  52:Footswitch.cpp **** 		}
+ 277               		.loc 1 52 4 is_stmt 1 view .LVU75
+  52:Footswitch.cpp **** 		}
+ 278               		.loc 1 52 26 is_stmt 0 view .LVU76
+ 279 00f6 83E0      		ldi r24,lo8(3)
+ 280               	.L19:
+  56:Footswitch.cpp **** 		}
+ 281               		.loc 1 56 26 view .LVU77
+ 282 00f8 8093 0000 		sts Footswitch_PressState,r24
+ 283               	.L18:
+  59:Footswitch.cpp **** 	}
+ 284               		.loc 1 59 3 is_stmt 1 view .LVU78
+  59:Footswitch.cpp **** 	}
+ 285               		.loc 1 59 26 is_stmt 0 view .LVU79
+ 286 00fc 1092 0000 		sts Footswitch_TimerOvfCnt+1,__zero_reg__
+ 287 0100 1092 0000 		sts Footswitch_TimerOvfCnt,__zero_reg__
+ 288 0104 00C0      		rjmp .L16
+ 289               	.L17:
+  54:Footswitch.cpp **** 		{
+ 290               		.loc 1 54 8 is_stmt 1 view .LVU80
+  54:Footswitch.cpp **** 		{
+ 291               		.loc 1 54 34 is_stmt 0 view .LVU81
+ 292 0106 8091 0000 		lds r24,Footswitch_PressState
+  54:Footswitch.cpp **** 		{
+ 293               		.loc 1 54 8 view .LVU82
+ 294 010a 8430      		cpi r24,lo8(4)
+ 295 010c 01F4      		brne .L18
+  56:Footswitch.cpp **** 		}
+ 296               		.loc 1 56 4 is_stmt 1 view .LVU83
+  56:Footswitch.cpp **** 		}
+ 297               		.loc 1 56 26 is_stmt 0 view .LVU84
+ 298 010e 86E0      		ldi r24,lo8(6)
+ 299 0110 00C0      		rjmp .L19
+ 300               		.cfi_endproc
+ 301               	.LFE1:
+ 303               	.global	__vector_4
+ 305               	__vector_4:
+ 306               	.LFB5:
+ 112:Footswitch.cpp **** 
+ 113:Footswitch.cpp **** /* Pin Change Interrupt 1 (PCINT1) Service Routine */
+ 114:Footswitch.cpp **** ISR (PCINT1_vect)
+ 115:Footswitch.cpp **** {
+ 307               		.loc 1 115 1 is_stmt 1 view -0
+ 308               		.cfi_startproc
+ 309 0112 8F93 8FB7 		__gcc_isr 1
+ 309      8F93 
+ 310               	/* prologue: Signal */
+ 311               	/* frame size = 0 */
+ 312               	/* stack size = 0...4 */
+ 313               	.L__stack_usage = 0 + __gcc_isr.n_pushed
+ 116:Footswitch.cpp **** 	if (!(PINC & (1 << PINC1)))		// Only react on falling-edge
+ 314               		.loc 1 116 2 view .LVU86
+ 315 0118 3199      		sbic 0x6,1
+ 316 011a 00C0      		rjmp .L20
+ 117:Footswitch.cpp **** 	{
+ 118:Footswitch.cpp **** 		PCICR &= ~(1 << PCIE1);		// Disable Pin Change Interrupt 1 (PCINT[14:8])
+ 317               		.loc 1 118 3 view .LVU87
+ 318               		.loc 1 118 9 is_stmt 0 view .LVU88
+ 319 011c 8091 6800 		lds r24,104
+ 320 0120 8D7F      		andi r24,lo8(-3)
+ 321 0122 8093 6800 		sts 104,r24
+ 119:Footswitch.cpp **** 		Footswitch_PressFlag = true;
+ 322               		.loc 1 119 3 is_stmt 1 view .LVU89
+ 323               		.loc 1 119 24 is_stmt 0 view .LVU90
+ 324 0126 81E0      		ldi r24,lo8(1)
+ 325 0128 8093 0000 		sts Footswitch_PressFlag,r24
+ 326               	.L20:
+ 327               	/* epilogue start */
  120:Footswitch.cpp **** 	}
- 226               		.loc 1 120 3 is_stmt 1 view .LVU58
- 120:Footswitch.cpp **** 	}
- 227               		.loc 1 120 26 is_stmt 0 view .LVU59
- 228 00b0 1092 0000 		sts Footswitch_TimerOvfCnt+1,__zero_reg__
- 229 00b4 1092 0000 		sts Footswitch_TimerOvfCnt,__zero_reg__
- 122:Footswitch.cpp **** 
- 230               		.loc 1 122 1 view .LVU60
- 231 00b8 00C0      		rjmp .L9
- 232               	.L10:
-  71:Footswitch.cpp **** 	{
- 233               		.loc 1 71 7 is_stmt 1 view .LVU61
-  71:Footswitch.cpp **** 	{
- 234               		.loc 1 71 33 is_stmt 0 view .LVU62
- 235 00ba 8091 0000 		lds r24,Footswitch_PressState
-  71:Footswitch.cpp **** 	{
- 236               		.loc 1 71 7 view .LVU63
- 237 00be 8430      		cpi r24,lo8(4)
- 238 00c0 01F0      		breq .+2
- 239 00c2 00C0      		rjmp .L13
-  74:Footswitch.cpp **** 		{
- 240               		.loc 1 74 3 is_stmt 1 view .LVU64
-  74:Footswitch.cpp **** 		{
- 241               		.loc 1 74 28 is_stmt 0 view .LVU65
- 242 00c4 9091 0000 		lds r25,Footswitch_PortState
- 243 00c8 8091 0000 		lds r24,Footswitch_InterruptMask
-  74:Footswitch.cpp **** 		{
- 244               		.loc 1 74 3 view .LVU66
- 245 00cc 9817      		cp r25,r24
- 246 00ce 01F0      		breq .L14
-  76:Footswitch.cpp **** 			Footswitch_PressState = SHORT_PRESS;
- 247               		.loc 1 76 4 is_stmt 1 view .LVU67
-  76:Footswitch.cpp **** 			Footswitch_PressState = SHORT_PRESS;
- 248               		.loc 1 76 27 is_stmt 0 view .LVU68
- 249 00d0 1092 0000 		sts Footswitch_TimerOvfCnt+1,__zero_reg__
- 250 00d4 1092 0000 		sts Footswitch_TimerOvfCnt,__zero_reg__
-  77:Footswitch.cpp **** 		}
- 251               		.loc 1 77 4 is_stmt 1 view .LVU69
-  77:Footswitch.cpp **** 		}
- 252               		.loc 1 77 26 is_stmt 0 view .LVU70
- 253 00d8 83E0      		ldi r24,lo8(3)
- 254 00da 8093 0000 		sts Footswitch_PressState,r24
- 255               	.L9:
- 256               	/* epilogue start */
- 122:Footswitch.cpp **** 
- 257               		.loc 1 122 1 view .LVU71
- 258 00de 0F91      		pop r16
- 259 00e0 EF90      		pop r14
- 260 00e2 CF90      		pop r12
- 261 00e4 AF90      		pop r10
- 262 00e6 0895      		ret
- 263               	.L14:
-  82:Footswitch.cpp **** 			
- 264               		.loc 1 82 4 is_stmt 1 view .LVU72
-  82:Footswitch.cpp **** 			
- 265               		.loc 1 82 30 is_stmt 0 view .LVU73
- 266 00e8 0E94 0000 		call _Z26Footswitch_EnableInterruptv
- 267               	.LVL12:
-  85:Footswitch.cpp **** 			{
- 268               		.loc 1 85 4 is_stmt 1 view .LVU74
-  85:Footswitch.cpp **** 			{
- 269               		.loc 1 85 20 is_stmt 0 view .LVU75
- 270 00ec 8091 0000 		lds r24,SystemState
-  85:Footswitch.cpp **** 			{
- 271               		.loc 1 85 4 view .LVU76
- 272 00f0 8823      		tst r24
- 273 00f2 01F0      		breq .L9
-  88:Footswitch.cpp **** 			{
- 274               		.loc 1 88 9 is_stmt 1 view .LVU77
-  88:Footswitch.cpp **** 			{
- 275               		.loc 1 88 25 is_stmt 0 view .LVU78
- 276 00f4 8091 0000 		lds r24,SystemState
-  88:Footswitch.cpp **** 			{
- 277               		.loc 1 88 9 view .LVU79
- 278 00f8 8130      		cpi r24,lo8(1)
- 279 00fa 01F4      		brne .L16
-  90:Footswitch.cpp **** 			}
- 280               		.loc 1 90 5 is_stmt 1 view .LVU80
-  90:Footswitch.cpp **** 			}
- 281               		.loc 1 90 22 is_stmt 0 view .LVU81
- 282 00fc A12C      		mov r10,__zero_reg__
- 283 00fe C12C      		mov r12,__zero_reg__
- 284 0100 E12C      		mov r14,__zero_reg__
- 285 0102 00E0      		ldi r16,0
- 286 0104 20E5      		ldi r18,lo8(80)
- 287 0106 4FE6      		ldi r20,lo8(111)
- 288 0108 6FE6      		ldi r22,lo8(111)
- 289 010a 8CE4      		ldi r24,lo8(76)
- 290               	.L25:
-  96:Footswitch.cpp **** 				}
- 291               		.loc 1 96 23 view .LVU82
- 292 010c 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
- 293               	.LVL13:
- 294 0110 00C0      		rjmp .L9
- 295               	.L16:
-  92:Footswitch.cpp **** 			{
- 296               		.loc 1 92 9 is_stmt 1 view .LVU83
-  92:Footswitch.cpp **** 			{
- 297               		.loc 1 92 25 is_stmt 0 view .LVU84
- 298 0112 8091 0000 		lds r24,SystemState
-  92:Footswitch.cpp **** 			{
- 299               		.loc 1 92 9 view .LVU85
- 300 0116 8230      		cpi r24,lo8(2)
- 301 0118 01F4      		brne .L17
-  94:Footswitch.cpp **** 				{
- 302               		.loc 1 94 5 is_stmt 1 view .LVU86
-  94:Footswitch.cpp **** 				{
- 303               		.loc 1 94 34 is_stmt 0 view .LVU87
- 304 011a 8091 0000 		lds r24,Footswitch_InterruptMask
-  94:Footswitch.cpp **** 				{
- 305               		.loc 1 94 5 view .LVU88
- 306 011e 807F      		andi r24,lo8(-16)
-  96:Footswitch.cpp **** 				}
- 307               		.loc 1 96 23 view .LVU89
- 308 0120 A12C      		mov r10,__zero_reg__
- 309 0122 C12C      		mov r12,__zero_reg__
- 310 0124 E12C      		mov r14,__zero_reg__
- 311 0126 00E0      		ldi r16,0
-  94:Footswitch.cpp **** 				{
- 312               		.loc 1 94 5 view .LVU90
- 313 0128 01F0      		breq .L18
-  96:Footswitch.cpp **** 				}
- 314               		.loc 1 96 6 is_stmt 1 view .LVU91
-  96:Footswitch.cpp **** 				}
- 315               		.loc 1 96 23 is_stmt 0 view .LVU92
- 316 012a 20E2      		ldi r18,lo8(32)
- 317 012c 45E6      		ldi r20,lo8(101)
- 318 012e 62E7      		ldi r22,lo8(114)
- 319 0130 80E5      		ldi r24,lo8(80)
- 320 0132 00C0      		rjmp .L25
- 321               	.L18:
- 100:Footswitch.cpp **** 				}
- 322               		.loc 1 100 6 is_stmt 1 view .LVU93
- 100:Footswitch.cpp **** 				}
- 323               		.loc 1 100 23 is_stmt 0 view .LVU94
- 324 0134 2EE5      		ldi r18,lo8(94)
- 325 0136 4EE5      		ldi r20,lo8(94)
- 326 0138 6EE5      		ldi r22,lo8(94)
- 327 013a 8EE5      		ldi r24,lo8(94)
- 328 013c 00C0      		rjmp .L25
- 329               	.L17:
- 103:Footswitch.cpp **** 			{
- 330               		.loc 1 103 9 is_stmt 1 view .LVU95
- 103:Footswitch.cpp **** 			{
- 331               		.loc 1 103 25 is_stmt 0 view .LVU96
- 332 013e 8091 0000 		lds r24,SystemState
- 333 0142 00C0      		rjmp .L9
- 334               	.L13:
- 108:Footswitch.cpp **** 	{
- 335               		.loc 1 108 7 is_stmt 1 view .LVU97
- 108:Footswitch.cpp **** 	{
- 336               		.loc 1 108 33 is_stmt 0 view .LVU98
- 337 0144 8091 0000 		lds r24,Footswitch_PressState
- 108:Footswitch.cpp **** 	{
- 338               		.loc 1 108 7 view .LVU99
- 339 0148 8530      		cpi r24,lo8(5)
- 340 014a 01F4      		brne .L9
- 111:Footswitch.cpp **** 		{
- 341               		.loc 1 111 3 is_stmt 1 view .LVU100
- 111:Footswitch.cpp **** 		{
- 342               		.loc 1 111 28 is_stmt 0 view .LVU101
- 343 014c 9091 0000 		lds r25,Footswitch_PortState
- 344 0150 8091 0000 		lds r24,Footswitch_InterruptMask
- 111:Footswitch.cpp **** 		{
- 345               		.loc 1 111 3 view .LVU102
- 346 0154 9817      		cp r25,r24
- 347 0156 01F0      		breq .L19
- 113:Footswitch.cpp **** 		}
- 348               		.loc 1 113 4 is_stmt 1 view .LVU103
- 113:Footswitch.cpp **** 		}
- 349               		.loc 1 113 26 is_stmt 0 view .LVU104
- 350 0158 86E0      		ldi r24,lo8(6)
- 351 015a 00C0      		rjmp .L24
- 352               	.L19:
- 117:Footswitch.cpp **** 		}
- 353               		.loc 1 117 4 is_stmt 1 view .LVU105
- 117:Footswitch.cpp **** 		}
- 354               		.loc 1 117 26 is_stmt 0 view .LVU106
- 355 015c 87E0      		ldi r24,lo8(7)
- 356 015e 00C0      		rjmp .L24
- 357               		.cfi_endproc
- 358               	.LFE2:
- 360               	.global	__vector_4
- 362               	__vector_4:
- 363               	.LFB5:
- 134:Footswitch.cpp **** 
- 135:Footswitch.cpp **** /* Pin Change Interrupt 1 (PCINT1) Service Routine */
- 136:Footswitch.cpp **** ISR (PCINT1_vect)
- 137:Footswitch.cpp **** {
- 364               		.loc 1 137 1 is_stmt 1 view -0
- 365               		.cfi_startproc
- 366 0160 8F93 8FB7 		__gcc_isr 1
- 366      8F93 
- 367               	/* prologue: Signal */
- 368               	/* frame size = 0 */
- 369               	/* stack size = 0...4 */
- 370               	.L__stack_usage = 0 + __gcc_isr.n_pushed
- 138:Footswitch.cpp **** 	if (!(PINC & (1 << PINC1)))		// Only react on falling-edge
- 371               		.loc 1 138 2 view .LVU108
- 372 0166 3199      		sbic 0x6,1
- 373 0168 00C0      		rjmp .L26
- 139:Footswitch.cpp **** 	{
- 140:Footswitch.cpp **** 		PCICR &= ~(1 << PCIE1);		// Disable Pin Change Interrupt 1 (PCINT[14:8])
- 374               		.loc 1 140 3 view .LVU109
- 375               		.loc 1 140 9 is_stmt 0 view .LVU110
- 376 016a 8091 6800 		lds r24,104
- 377 016e 8D7F      		andi r24,lo8(-3)
- 378 0170 8093 6800 		sts 104,r24
- 141:Footswitch.cpp **** 		Footswitch_PressFlag = true;
- 379               		.loc 1 141 3 is_stmt 1 view .LVU111
- 380               		.loc 1 141 24 is_stmt 0 view .LVU112
- 381 0174 81E0      		ldi r24,lo8(1)
- 382 0176 8093 0000 		sts Footswitch_PressFlag,r24
- 383               	.L26:
- 384               	/* epilogue start */
- 142:Footswitch.cpp **** 	}
- 143:Footswitch.cpp **** }
- 385               		.loc 1 143 1 view .LVU113
- 386 017a 8F91 8FBF 		__gcc_isr 2
- 386      8F91 
- 387 0180 1895      		reti
- 388               		__gcc_isr 0,r24
- 389               		.cfi_endproc
- 390               	.LFE5:
- 392               	.global	Footswitch_TimerFlag
- 393               		.section .bss
- 396               	Footswitch_TimerFlag:
- 397 0000 00        		.zero	1
- 398               	.global	Footswitch_TimerOvfCnt
- 401               	Footswitch_TimerOvfCnt:
- 402 0001 0000      		.zero	2
- 403               	.global	Footswitch_InterruptMask
- 406               	Footswitch_InterruptMask:
- 407 0003 00        		.zero	1
- 408               	.global	Footswitch_PortState
- 411               	Footswitch_PortState:
- 412 0004 00        		.zero	1
- 413               	.global	Footswitch_PressFlag
- 416               	Footswitch_PressFlag:
- 417 0005 00        		.zero	1
- 418               	.global	Footswitch_PressState
- 421               	Footswitch_PressState:
- 422 0006 00        		.zero	1
- 423               		.text
- 424               	.Letext0:
- 425               		.file 2 "/usr/avr/include/stdint.h"
- 426               		.file 3 "Footswitch.h"
- 427               		.file 4 "MasterCom.h"
- 428               		.file 5 "System.h"
- 429               		.file 6 "MCP23017.h"
- 430               		.file 7 "Segment7.h"
+ 121:Footswitch.cpp **** }
+ 328               		.loc 1 121 1 view .LVU91
+ 329 012c 8F91 8FBF 		__gcc_isr 2
+ 329      8F91 
+ 330 0132 1895      		reti
+ 331               		__gcc_isr 0,r24
+ 332               		.cfi_endproc
+ 333               	.LFE5:
+ 335               	.global	Footswitch_TimerFlag
+ 336               		.section .bss
+ 339               	Footswitch_TimerFlag:
+ 340 0000 00        		.zero	1
+ 341               	.global	Footswitch_TimerOvfCnt
+ 344               	Footswitch_TimerOvfCnt:
+ 345 0001 0000      		.zero	2
+ 346               	.global	Footswitch_InterruptMask
+ 349               	Footswitch_InterruptMask:
+ 350 0003 00        		.zero	1
+ 351               	.global	Footswitch_PortState
+ 354               	Footswitch_PortState:
+ 355 0004 00        		.zero	1
+ 356               	.global	Footswitch_PressFlag
+ 359               	Footswitch_PressFlag:
+ 360 0005 00        		.zero	1
+ 361               	.global	Footswitch_PressState
+ 364               	Footswitch_PressState:
+ 365 0006 00        		.zero	1
+ 366               		.text
+ 367               	.Letext0:
+ 368               		.file 2 "/usr/avr/include/stdint.h"
+ 369               		.file 3 "Footswitch.h"
+ 370               		.file 4 "System.h"
+ 371               		.file 5 "Segment7.h"
+ 372               		.file 6 "MCP23017.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 Footswitch.cpp
-     /tmp/ccLVCcQe.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccLVCcQe.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccLVCcQe.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccLVCcQe.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccLVCcQe.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccLVCcQe.s:12     .text:0000000000000000 _Z22Footswitch_HandlePressv
-     /tmp/ccLVCcQe.s:406    .bss:0000000000000003 Footswitch_InterruptMask
-     /tmp/ccLVCcQe.s:421    .bss:0000000000000006 Footswitch_PressState
-     /tmp/ccLVCcQe.s:32     .text:000000000000000c _Z26Footswitch_EnableInterruptv
-     /tmp/ccLVCcQe.s:58     .text:000000000000001a _Z15Footswitch_Initv
-     /tmp/ccLVCcQe.s:92     .text:0000000000000034 _Z24Footswitch_PressDetectedv
-     /tmp/ccLVCcQe.s:411    .bss:0000000000000004 Footswitch_PortState
-     /tmp/ccLVCcQe.s:401    .bss:0000000000000001 Footswitch_TimerOvfCnt
-     /tmp/ccLVCcQe.s:175    .text:0000000000000082 _Z22Footswitch_HandleTimerv
-     /tmp/ccLVCcQe.s:362    .text:0000000000000160 __vector_4
+     /tmp/cciyjvlj.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cciyjvlj.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cciyjvlj.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cciyjvlj.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cciyjvlj.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cciyjvlj.s:12     .text:0000000000000000 _Z22Footswitch_HandleTimerv
+     /tmp/cciyjvlj.s:364    .bss:0000000000000006 Footswitch_PressState
+     /tmp/cciyjvlj.s:349    .bss:0000000000000003 Footswitch_InterruptMask
+     /tmp/cciyjvlj.s:344    .bss:0000000000000001 Footswitch_TimerOvfCnt
+     /tmp/cciyjvlj.s:138    .text:0000000000000088 _Z22Footswitch_HandlePressv
+     /tmp/cciyjvlj.s:157    .text:0000000000000094 _Z26Footswitch_EnableInterruptv
+     /tmp/cciyjvlj.s:183    .text:00000000000000a2 _Z15Footswitch_Initv
+     /tmp/cciyjvlj.s:210    .text:00000000000000b2 _Z24Footswitch_PressDetectedv
+     /tmp/cciyjvlj.s:354    .bss:0000000000000004 Footswitch_PortState
+     /tmp/cciyjvlj.s:305    .text:0000000000000112 __vector_4
                             *ABS*:0000000000000002 __gcc_isr.n_pushed.001
-     /tmp/ccLVCcQe.s:416    .bss:0000000000000005 Footswitch_PressFlag
-     /tmp/ccLVCcQe.s:396    .bss:0000000000000000 Footswitch_TimerFlag
+     /tmp/cciyjvlj.s:359    .bss:0000000000000005 Footswitch_PressFlag
+     /tmp/cciyjvlj.s:339    .bss:0000000000000000 Footswitch_TimerFlag
 
 UNDEFINED SYMBOLS
-_Z28System_HandleFootswitchInput16Footswitch_Stateh
-_Z16MCP23017_ReadReghh
 SystemState
 _Z17Segment7_WriteAllcccchhhh
+_Z28System_HandleFootswitchInput16Footswitch_Stateh
+_Z16MCP23017_ReadReghh
 __do_clear_bss

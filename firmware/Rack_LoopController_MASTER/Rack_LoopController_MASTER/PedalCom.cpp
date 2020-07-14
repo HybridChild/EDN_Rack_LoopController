@@ -234,6 +234,7 @@ bool PedalCom_QueueCommand(CMD cmd, uint8_t datLen, uint8_t *dat)
 	return true;
 }
 
+
 void PedalCom_PutCommand()
 {
 	/* Only transmit new command if previous one got an ACK */
@@ -269,6 +270,7 @@ void PedalCom_PutCommand()
 		PedalCom_ResponseTimeoutOvfCnt = 1;
 	}
 }
+
 
 void PedalCom_PrepareRetransmit()
 {

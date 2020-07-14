@@ -64,17 +64,12 @@ ISR(TIMER0_COMPA_vect)
 			
 		if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_LONG_PRESS_TIMEOUT && Footswitch_PressState == PRESSED)
 		{
-			Footswitch_TimerFlag = true;
 			Footswitch_PressState = STILL_PRESSED;
+			Footswitch_TimerFlag = true;
 		}
-		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == WAITING)
+		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_LONG_PRESS_TIMEOUT  && Footswitch_PressState == PRESS_SENSED)
 		{
 			Footswitch_PressState = PRESSED;
-			Footswitch_TimerFlag = true;
-		}
-		else if (Footswitch_TimerOvfCnt > FOOTSWITCH_SHORT_PRESS_TIMEOUT && Footswitch_PressState == PRESS_SENSED)
-		{
-			Footswitch_PressState = WAITING;
 			Footswitch_TimerFlag = true;
 		}
 	}
