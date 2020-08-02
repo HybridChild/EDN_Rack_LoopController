@@ -58,7 +58,7 @@
   45:main.cpp      ****     while (1) 
   46:main.cpp      ****     {
   47:main.cpp      **** 		/* Handle incoming data from Master */
-  48:main.cpp      **** 		while (UART_Available())
+  48:main.cpp      **** 		while (UART_RxAvailable())
   49:main.cpp      **** 		{
   50:main.cpp      **** 			MasterCom_Receive();
   51:main.cpp      **** 		}
@@ -80,7 +80,7 @@
   67:main.cpp      **** 		{
   68:main.cpp      **** 			MasterCom_DelayTxFlag = false;
   69:main.cpp      **** 			
-  70:main.cpp      **** 			if (!UART_QueueIsEmpty())
+  70:main.cpp      **** 			if (UART_TxAvailable())
   71:main.cpp      **** 			{
   72:main.cpp      **** 				MasterCom_Transmit();
   73:main.cpp      **** 			}
@@ -300,273 +300,265 @@
  141               	.LVL16:
   40:main.cpp      **** 	
  142               		.loc 1 40 2 is_stmt 1 view .LVU38
-  40:main.cpp      **** 	
- 143               		.loc 1 40 7 is_stmt 0 view .LVU39
- 144               	/* #APP */
- 145               	 ;  40 "main.cpp" 1
- 146 0022 7894      		sei
- 147               	 ;  0 "" 2
+ 143               	/* #APP */
+ 144               	 ;  40 "main.cpp" 1
+ 145 0022 7894      		sei
+ 146               	 ;  0 "" 2
   42:main.cpp      **** 	
- 148               		.loc 1 42 2 is_stmt 1 view .LVU40
+ 147               		.loc 1 42 2 view .LVU39
   42:main.cpp      **** 	
- 149               		.loc 1 42 19 is_stmt 0 view .LVU41
- 150               	/* #NOAPP */
- 151 0024 A12C      		mov r10,__zero_reg__
- 152 0026 C12C      		mov r12,__zero_reg__
- 153 0028 E12C      		mov r14,__zero_reg__
- 154 002a 00E0      		ldi r16,0
- 155 002c 26E6      		ldi r18,lo8(102)
- 156 002e 46E6      		ldi r20,lo8(102)
- 157 0030 69E6      		ldi r22,lo8(105)
- 158 0032 82E7      		ldi r24,lo8(114)
- 159 0034 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
- 160               	.LVL17:
+ 148               		.loc 1 42 19 is_stmt 0 view .LVU40
+ 149               	/* #NOAPP */
+ 150 0024 A12C      		mov r10,__zero_reg__
+ 151 0026 C12C      		mov r12,__zero_reg__
+ 152 0028 E12C      		mov r14,__zero_reg__
+ 153 002a 00E0      		ldi r16,0
+ 154 002c 26E6      		ldi r18,lo8(102)
+ 155 002e 46E6      		ldi r20,lo8(102)
+ 156 0030 69E6      		ldi r22,lo8(105)
+ 157 0032 82E7      		ldi r24,lo8(114)
+ 158 0034 0E94 0000 		call _Z17Segment7_WriteAllcccchhhh
+ 159               	.LVL17:
   88:main.cpp      **** 		}
- 161               		.loc 1 88 26 view .LVU42
- 162 0038 C1E0      		ldi r28,lo8(1)
- 163               	.L3:
+ 160               		.loc 1 88 26 view .LVU41
+ 161 0038 C1E0      		ldi r28,lo8(1)
+ 162               	.L3:
   45:main.cpp      ****     {
- 164               		.loc 1 45 5 is_stmt 1 view .LVU43
+ 163               		.loc 1 45 5 is_stmt 1 view .LVU42
   48:main.cpp      **** 		{
- 165               		.loc 1 48 3 view .LVU44
+ 164               		.loc 1 48 3 view .LVU43
   48:main.cpp      **** 		{
- 166               		.loc 1 48 25 view .LVU45
-  48:main.cpp      **** 		{
- 167               		.loc 1 48 24 is_stmt 0 view .LVU46
- 168 003a 0E94 0000 		call _Z14UART_Availablev
- 169               	.LVL18:
-  48:main.cpp      **** 		{
- 170               		.loc 1 48 25 view .LVU47
- 171 003e 892B      		or r24,r25
- 172 0040 01F0      		breq .L4
+ 165               		.loc 1 48 26 view .LVU44
+ 166 003a 0E94 0000 		call _Z16UART_RxAvailablev
+ 167               	.LVL18:
+ 168 003e 8823      		tst r24
+ 169 0040 01F0      		breq .L4
   50:main.cpp      **** 		}
- 173               		.loc 1 50 4 is_stmt 1 view .LVU48
+ 170               		.loc 1 50 4 view .LVU45
   50:main.cpp      **** 		}
- 174               		.loc 1 50 21 is_stmt 0 view .LVU49
- 175 0042 0E94 0000 		call _Z17MasterCom_Receivev
- 176               	.LVL19:
+ 171               		.loc 1 50 21 is_stmt 0 view .LVU46
+ 172 0042 0E94 0000 		call _Z17MasterCom_Receivev
+ 173               	.LVL19:
   48:main.cpp      **** 		{
- 177               		.loc 1 48 3 view .LVU50
- 178 0046 00C0      		rjmp .L3
- 179               	.L4:
+ 174               		.loc 1 48 3 view .LVU47
+ 175 0046 00C0      		rjmp .L3
+ 176               	.L4:
   54:main.cpp      **** 		{
- 180               		.loc 1 54 3 is_stmt 1 view .LVU51
+ 177               		.loc 1 54 3 is_stmt 1 view .LVU48
   54:main.cpp      **** 		{
- 181               		.loc 1 54 28 is_stmt 0 view .LVU52
- 182 0048 0E94 0000 		call _Z21MasterCom_RxAvailablev
- 183               	.LVL20:
+ 178               		.loc 1 54 28 is_stmt 0 view .LVU49
+ 179 0048 0E94 0000 		call _Z21MasterCom_RxAvailablev
+ 180               	.LVL20:
   54:main.cpp      **** 		{
- 184               		.loc 1 54 3 view .LVU53
- 185 004c 8111      		cpse r24,__zero_reg__
+ 181               		.loc 1 54 3 view .LVU50
+ 182 004c 8111      		cpse r24,__zero_reg__
   56:main.cpp      **** 		}
- 186               		.loc 1 56 4 is_stmt 1 view .LVU54
+ 183               		.loc 1 56 4 is_stmt 1 view .LVU51
   56:main.cpp      **** 		}
- 187               		.loc 1 56 28 is_stmt 0 view .LVU55
- 188 004e 0E94 0000 		call _Z24MasterCom_HandleReceivedv
- 189               	.LVL21:
- 190               	.L6:
+ 184               		.loc 1 56 28 is_stmt 0 view .LVU52
+ 185 004e 0E94 0000 		call _Z24MasterCom_HandleReceivedv
+ 186               	.LVL21:
+ 187               	.L6:
   60:main.cpp      **** 		{
- 191               		.loc 1 60 3 is_stmt 1 view .LVU56
+ 188               		.loc 1 60 3 is_stmt 1 view .LVU53
   60:main.cpp      **** 		{
- 192               		.loc 1 60 28 is_stmt 0 view .LVU57
- 193 0052 0E94 0000 		call _Z21MasterCom_TxAvailablev
- 194               	.LVL22:
+ 189               		.loc 1 60 28 is_stmt 0 view .LVU54
+ 190 0052 0E94 0000 		call _Z21MasterCom_TxAvailablev
+ 191               	.LVL22:
   60:main.cpp      **** 		{
- 195               		.loc 1 60 3 view .LVU58
- 196 0056 8111      		cpse r24,__zero_reg__
+ 192               		.loc 1 60 3 view .LVU55
+ 193 0056 8111      		cpse r24,__zero_reg__
   62:main.cpp      **** 		}
- 197               		.loc 1 62 4 is_stmt 1 view .LVU59
+ 194               		.loc 1 62 4 is_stmt 1 view .LVU56
   62:main.cpp      **** 		}
- 198               		.loc 1 62 24 is_stmt 0 view .LVU60
- 199 0058 0E94 0000 		call _Z20MasterCom_PutCommandv
- 200               	.LVL23:
- 201               	.L7:
+ 195               		.loc 1 62 24 is_stmt 0 view .LVU57
+ 196 0058 0E94 0000 		call _Z20MasterCom_PutCommandv
+ 197               	.LVL23:
+ 198               	.L7:
   66:main.cpp      **** 		{
- 202               		.loc 1 66 3 is_stmt 1 view .LVU61
+ 199               		.loc 1 66 3 is_stmt 1 view .LVU58
   66:main.cpp      **** 		{
- 203               		.loc 1 66 7 is_stmt 0 view .LVU62
- 204 005c 8091 0000 		lds r24,MasterCom_DelayTxFlag
+ 200               		.loc 1 66 7 is_stmt 0 view .LVU59
+ 201 005c 8091 0000 		lds r24,MasterCom_DelayTxFlag
   66:main.cpp      **** 		{
- 205               		.loc 1 66 3 view .LVU63
- 206 0060 8823      		tst r24
- 207 0062 01F0      		breq .L9
+ 202               		.loc 1 66 3 view .LVU60
+ 203 0060 8823      		tst r24
+ 204 0062 01F0      		breq .L9
   68:main.cpp      **** 			
- 208               		.loc 1 68 4 is_stmt 1 view .LVU64
+ 205               		.loc 1 68 4 is_stmt 1 view .LVU61
   68:main.cpp      **** 			
- 209               		.loc 1 68 26 is_stmt 0 view .LVU65
- 210 0064 1092 0000 		sts MasterCom_DelayTxFlag,__zero_reg__
+ 206               		.loc 1 68 26 is_stmt 0 view .LVU62
+ 207 0064 1092 0000 		sts MasterCom_DelayTxFlag,__zero_reg__
   70:main.cpp      **** 			{
- 211               		.loc 1 70 4 is_stmt 1 view .LVU66
+ 208               		.loc 1 70 4 is_stmt 1 view .LVU63
   70:main.cpp      **** 			{
- 212               		.loc 1 70 26 is_stmt 0 view .LVU67
- 213 0068 0E94 0000 		call _Z17UART_QueueIsEmptyv
- 214               	.LVL24:
+ 209               		.loc 1 70 24 is_stmt 0 view .LVU64
+ 210 0068 0E94 0000 		call _Z16UART_TxAvailablev
+ 211               	.LVL24:
   70:main.cpp      **** 			{
- 215               		.loc 1 70 4 view .LVU68
- 216 006c 8111      		cpse r24,__zero_reg__
- 217 006e 00C0      		rjmp .L9
+ 212               		.loc 1 70 4 view .LVU65
+ 213 006c 8111      		cpse r24,__zero_reg__
   72:main.cpp      **** 			}
- 218               		.loc 1 72 5 is_stmt 1 view .LVU69
+ 214               		.loc 1 72 5 is_stmt 1 view .LVU66
   72:main.cpp      **** 			}
- 219               		.loc 1 72 23 is_stmt 0 view .LVU70
- 220 0070 0E94 0000 		call _Z18MasterCom_Transmitv
- 221               	.LVL25:
- 222               	.L9:
+ 215               		.loc 1 72 23 is_stmt 0 view .LVU67
+ 216 006e 0E94 0000 		call _Z18MasterCom_Transmitv
+ 217               	.LVL25:
+ 218               	.L9:
   77:main.cpp      **** 		{
- 223               		.loc 1 77 3 is_stmt 1 view .LVU71
+ 219               		.loc 1 77 3 is_stmt 1 view .LVU68
   77:main.cpp      **** 		{
- 224               		.loc 1 77 7 is_stmt 0 view .LVU72
- 225 0074 8091 0000 		lds r24,MasterCom_ResponseTimeoutFlag
+ 220               		.loc 1 77 7 is_stmt 0 view .LVU69
+ 221 0072 8091 0000 		lds r24,MasterCom_ResponseTimeoutFlag
   77:main.cpp      **** 		{
- 226               		.loc 1 77 3 view .LVU73
- 227 0078 8823      		tst r24
- 228 007a 01F0      		breq .L11
+ 222               		.loc 1 77 3 view .LVU70
+ 223 0076 8823      		tst r24
+ 224 0078 01F0      		breq .L11
   79:main.cpp      **** 			MasterCom_PrepareRetransmit();
- 229               		.loc 1 79 4 is_stmt 1 view .LVU74
+ 225               		.loc 1 79 4 is_stmt 1 view .LVU71
   79:main.cpp      **** 			MasterCom_PrepareRetransmit();
- 230               		.loc 1 79 34 is_stmt 0 view .LVU75
- 231 007c 1092 0000 		sts MasterCom_ResponseTimeoutFlag,__zero_reg__
+ 226               		.loc 1 79 34 is_stmt 0 view .LVU72
+ 227 007a 1092 0000 		sts MasterCom_ResponseTimeoutFlag,__zero_reg__
   80:main.cpp      **** 		}
- 232               		.loc 1 80 4 is_stmt 1 view .LVU76
+ 228               		.loc 1 80 4 is_stmt 1 view .LVU73
   80:main.cpp      **** 		}
- 233               		.loc 1 80 31 is_stmt 0 view .LVU77
- 234 0080 0E94 0000 		call _Z27MasterCom_PrepareRetransmitv
- 235               	.LVL26:
- 236               	.L11:
+ 229               		.loc 1 80 31 is_stmt 0 view .LVU74
+ 230 007e 0E94 0000 		call _Z27MasterCom_PrepareRetransmitv
+ 231               	.LVL26:
+ 232               	.L11:
   84:main.cpp      **** 		{
- 237               		.loc 1 84 3 is_stmt 1 view .LVU78
+ 233               		.loc 1 84 3 is_stmt 1 view .LVU75
   84:main.cpp      **** 		{
- 238               		.loc 1 84 7 is_stmt 0 view .LVU79
- 239 0084 8091 0000 		lds r24,MasterCom_FullFrameTimeoutFlag
+ 234               		.loc 1 84 7 is_stmt 0 view .LVU76
+ 235 0082 8091 0000 		lds r24,MasterCom_FullFrameTimeoutFlag
   84:main.cpp      **** 		{
- 240               		.loc 1 84 3 view .LVU80
- 241 0088 8823      		tst r24
- 242 008a 01F0      		breq .L12
+ 236               		.loc 1 84 3 view .LVU77
+ 237 0086 8823      		tst r24
+ 238 0088 01F0      		breq .L12
   86:main.cpp      **** 			UART_QueueChar(NACK_BYTE);
- 243               		.loc 1 86 4 is_stmt 1 view .LVU81
+ 239               		.loc 1 86 4 is_stmt 1 view .LVU78
   86:main.cpp      **** 			UART_QueueChar(NACK_BYTE);
- 244               		.loc 1 86 35 is_stmt 0 view .LVU82
- 245 008c 1092 0000 		sts MasterCom_FullFrameTimeoutFlag,__zero_reg__
+ 240               		.loc 1 86 35 is_stmt 0 view .LVU79
+ 241 008a 1092 0000 		sts MasterCom_FullFrameTimeoutFlag,__zero_reg__
   87:main.cpp      **** 			MasterCom_DelayTxFlag = true;
- 246               		.loc 1 87 4 is_stmt 1 view .LVU83
+ 242               		.loc 1 87 4 is_stmt 1 view .LVU80
   87:main.cpp      **** 			MasterCom_DelayTxFlag = true;
- 247               		.loc 1 87 18 is_stmt 0 view .LVU84
- 248 0090 8AE2      		ldi r24,lo8(42)
- 249 0092 0E94 0000 		call _Z14UART_QueueCharh
- 250               	.LVL27:
+ 243               		.loc 1 87 18 is_stmt 0 view .LVU81
+ 244 008e 8AE2      		ldi r24,lo8(42)
+ 245 0090 0E94 0000 		call _Z14UART_QueueCharh
+ 246               	.LVL27:
   88:main.cpp      **** 		}
- 251               		.loc 1 88 4 is_stmt 1 view .LVU85
+ 247               		.loc 1 88 4 is_stmt 1 view .LVU82
   88:main.cpp      **** 		}
- 252               		.loc 1 88 26 is_stmt 0 view .LVU86
- 253 0096 C093 0000 		sts MasterCom_DelayTxFlag,r28
- 254               	.L12:
+ 248               		.loc 1 88 26 is_stmt 0 view .LVU83
+ 249 0094 C093 0000 		sts MasterCom_DelayTxFlag,r28
+ 250               	.L12:
   92:main.cpp      **** 		{
- 255               		.loc 1 92 3 is_stmt 1 view .LVU87
+ 251               		.loc 1 92 3 is_stmt 1 view .LVU84
   92:main.cpp      **** 		{
- 256               		.loc 1 92 7 is_stmt 0 view .LVU88
- 257 009a 8091 0000 		lds r24,Footswitch_PressFlag
+ 252               		.loc 1 92 7 is_stmt 0 view .LVU85
+ 253 0098 8091 0000 		lds r24,Footswitch_PressFlag
   92:main.cpp      **** 		{
- 258               		.loc 1 92 3 view .LVU89
- 259 009e 8823      		tst r24
- 260 00a0 01F0      		breq .L13
+ 254               		.loc 1 92 3 view .LVU86
+ 255 009c 8823      		tst r24
+ 256 009e 01F0      		breq .L13
   94:main.cpp      **** 			Footswitch_PressDetected();
- 261               		.loc 1 94 4 is_stmt 1 view .LVU90
+ 257               		.loc 1 94 4 is_stmt 1 view .LVU87
   94:main.cpp      **** 			Footswitch_PressDetected();
- 262               		.loc 1 94 25 is_stmt 0 view .LVU91
- 263 00a2 1092 0000 		sts Footswitch_PressFlag,__zero_reg__
+ 258               		.loc 1 94 25 is_stmt 0 view .LVU88
+ 259 00a0 1092 0000 		sts Footswitch_PressFlag,__zero_reg__
   95:main.cpp      **** 		}
- 264               		.loc 1 95 4 is_stmt 1 view .LVU92
+ 260               		.loc 1 95 4 is_stmt 1 view .LVU89
   95:main.cpp      **** 		}
- 265               		.loc 1 95 28 is_stmt 0 view .LVU93
- 266 00a6 0E94 0000 		call _Z24Footswitch_PressDetectedv
- 267               	.LVL28:
- 268               	.L13:
+ 261               		.loc 1 95 28 is_stmt 0 view .LVU90
+ 262 00a4 0E94 0000 		call _Z24Footswitch_PressDetectedv
+ 263               	.LVL28:
+ 264               	.L13:
   99:main.cpp      **** 		{
- 269               		.loc 1 99 3 is_stmt 1 view .LVU94
+ 265               		.loc 1 99 3 is_stmt 1 view .LVU91
   99:main.cpp      **** 		{
- 270               		.loc 1 99 7 is_stmt 0 view .LVU95
- 271 00aa 8091 0000 		lds r24,Footswitch_TimerFlag
+ 266               		.loc 1 99 7 is_stmt 0 view .LVU92
+ 267 00a8 8091 0000 		lds r24,Footswitch_TimerFlag
   99:main.cpp      **** 		{
- 272               		.loc 1 99 3 view .LVU96
- 273 00ae 8823      		tst r24
- 274 00b0 01F0      		breq .L14
+ 268               		.loc 1 99 3 view .LVU93
+ 269 00ac 8823      		tst r24
+ 270 00ae 01F0      		breq .L14
  101:main.cpp      **** 			Footswitch_HandleTimer();
- 275               		.loc 1 101 4 is_stmt 1 view .LVU97
+ 271               		.loc 1 101 4 is_stmt 1 view .LVU94
  101:main.cpp      **** 			Footswitch_HandleTimer();
- 276               		.loc 1 101 25 is_stmt 0 view .LVU98
- 277 00b2 1092 0000 		sts Footswitch_TimerFlag,__zero_reg__
+ 272               		.loc 1 101 25 is_stmt 0 view .LVU95
+ 273 00b0 1092 0000 		sts Footswitch_TimerFlag,__zero_reg__
  102:main.cpp      **** 		}
- 278               		.loc 1 102 4 is_stmt 1 view .LVU99
+ 274               		.loc 1 102 4 is_stmt 1 view .LVU96
  102:main.cpp      **** 		}
- 279               		.loc 1 102 26 is_stmt 0 view .LVU100
- 280 00b6 0E94 0000 		call _Z22Footswitch_HandleTimerv
- 281               	.LVL29:
- 282               	.L14:
+ 275               		.loc 1 102 26 is_stmt 0 view .LVU97
+ 276 00b4 0E94 0000 		call _Z22Footswitch_HandleTimerv
+ 277               	.LVL29:
+ 278               	.L14:
  106:main.cpp      **** 			Footswitch_PressState == LONG_PRESS ||
- 283               		.loc 1 106 3 is_stmt 1 view .LVU101
+ 279               		.loc 1 106 3 is_stmt 1 view .LVU98
  106:main.cpp      **** 			Footswitch_PressState == LONG_PRESS ||
- 284               		.loc 1 106 29 is_stmt 0 view .LVU102
- 285 00ba 8091 0000 		lds r24,Footswitch_PressState
+ 280               		.loc 1 106 29 is_stmt 0 view .LVU99
+ 281 00b8 8091 0000 		lds r24,Footswitch_PressState
  107:main.cpp      **** 			Footswitch_PressState == LONG_LONG_PRESS)
- 286               		.loc 1 107 40 view .LVU103
- 287 00be 8330      		cpi r24,lo8(3)
- 288 00c0 01F0      		breq .L15
+ 282               		.loc 1 107 40 view .LVU100
+ 283 00bc 8330      		cpi r24,lo8(3)
+ 284 00be 01F0      		breq .L15
  107:main.cpp      **** 			Footswitch_PressState == LONG_LONG_PRESS)
- 289               		.loc 1 107 26 discriminator 2 view .LVU104
- 290 00c2 8091 0000 		lds r24,Footswitch_PressState
+ 285               		.loc 1 107 26 discriminator 2 view .LVU101
+ 286 00c0 8091 0000 		lds r24,Footswitch_PressState
  106:main.cpp      **** 			Footswitch_PressState == LONG_PRESS ||
- 291               		.loc 1 106 44 discriminator 2 view .LVU105
- 292 00c6 8630      		cpi r24,lo8(6)
- 293 00c8 01F0      		breq .L15
+ 287               		.loc 1 106 44 discriminator 2 view .LVU102
+ 288 00c4 8630      		cpi r24,lo8(6)
+ 289 00c6 01F0      		breq .L15
  108:main.cpp      **** 		{			
- 294               		.loc 1 108 26 discriminator 3 view .LVU106
- 295 00ca 8091 0000 		lds r24,Footswitch_PressState
+ 290               		.loc 1 108 26 discriminator 3 view .LVU103
+ 291 00c8 8091 0000 		lds r24,Footswitch_PressState
  107:main.cpp      **** 			Footswitch_PressState == LONG_LONG_PRESS)
- 296               		.loc 1 107 40 discriminator 3 view .LVU107
- 297 00ce 8730      		cpi r24,lo8(7)
- 298 00d0 01F0      		breq .+2
- 299 00d2 00C0      		rjmp .L3
- 300               	.L15:
+ 292               		.loc 1 107 40 discriminator 3 view .LVU104
+ 293 00cc 8730      		cpi r24,lo8(7)
+ 294 00ce 01F0      		breq .+2
+ 295 00d0 00C0      		rjmp .L3
+ 296               	.L15:
  110:main.cpp      **** 			
- 301               		.loc 1 110 4 is_stmt 1 view .LVU108
+ 297               		.loc 1 110 4 is_stmt 1 view .LVU105
  110:main.cpp      **** 			
- 302               		.loc 1 110 26 is_stmt 0 view .LVU109
- 303 00d4 0E94 0000 		call _Z22Footswitch_HandlePressv
- 304               	.LVL30:
+ 298               		.loc 1 110 26 is_stmt 0 view .LVU106
+ 299 00d2 0E94 0000 		call _Z22Footswitch_HandlePressv
+ 300               	.LVL30:
  113:main.cpp      **** 			Footswitch_EnableInterrupt();
- 305               		.loc 1 113 4 is_stmt 1 view .LVU110
+ 301               		.loc 1 113 4 is_stmt 1 view .LVU107
  113:main.cpp      **** 			Footswitch_EnableInterrupt();
- 306               		.loc 1 113 26 is_stmt 0 view .LVU111
- 307 00d8 1092 0000 		sts Footswitch_PressState,__zero_reg__
+ 302               		.loc 1 113 26 is_stmt 0 view .LVU108
+ 303 00d6 1092 0000 		sts Footswitch_PressState,__zero_reg__
  114:main.cpp      **** 		}
- 308               		.loc 1 114 4 is_stmt 1 view .LVU112
+ 304               		.loc 1 114 4 is_stmt 1 view .LVU109
  114:main.cpp      **** 		}
- 309               		.loc 1 114 30 is_stmt 0 view .LVU113
- 310 00dc 0E94 0000 		call _Z26Footswitch_EnableInterruptv
- 311               	.LVL31:
- 312 00e0 00C0      		rjmp .L3
- 313               		.cfi_endproc
- 314               	.LFE0:
- 316               		.text
- 317               	.Letext0:
- 318               		.file 2 "/usr/avr/include/stdint.h"
- 319               		.file 3 "MasterCom.h"
- 320               		.file 4 "Footswitch.h"
- 321               		.file 5 "System.h"
- 322               		.file 6 "MCP23017.h"
- 323               		.file 7 "Timer.h"
- 324               		.file 8 "i2cmaster.h"
- 325               		.file 9 "UART.h"
- 326               		.file 10 "Segment7.h"
+ 305               		.loc 1 114 30 is_stmt 0 view .LVU110
+ 306 00da 0E94 0000 		call _Z26Footswitch_EnableInterruptv
+ 307               	.LVL31:
+ 308 00de 00C0      		rjmp .L3
+ 309               		.cfi_endproc
+ 310               	.LFE0:
+ 312               		.text
+ 313               	.Letext0:
+ 314               		.file 2 "MasterCom.h"
+ 315               		.file 3 "Footswitch.h"
+ 316               		.file 4 "MCP23017.h"
+ 317               		.file 5 "Timer.h"
+ 318               		.file 6 "i2cmaster.h"
+ 319               		.file 7 "UART.h"
+ 320               		.file 8 "Segment7.h"
+ 321               		.file 9 "/usr/avr/include/stdint.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 main.cpp
-     /tmp/ccAUdGzC.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccAUdGzC.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccAUdGzC.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccAUdGzC.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccAUdGzC.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccAUdGzC.s:12     .text:0000000000000000 _Z16Init_ioExpandersv
-     /tmp/ccAUdGzC.s:103    .text.startup:0000000000000000 main
+     /tmp/ccOECPal.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccOECPal.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccOECPal.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccOECPal.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccOECPal.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccOECPal.s:12     .text:0000000000000000 _Z16Init_ioExpandersv
+     /tmp/ccOECPal.s:103    .text.startup:0000000000000000 main
 
 UNDEFINED SYMBOLS
 _Z17MCP23017_WriteReghhh
@@ -577,14 +569,14 @@ _Z9UART_Initjhh
 _Z14MasterCom_Initv
 _Z15Footswitch_Initv
 _Z17Segment7_WriteAllcccchhhh
-_Z14UART_Availablev
+_Z16UART_RxAvailablev
 _Z17MasterCom_Receivev
 _Z21MasterCom_RxAvailablev
 _Z24MasterCom_HandleReceivedv
 _Z21MasterCom_TxAvailablev
 _Z20MasterCom_PutCommandv
 MasterCom_DelayTxFlag
-_Z17UART_QueueIsEmptyv
+_Z16UART_TxAvailablev
 _Z18MasterCom_Transmitv
 MasterCom_ResponseTimeoutFlag
 _Z27MasterCom_PrepareRetransmitv

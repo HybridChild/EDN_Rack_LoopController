@@ -33,19 +33,20 @@ unsigned int	UART0_GetChar(void);
 void			UART0_PutChar(unsigned char data);
 void			UART0_PutString(const char *s );
 void			UART0_PutString_p(const char *progmem_s );
-int				UART0_Available(void);
+bool			UART0_RxAvailable(void);
+bool			UART0_TxAvailable(void);
 void			UART0_Flush(void);
 int				UART0_QueueChar(unsigned char data);
 void			UART0_QueueArray(const char *array, unsigned char length);
 void			UART0_PutQueue(void);
-bool			UART0_QueueIsEmpty(void);
 
 void			UART1_Init(unsigned int baudrate, unsigned char stopbit, unsigned char parity);
 unsigned int	UART1_GetChar(void);
 void			UART1_PutChar(unsigned char data);
 void			UART1_PutString(const char *s );
 void			UART1_PutString_p(const char *progmem_s );
-int				UART1_Available(void);
+bool			UART1_RxAvailable(void);
+bool			UART1_TxAvailable(void);
 void			UART1_Flush(void);
 
 

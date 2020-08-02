@@ -36,121 +36,643 @@
   25               	.LVL1:
   13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
   26               		.loc 1 13 2 is_stmt 1 view .LVU3
-  27               		.loc 1 13 9 is_stmt 0 view .LVU4
-  28 0002 90E0      		ldi r25,0
-  29               	.LVL2:
+  27               		.loc 1 13 17 is_stmt 0 view .LVU4
+  28 0002 982F      		mov r25,r24
+  29 0004 9695      		lsr r25
+  30 0006 9695      		lsr r25
+  31 0008 9373      		andi r25,lo8(51)
+  32               		.loc 1 13 35 view .LVU5
+  33 000a 44E0      		ldi r20,lo8(4)
+  34 000c 849F      		mul r24,r20
+  35 000e 9001      		movw r18,r0
+  36 0010 1124      		clr __zero_reg__
+  37 0012 2C7C      		andi r18,lo8(-52)
+  38               		.loc 1 13 22 view .LVU6
+  39 0014 922B      		or r25,r18
+  40               	.LVL2:
   14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-  30               		.loc 1 14 2 is_stmt 1 view .LVU5
-  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-  31               		.loc 1 13 17 is_stmt 0 view .LVU6
-  32 0004 9C01      		movw r18,r24
-  33 0006 3595      		asr r19
-  34 0008 2795      		ror r18
-  35 000a 3595      		asr r19
-  36 000c 2795      		ror r18
-  37 000e 2373      		andi r18,lo8(51)
-  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-  38               		.loc 1 13 35 view .LVU7
-  39 0010 880F      		lsl r24
-  40 0012 991F      		rol r25
-  41 0014 880F      		lsl r24
-  42 0016 991F      		rol r25
-  43               	.LVL3:
-  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-  44               		.loc 1 13 35 view .LVU8
-  45 0018 8C7C      		andi r24,lo8(-52)
-  13:util.cpp      **** 	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-  46               		.loc 1 13 22 view .LVU9
-  47 001a 282B      		or r18,r24
-  48               		.loc 1 14 9 view .LVU10
-  49 001c 30E0      		ldi r19,0
-  50               	.LVL4:
+  41               		.loc 1 14 2 is_stmt 1 view .LVU7
+  42               		.loc 1 14 17 is_stmt 0 view .LVU8
+  43 0016 892F      		mov r24,r25
+  44 0018 8695      		lsr r24
+  45 001a 8575      		andi r24,lo8(85)
+  46               		.loc 1 14 35 view .LVU9
+  47 001c 990F      		lsl r25
+  48               	.LVL3:
+  49               		.loc 1 14 35 view .LVU10
+  50 001e 9A7A      		andi r25,lo8(-86)
+  51               	.LVL4:
   15:util.cpp      **** 	return b;
-  51               		.loc 1 15 2 is_stmt 1 view .LVU11
-  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-  52               		.loc 1 14 17 is_stmt 0 view .LVU12
-  53 001e C901      		movw r24,r18
-  54 0020 9595      		asr r25
-  55 0022 8795      		ror r24
-  56 0024 8575      		andi r24,lo8(85)
-  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-  57               		.loc 1 14 35 view .LVU13
-  58 0026 220F      		lsl r18
-  59 0028 331F      		rol r19
-  60               	.LVL5:
-  14:util.cpp      **** 	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-  61               		.loc 1 14 35 view .LVU14
-  62 002a 2A7A      		andi r18,lo8(-86)
+  52               		.loc 1 15 2 is_stmt 1 view .LVU11
   16:util.cpp      **** }
-  63               		.loc 1 16 1 view .LVU15
-  64 002c 822B      		or r24,r18
-  65               	/* epilogue start */
-  66 002e 0895      		ret
-  67               		.cfi_endproc
-  68               	.LFE0:
-  70               	.global	_Z12Util_Bit2Inth
-  72               	_Z12Util_Bit2Inth:
-  73               	.LVL6:
-  74               	.LFB1:
+  53               		.loc 1 16 1 is_stmt 0 view .LVU12
+  54 0020 892B      		or r24,r25
+  55               	.LVL5:
+  56               	/* epilogue start */
+  57               		.loc 1 16 1 view .LVU13
+  58 0022 0895      		ret
+  59               		.cfi_endproc
+  60               	.LFE0:
+  62               	.global	_Z12Util_Bit2Inth
+  64               	_Z12Util_Bit2Inth:
+  65               	.LVL6:
+  66               	.LFB1:
   17:util.cpp      **** 
   18:util.cpp      **** uint8_t Util_Bit2Int(uint8_t val)
   19:util.cpp      **** {
-  75               		.loc 1 19 1 is_stmt 1 view -0
-  76               		.cfi_startproc
-  77               	/* prologue: function */
-  78               	/* frame size = 0 */
-  79               	/* stack size = 0 */
-  80               	.L__stack_usage = 0
-  81               		.loc 1 19 1 is_stmt 0 view .LVU17
-  82 0030 982F      		mov r25,r24
+  67               		.loc 1 19 1 is_stmt 1 view -0
+  68               		.cfi_startproc
+  69               	/* prologue: function */
+  70               	/* frame size = 0 */
+  71               	/* stack size = 0 */
+  72               	.L__stack_usage = 0
+  73               		.loc 1 19 1 is_stmt 0 view .LVU15
+  74 0024 982F      		mov r25,r24
   20:util.cpp      **** 	uint8_t i = 0;
-  83               		.loc 1 20 2 is_stmt 1 view .LVU18
-  84               	.LVL7:
-  85               		.loc 1 20 10 is_stmt 0 view .LVU19
-  86 0032 80E0      		ldi r24,0
-  87               	.LVL8:
-  88               	.L4:
+  75               		.loc 1 20 2 is_stmt 1 view .LVU16
+  76               	.LVL7:
+  77               		.loc 1 20 10 is_stmt 0 view .LVU17
+  78 0026 80E0      		ldi r24,0
+  79               	.LVL8:
+  80               	.L4:
   21:util.cpp      **** 	
   22:util.cpp      **** 	while (val)
-  89               		.loc 1 22 2 is_stmt 1 view .LVU20
-  90               		.loc 1 22 9 view .LVU21
-  91 0034 9923      		tst r25
-  92 0036 01F0      		breq .L2
+  81               		.loc 1 22 2 is_stmt 1 view .LVU18
+  82               		.loc 1 22 9 view .LVU19
+  83 0028 9923      		tst r25
+  84 002a 01F0      		breq .L2
   23:util.cpp      **** 	{
   24:util.cpp      **** 		val = (val >> 1);
-  93               		.loc 1 24 3 view .LVU22
-  94               		.loc 1 24 7 is_stmt 0 view .LVU23
-  95 0038 9695      		lsr r25
-  96               	.LVL9:
+  85               		.loc 1 24 3 view .LVU20
+  86               		.loc 1 24 7 is_stmt 0 view .LVU21
+  87 002c 9695      		lsr r25
+  88               	.LVL9:
   25:util.cpp      **** 		i++;
-  97               		.loc 1 25 3 is_stmt 1 view .LVU24
-  98               		.loc 1 25 4 is_stmt 0 view .LVU25
-  99 003a 8F5F      		subi r24,lo8(-(1))
- 100               	.LVL10:
+  89               		.loc 1 25 3 is_stmt 1 view .LVU22
+  90               		.loc 1 25 4 is_stmt 0 view .LVU23
+  91 002e 8F5F      		subi r24,lo8(-(1))
+  92               	.LVL10:
   22:util.cpp      **** 	{
- 101               		.loc 1 22 2 view .LVU26
- 102 003c 00C0      		rjmp .L4
- 103               	.LVL11:
- 104               	.L2:
- 105               	/* epilogue start */
+  93               		.loc 1 22 2 view .LVU24
+  94 0030 00C0      		rjmp .L4
+  95               	.L2:
+  96               	/* epilogue start */
   26:util.cpp      **** 	}
   27:util.cpp      **** 	
   28:util.cpp      **** 	return i;
-  29:util.cpp      **** }...
- 106               		.loc 1 29 1 view .LVU27
- 107 003e 0895      		ret
- 108               		.cfi_endproc
- 109               	.LFE1:
- 111               	.Letext0:
- 112               		.file 2 "/usr/lib/gcc/avr/9.2.0/include/stdint-gcc.h"
+  29:util.cpp      **** }
+  97               		.loc 1 29 1 view .LVU25
+  98 0032 0895      		ret
+  99               		.cfi_endproc
+ 100               	.LFE1:
+ 102               	.global	_Z30FindClosestArrayIndexDecendingPKmhm
+ 104               	_Z30FindClosestArrayIndexDecendingPKmhm:
+ 105               	.LVL11:
+ 106               	.LFB2:
+  30:util.cpp      **** 
+  31:util.cpp      **** /* Returns array index whose value is closest to target
+  32:util.cpp      **** ** (Array must be sorted in decending order) */
+  33:util.cpp      **** uint8_t FindClosestArrayIndexDecending(const uint32_t *arr, uint8_t n, uint32_t target)
+  34:util.cpp      **** {
+ 107               		.loc 1 34 1 is_stmt 1 view -0
+ 108               		.cfi_startproc
+ 109               		.loc 1 34 1 is_stmt 0 view .LVU27
+ 110 0034 8F92      		push r8
+ 111               	.LCFI0:
+ 112               		.cfi_def_cfa_offset 3
+ 113               		.cfi_offset 8, -2
+ 114 0036 9F92      		push r9
+ 115               	.LCFI1:
+ 116               		.cfi_def_cfa_offset 4
+ 117               		.cfi_offset 9, -3
+ 118 0038 AF92      		push r10
+ 119               	.LCFI2:
+ 120               		.cfi_def_cfa_offset 5
+ 121               		.cfi_offset 10, -4
+ 122 003a BF92      		push r11
+ 123               	.LCFI3:
+ 124               		.cfi_def_cfa_offset 6
+ 125               		.cfi_offset 11, -5
+ 126 003c CF92      		push r12
+ 127               	.LCFI4:
+ 128               		.cfi_def_cfa_offset 7
+ 129               		.cfi_offset 12, -6
+ 130 003e DF92      		push r13
+ 131               	.LCFI5:
+ 132               		.cfi_def_cfa_offset 8
+ 133               		.cfi_offset 13, -7
+ 134 0040 EF92      		push r14
+ 135               	.LCFI6:
+ 136               		.cfi_def_cfa_offset 9
+ 137               		.cfi_offset 14, -8
+ 138 0042 FF92      		push r15
+ 139               	.LCFI7:
+ 140               		.cfi_def_cfa_offset 10
+ 141               		.cfi_offset 15, -9
+ 142 0044 0F93      		push r16
+ 143               	.LCFI8:
+ 144               		.cfi_def_cfa_offset 11
+ 145               		.cfi_offset 16, -10
+ 146 0046 1F93      		push r17
+ 147               	.LCFI9:
+ 148               		.cfi_def_cfa_offset 12
+ 149               		.cfi_offset 17, -11
+ 150 0048 CF93      		push r28
+ 151               	.LCFI10:
+ 152               		.cfi_def_cfa_offset 13
+ 153               		.cfi_offset 28, -12
+ 154 004a DF93      		push r29
+ 155               	.LCFI11:
+ 156               		.cfi_def_cfa_offset 14
+ 157               		.cfi_offset 29, -13
+ 158               	/* prologue: function */
+ 159               	/* frame size = 0 */
+ 160               	/* stack size = 12 */
+ 161               	.L__stack_usage = 12
+ 162 004c DC01      		movw r26,r24
+ 163 004e 862F      		mov r24,r22
+ 164               	.LVL12:
+ 165               		.loc 1 34 1 view .LVU28
+ 166 0050 022F      		mov r16,r18
+ 167 0052 132F      		mov r17,r19
+ 168 0054 9A01      		movw r18,r20
+ 169               	.LVL13:
+  35:util.cpp      ****     // Corner cases
+  36:util.cpp      ****     if (target >= arr[0])
+ 170               		.loc 1 36 5 is_stmt 1 view .LVU29
+ 171 0056 4D91      		ld r20,X+
+ 172 0058 5D91      		ld r21,X+
+ 173 005a 6D91      		ld r22,X+
+ 174 005c 7C91      		ld r23,X
+ 175 005e 1397      		sbiw r26,3
+ 176 0060 0417      		cp r16,r20
+ 177 0062 1507      		cpc r17,r21
+ 178 0064 2607      		cpc r18,r22
+ 179 0066 3707      		cpc r19,r23
+ 180 0068 00F0      		brlo .+2
+ 181 006a 00C0      		rjmp .L11
+  37:util.cpp      ****         return 0;
+  38:util.cpp      ****     if (target <= arr[n - 1])
+ 182               		.loc 1 38 5 view .LVU30
+ 183               		.loc 1 38 28 is_stmt 0 view .LVU31
+ 184 006c C82F      		mov r28,r24
+ 185 006e D0E0      		ldi r29,0
+ 186 0070 FE01      		movw r30,r28
+ 187 0072 E150      		subi r30,1
+ 188 0074 F04C      		sbci r31,-64
+ 189 0076 EE0F      		lsl r30
+ 190 0078 FF1F      		rol r31
+ 191 007a EE0F      		lsl r30
+ 192 007c FF1F      		rol r31
+ 193 007e EA0F      		add r30,r26
+ 194 0080 FB1F      		adc r31,r27
+ 195               		.loc 1 38 5 view .LVU32
+ 196 0082 4081      		ld r20,Z
+ 197 0084 5181      		ldd r21,Z+1
+ 198 0086 6281      		ldd r22,Z+2
+ 199 0088 7381      		ldd r23,Z+3
+ 200 008a 4017      		cp r20,r16
+ 201 008c 5107      		cpc r21,r17
+ 202 008e 6207      		cpc r22,r18
+ 203 0090 7307      		cpc r23,r19
+ 204 0092 00F4      		brsh .+2
+ 205 0094 00C0      		rjmp .L12
+ 206               	.LVL14:
+ 207               	.L15:
+  39:util.cpp      ****         return (n - 1);
+  40:util.cpp      ****  
+  41:util.cpp      ****     uint8_t i = 0;
+  42:util.cpp      ****     uint8_t j = n;
+  43:util.cpp      ****     uint8_t mid = 0;
+  44:util.cpp      **** 
+  45:util.cpp      ****     // Do binary search
+  46:util.cpp      ****     while (i < j)
+  47:util.cpp      ****     {
+  48:util.cpp      ****         mid = ((i + j) >> 1);   // (i + j) / 2
+  49:util.cpp      ****  
+  50:util.cpp      ****         if (arr[mid] == target)
+  51:util.cpp      ****             return mid;
+  52:util.cpp      ****  
+  53:util.cpp      ****         /* If target is greater than array element, then search in left */
+  54:util.cpp      ****         if (target > arr[mid])
+  55:util.cpp      ****         {
+  56:util.cpp      ****             // If target is less than previous to mid, return closest of two
+  57:util.cpp      ****             if (mid > 0 && target < arr[mid - 1])
+  58:util.cpp      ****             {
+  59:util.cpp      ****                 if (target - arr[mid] >= arr[mid - 1] - target)
+  60:util.cpp      ****                     return (mid - 1);
+ 208               		.loc 1 60 21 is_stmt 1 view .LVU33
+ 209               		.loc 1 60 36 is_stmt 0 view .LVU34
+ 210 0096 8150      		subi r24,lo8(-(-1))
+ 211 0098 00C0      		rjmp .L5
+ 212               	.LVL15:
+ 213               	.L14:
+ 214               		.loc 1 60 36 view .LVU35
+ 215 009a 642F      		mov r22,r20
+ 216               	.LVL16:
+ 217               	.L7:
+  46:util.cpp      ****     {
+ 218               		.loc 1 46 5 is_stmt 1 view .LVU36
+  46:util.cpp      ****     {
+ 219               		.loc 1 46 14 view .LVU37
+ 220 009c 9617      		cp r25,r22
+ 221 009e 00F4      		brsh .L5
+  48:util.cpp      ****  
+ 222               		.loc 1 48 9 view .LVU38
+  48:util.cpp      ****  
+ 223               		.loc 1 48 19 is_stmt 0 view .LVU39
+ 224 00a0 E92F      		mov r30,r25
+ 225 00a2 E60F      		add r30,r22
+ 226 00a4 FF27      		clr r31
+ 227 00a6 FF1F      		rol r31
+ 228 00a8 AF01      		movw r20,r30
+  48:util.cpp      ****  
+ 229               		.loc 1 48 24 view .LVU40
+ 230 00aa 5595      		asr r21
+ 231 00ac 4795      		ror r20
+ 232               	.LVL17:
+  48:util.cpp      ****  
+ 233               		.loc 1 48 13 view .LVU41
+ 234 00ae 842F      		mov r24,r20
+ 235               	.LVL18:
+  50:util.cpp      ****             return mid;
+ 236               		.loc 1 50 9 is_stmt 1 view .LVU42
+  50:util.cpp      ****             return mid;
+ 237               		.loc 1 50 20 is_stmt 0 view .LVU43
+ 238 00b0 FA01      		movw r30,r20
+ 239 00b2 EE0F      		lsl r30
+ 240 00b4 FF1F      		rol r31
+ 241 00b6 EE0F      		lsl r30
+ 242 00b8 FF1F      		rol r31
+ 243 00ba EA0F      		add r30,r26
+ 244 00bc FB1F      		adc r31,r27
+ 245 00be C080      		ld r12,Z
+ 246 00c0 D180      		ldd r13,Z+1
+ 247 00c2 E280      		ldd r14,Z+2
+ 248 00c4 F380      		ldd r15,Z+3
+  50:util.cpp      ****             return mid;
+ 249               		.loc 1 50 9 view .LVU44
+ 250 00c6 C016      		cp r12,r16
+ 251 00c8 D106      		cpc r13,r17
+ 252 00ca E206      		cpc r14,r18
+ 253 00cc F306      		cpc r15,r19
+ 254 00ce 01F0      		breq .L5
+  54:util.cpp      ****         {
+ 255               		.loc 1 54 9 is_stmt 1 view .LVU45
+ 256 00d0 C016      		cp r12,r16
+ 257 00d2 D106      		cpc r13,r17
+ 258 00d4 E206      		cpc r14,r18
+ 259 00d6 F306      		cpc r15,r19
+ 260 00d8 00F4      		brsh .L8
+  57:util.cpp      ****             {
+ 261               		.loc 1 57 13 view .LVU46
+ 262 00da 4423      		tst r20
+ 263 00dc 01F0      		breq .L5
+  57:util.cpp      ****             {
+ 264               		.loc 1 57 48 is_stmt 0 discriminator 1 view .LVU47
+ 265 00de 3497      		sbiw r30,4
+ 266 00e0 8080      		ld r8,Z
+ 267 00e2 9180      		ldd r9,Z+1
+ 268 00e4 A280      		ldd r10,Z+2
+ 269 00e6 B380      		ldd r11,Z+3
+  57:util.cpp      ****             {
+ 270               		.loc 1 57 25 discriminator 1 view .LVU48
+ 271 00e8 0815      		cp r16,r8
+ 272 00ea 1905      		cpc r17,r9
+ 273 00ec 2A05      		cpc r18,r10
+ 274 00ee 3B05      		cpc r19,r11
+ 275 00f0 00F4      		brsh .L14
+  59:util.cpp      ****                     return (mid - 1);
+ 276               		.loc 1 59 17 is_stmt 1 view .LVU49
+  59:util.cpp      ****                     return (mid - 1);
+ 277               		.loc 1 59 28 is_stmt 0 view .LVU50
+ 278 00f2 B901      		movw r22,r18
+ 279               	.LVL19:
+  59:util.cpp      ****                     return (mid - 1);
+ 280               		.loc 1 59 28 view .LVU51
+ 281 00f4 A801      		movw r20,r16
+ 282               	.LVL20:
+  59:util.cpp      ****                     return (mid - 1);
+ 283               		.loc 1 59 28 view .LVU52
+ 284 00f6 4C19      		sub r20,r12
+ 285 00f8 5D09      		sbc r21,r13
+ 286 00fa 6E09      		sbc r22,r14
+ 287 00fc 7F09      		sbc r23,r15
+  59:util.cpp      ****                     return (mid - 1);
+ 288               		.loc 1 59 55 view .LVU53
+ 289 00fe 801A      		sub r8,r16
+ 290 0100 910A      		sbc r9,r17
+ 291 0102 A20A      		sbc r10,r18
+ 292 0104 B30A      		sbc r11,r19
+  59:util.cpp      ****                     return (mid - 1);
+ 293               		.loc 1 59 17 view .LVU54
+ 294 0106 4815      		cp r20,r8
+ 295 0108 5905      		cpc r21,r9
+ 296 010a 6A05      		cpc r22,r10
+ 297 010c 7B05      		cpc r23,r11
+ 298 010e 00F4      		brsh .L15
+ 299               	.LVL21:
+ 300               	.L5:
+ 301               	/* epilogue start */
+  61:util.cpp      ****                 else
+  62:util.cpp      ****                     return mid;
+  63:util.cpp      ****             }
+  64:util.cpp      ****  
+  65:util.cpp      ****             /* Repeat for left half */
+  66:util.cpp      ****             j = mid;
+  67:util.cpp      ****         }
+  68:util.cpp      ****         // If target is less than mid
+  69:util.cpp      ****         else
+  70:util.cpp      ****         {
+  71:util.cpp      ****             // If target is greater than next from mid, return closest of two
+  72:util.cpp      ****             if (mid < (n - 1) && target > arr[mid + 1])
+  73:util.cpp      ****             {
+  74:util.cpp      ****                 if (target - arr[mid + 1] >= arr[mid] - target)
+  75:util.cpp      ****                     return mid;
+  76:util.cpp      ****                 else
+  77:util.cpp      ****                     return (mid + 1);
+  78:util.cpp      ****             }
+  79:util.cpp      **** 
+  80:util.cpp      ****             // update i
+  81:util.cpp      ****             i = mid + 1; 
+  82:util.cpp      ****         }
+  83:util.cpp      ****     }
+  84:util.cpp      ****  
+  85:util.cpp      ****     // Only single element left after search
+  86:util.cpp      ****     return mid;
+  87:util.cpp      **** }
+ 302               		.loc 1 87 1 view .LVU55
+ 303 0110 DF91      		pop r29
+ 304 0112 CF91      		pop r28
+ 305 0114 1F91      		pop r17
+ 306 0116 0F91      		pop r16
+ 307 0118 FF90      		pop r15
+ 308 011a EF90      		pop r14
+ 309 011c DF90      		pop r13
+ 310 011e CF90      		pop r12
+ 311 0120 BF90      		pop r11
+ 312 0122 AF90      		pop r10
+ 313 0124 9F90      		pop r9
+ 314 0126 8F90      		pop r8
+ 315 0128 0895      		ret
+ 316               	.LVL22:
+ 317               	.L12:
+  42:util.cpp      ****     uint8_t mid = 0;
+ 318               		.loc 1 42 13 view .LVU56
+ 319 012a 682F      		mov r22,r24
+ 320               	.LVL23:
+  43:util.cpp      **** 
+ 321               		.loc 1 43 13 view .LVU57
+ 322 012c 80E0      		ldi r24,0
+ 323               	.LVL24:
+  41:util.cpp      ****     uint8_t j = n;
+ 324               		.loc 1 41 13 view .LVU58
+ 325 012e 90E0      		ldi r25,0
+  72:util.cpp      ****             {
+ 326               		.loc 1 72 26 view .LVU59
+ 327 0130 2197      		sbiw r28,1
+ 328               	.LVL25:
+  72:util.cpp      ****             {
+ 329               		.loc 1 72 26 view .LVU60
+ 330 0132 00C0      		rjmp .L7
+ 331               	.LVL26:
+ 332               	.L8:
+  72:util.cpp      ****             {
+ 333               		.loc 1 72 13 is_stmt 1 view .LVU61
+ 334 0134 4C17      		cp r20,r28
+ 335 0136 5D07      		cpc r21,r29
+ 336 0138 04F4      		brge .L10
+  72:util.cpp      ****             {
+ 337               		.loc 1 72 54 is_stmt 0 discriminator 1 view .LVU62
+ 338 013a 8480      		ldd r8,Z+4
+ 339 013c 9580      		ldd r9,Z+5
+ 340 013e A680      		ldd r10,Z+6
+ 341 0140 B780      		ldd r11,Z+7
+  72:util.cpp      ****             {
+ 342               		.loc 1 72 31 discriminator 1 view .LVU63
+ 343 0142 8016      		cp r8,r16
+ 344 0144 9106      		cpc r9,r17
+ 345 0146 A206      		cpc r10,r18
+ 346 0148 B306      		cpc r11,r19
+ 347 014a 00F4      		brsh .L10
+  74:util.cpp      ****                     return mid;
+ 348               		.loc 1 74 17 is_stmt 1 view .LVU64
+  74:util.cpp      ****                     return mid;
+ 349               		.loc 1 74 28 is_stmt 0 view .LVU65
+ 350 014c B901      		movw r22,r18
+ 351               	.LVL27:
+  74:util.cpp      ****                     return mid;
+ 352               		.loc 1 74 28 view .LVU66
+ 353 014e A801      		movw r20,r16
+ 354               	.LVL28:
+  74:util.cpp      ****                     return mid;
+ 355               		.loc 1 74 28 view .LVU67
+ 356 0150 4819      		sub r20,r8
+ 357 0152 5909      		sbc r21,r9
+ 358 0154 6A09      		sbc r22,r10
+ 359 0156 7B09      		sbc r23,r11
+  74:util.cpp      ****                     return mid;
+ 360               		.loc 1 74 55 view .LVU68
+ 361 0158 C01A      		sub r12,r16
+ 362 015a D10A      		sbc r13,r17
+ 363 015c E20A      		sbc r14,r18
+ 364 015e F30A      		sbc r15,r19
+  74:util.cpp      ****                     return mid;
+ 365               		.loc 1 74 17 view .LVU69
+ 366 0160 4C15      		cp r20,r12
+ 367 0162 5D05      		cpc r21,r13
+ 368 0164 6E05      		cpc r22,r14
+ 369 0166 7F05      		cpc r23,r15
+ 370 0168 00F4      		brsh .L5
+  77:util.cpp      ****             }
+ 371               		.loc 1 77 21 is_stmt 1 view .LVU70
+  77:util.cpp      ****             }
+ 372               		.loc 1 77 36 is_stmt 0 view .LVU71
+ 373 016a 8F5F      		subi r24,lo8(-(1))
+ 374 016c 00C0      		rjmp .L5
+ 375               	.LVL29:
+ 376               	.L10:
+  81:util.cpp      ****         }
+ 377               		.loc 1 81 13 is_stmt 1 view .LVU72
+  81:util.cpp      ****         }
+ 378               		.loc 1 81 15 is_stmt 0 view .LVU73
+ 379 016e 91E0      		ldi r25,lo8(1)
+ 380               	.LVL30:
+  81:util.cpp      ****         }
+ 381               		.loc 1 81 15 view .LVU74
+ 382 0170 940F      		add r25,r20
+ 383               	.LVL31:
+  81:util.cpp      ****         }
+ 384               		.loc 1 81 15 view .LVU75
+ 385 0172 00C0      		rjmp .L7
+ 386               	.LVL32:
+ 387               	.L11:
+  37:util.cpp      ****     if (target <= arr[n - 1])
+ 388               		.loc 1 37 16 view .LVU76
+ 389 0174 80E0      		ldi r24,0
+ 390 0176 00C0      		rjmp .L5
+ 391               		.cfi_endproc
+ 392               	.LFE2:
+ 394               	.global	_Z13GetMostCommonPhh
+ 396               	_Z13GetMostCommonPhh:
+ 397               	.LVL33:
+ 398               	.LFB3:
+  88:util.cpp      **** 
+  89:util.cpp      **** /* Returns the value that is most numerous in the array */
+  90:util.cpp      **** uint8_t GetMostCommon(uint8_t *arr, uint8_t size)
+  91:util.cpp      **** {
+ 399               		.loc 1 91 1 is_stmt 1 view -0
+ 400               		.cfi_startproc
+ 401               		.loc 1 91 1 is_stmt 0 view .LVU78
+ 402 0178 CF93      		push r28
+ 403               	.LCFI12:
+ 404               		.cfi_def_cfa_offset 3
+ 405               		.cfi_offset 28, -2
+ 406 017a DF93      		push r29
+ 407               	.LCFI13:
+ 408               		.cfi_def_cfa_offset 4
+ 409               		.cfi_offset 29, -3
+ 410               	/* prologue: function */
+ 411               	/* frame size = 0 */
+ 412               	/* stack size = 2 */
+ 413               	.L__stack_usage = 2
+ 414 017c AC01      		movw r20,r24
+  92:util.cpp      ****     uint8_t count = 0;
+ 415               		.loc 1 92 5 is_stmt 1 view .LVU79
+ 416               	.LVL34:
+  93:util.cpp      ****     uint8_t most = 0;
+ 417               		.loc 1 93 5 view .LVU80
+  94:util.cpp      ****     uint8_t temp = 0;
+ 418               		.loc 1 94 5 view .LVU81
+  95:util.cpp      ****     uint8_t elem = 0;
+ 419               		.loc 1 95 5 view .LVU82
+  96:util.cpp      **** 
+  97:util.cpp      ****     for (uint8_t i = 0; i < size; i++)
+ 420               		.loc 1 97 5 view .LVU83
+ 421               		.loc 1 97 5 is_stmt 0 view .LVU84
+ 422 017e DC01      		movw r26,r24
+ 423               	.LBB2:
+ 424               		.loc 1 97 18 view .LVU85
+ 425 0180 90E0      		ldi r25,0
+ 426               	.LBE2:
+  95:util.cpp      ****     uint8_t elem = 0;
+ 427               		.loc 1 95 13 view .LVU86
+ 428 0182 80E0      		ldi r24,0
+ 429               	.LVL35:
+  93:util.cpp      ****     uint8_t temp = 0;
+ 430               		.loc 1 93 13 view .LVU87
+ 431 0184 70E0      		ldi r23,0
+ 432               	.LVL36:
+ 433               	.L17:
+ 434               	.LBB6:
+ 435               		.loc 1 97 27 is_stmt 1 discriminator 1 view .LVU88
+ 436 0186 9617      		cp r25,r22
+ 437 0188 01F0      		breq .L16
+ 438               	.LBB3:
+  98:util.cpp      ****     {
+  99:util.cpp      ****         temp = arr[i];
+ 439               		.loc 1 99 9 view .LVU89
+ 440               		.loc 1 99 14 is_stmt 0 view .LVU90
+ 441 018a ED91      		ld r30,X+
+ 442               	.LVL37:
+ 100:util.cpp      ****         count = 1;
+ 443               		.loc 1 100 9 is_stmt 1 view .LVU91
+ 101:util.cpp      **** 
+ 102:util.cpp      ****         for (uint8_t j = i+1; j < size; j++)
+ 444               		.loc 1 102 9 view .LVU92
+ 445               	.LBB4:
+ 446               		.loc 1 102 22 is_stmt 0 view .LVU93
+ 447 018c 9F5F      		subi r25,lo8(-(1))
+ 448               	.LVL38:
+ 449               		.loc 1 102 22 view .LVU94
+ 450 018e EA01      		movw r28,r20
+ 451 0190 C90F      		add r28,r25
+ 452 0192 D11D      		adc r29,__zero_reg__
+ 453 0194 392F      		mov r19,r25
+ 454               	.LBE4:
+ 100:util.cpp      ****         count = 1;
+ 455               		.loc 1 100 15 view .LVU95
+ 456 0196 21E0      		ldi r18,lo8(1)
+ 457               	.LVL39:
+ 458               	.L21:
+ 459               	.LBB5:
+ 460               		.loc 1 102 33 is_stmt 1 discriminator 1 view .LVU96
+ 461 0198 3617      		cp r19,r22
+ 462 019a 01F0      		breq .L19
+ 103:util.cpp      ****         {
+ 104:util.cpp      ****             if (arr[j] == temp)
+ 463               		.loc 1 104 13 view .LVU97
+ 464               		.loc 1 104 22 is_stmt 0 view .LVU98
+ 465 019c F991      		ld r31,Y+
+ 466               		.loc 1 104 13 view .LVU99
+ 467 019e FE13      		cpse r31,r30
+ 468 01a0 00C0      		rjmp .L20
+ 105:util.cpp      ****                 count++;
+ 469               		.loc 1 105 17 is_stmt 1 view .LVU100
+ 470               		.loc 1 105 22 is_stmt 0 view .LVU101
+ 471 01a2 2F5F      		subi r18,lo8(-(1))
+ 472               	.LVL40:
+ 473               	.L20:
+ 102:util.cpp      ****         {
+ 474               		.loc 1 102 9 is_stmt 1 discriminator 2 view .LVU102
+ 475 01a4 3F5F      		subi r19,lo8(-(1))
+ 476               	.LVL41:
+ 102:util.cpp      ****         {
+ 477               		.loc 1 102 9 is_stmt 0 discriminator 2 view .LVU103
+ 478 01a6 00C0      		rjmp .L21
+ 479               	.L19:
+ 102:util.cpp      ****         {
+ 480               		.loc 1 102 9 discriminator 2 view .LVU104
+ 481               	.LBE5:
+ 106:util.cpp      ****         }
+ 107:util.cpp      **** 
+ 108:util.cpp      ****         if (most < count)
+ 482               		.loc 1 108 9 is_stmt 1 view .LVU105
+ 483 01a8 7217      		cp r23,r18
+ 484 01aa 00F4      		brsh .L17
+ 109:util.cpp      ****         {
+ 110:util.cpp      ****             most = count;
+ 111:util.cpp      ****             elem = arr[i];
+ 485               		.loc 1 111 18 is_stmt 0 view .LVU106
+ 486 01ac 8E2F      		mov r24,r30
+ 487               	.LVL42:
+ 108:util.cpp      ****         {
+ 488               		.loc 1 108 9 view .LVU107
+ 489 01ae 722F      		mov r23,r18
+ 490               	.LVL43:
+ 108:util.cpp      ****         {
+ 491               		.loc 1 108 9 view .LVU108
+ 492 01b0 00C0      		rjmp .L17
+ 493               	.LVL44:
+ 494               	.L16:
+ 495               	/* epilogue start */
+ 108:util.cpp      ****         {
+ 496               		.loc 1 108 9 view .LVU109
+ 497               	.LBE3:
+ 498               	.LBE6:
+ 112:util.cpp      ****         }
+ 113:util.cpp      ****     }
+ 114:util.cpp      **** 
+ 115:util.cpp      ****     return elem;
+ 116:util.cpp      **** }...
+ 499               		.loc 1 116 1 view .LVU110
+ 500 01b2 DF91      		pop r29
+ 501 01b4 CF91      		pop r28
+ 502 01b6 0895      		ret
+ 503               		.cfi_endproc
+ 504               	.LFE3:
+ 506               	.Letext0:
+ 507               		.file 2 "/usr/lib/gcc/avr/10.1.0/include/stdint-gcc.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 util.cpp
-     /tmp/ccUBYtHf.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccUBYtHf.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccUBYtHf.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccUBYtHf.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccUBYtHf.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccUBYtHf.s:12     .text:0000000000000000 _Z16Util_ReverseByteh
-     /tmp/ccUBYtHf.s:72     .text:0000000000000030 _Z12Util_Bit2Inth
+     /tmp/ccp64Cnj.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccp64Cnj.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccp64Cnj.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccp64Cnj.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccp64Cnj.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccp64Cnj.s:12     .text:0000000000000000 _Z16Util_ReverseByteh
+     /tmp/ccp64Cnj.s:64     .text:0000000000000024 _Z12Util_Bit2Inth
+     /tmp/ccp64Cnj.s:104    .text:0000000000000034 _Z30FindClosestArrayIndexDecendingPKmhm
+     /tmp/ccp64Cnj.s:396    .text:0000000000000178 _Z13GetMostCommonPhh
 
 NO UNDEFINED SYMBOLS

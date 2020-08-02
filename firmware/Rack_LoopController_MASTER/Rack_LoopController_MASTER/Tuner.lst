@@ -1,0 +1,1961 @@
+   1               		.file	"Tuner.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z10Tuner_Initv
+  12               	_Z10Tuner_Initv:
+  13               	.LFB4:
+  14               		.file 1 "Tuner.cpp"
+   1:Tuner.cpp     **** #include <avr/io.h>
+   2:Tuner.cpp     **** #include <stdint-gcc.h>
+   3:Tuner.cpp     **** #include <stdlib.h>
+   4:Tuner.cpp     **** #include "Tuner.h"
+   5:Tuner.cpp     **** #include "InputCapture.h"
+   6:Tuner.cpp     **** #include "util.h"
+   7:Tuner.cpp     **** 
+   8:Tuner.cpp     **** /* Defines */
+   9:Tuner.cpp     **** #define CLK_PERIOD (1/F_CPU)
+  10:Tuner.cpp     **** 
+  11:Tuner.cpp     **** #define MUTE_DDR				DDRD
+  12:Tuner.cpp     **** #define MUTE_PORT				PORTD
+  13:Tuner.cpp     **** #define MUTE_PORT_PIN           PORTD5
+  14:Tuner.cpp     **** 
+  15:Tuner.cpp     **** #define NOTES      12
+  16:Tuner.cpp     **** #define OCTAVES     8
+  17:Tuner.cpp     **** #define LIMIT_SHIFT_HARMONIC    7
+  18:Tuner.cpp     **** #define LIMIT_SHIFT_RIGHT_NOTE  7
+  19:Tuner.cpp     **** 
+  20:Tuner.cpp     **** #define HARMONICS   4
+  21:Tuner.cpp     **** #define WORK_ARRAY_SIZE  (HARMONICS + 1)
+  22:Tuner.cpp     **** 
+  23:Tuner.cpp     **** /* Size of the circular result buffer, must be power of 2 */
+  24:Tuner.cpp     **** #define RESULT_ARRAY_SIZE   8
+  25:Tuner.cpp     **** /* Mask for calculating result buffer head/tail */
+  26:Tuner.cpp     **** #define RESULT_ARRAY_MASK	( RESULT_ARRAY_SIZE - 1)
+  27:Tuner.cpp     **** 
+  28:Tuner.cpp     **** /* Number of steps for red LEDs in tuner display */
+  29:Tuner.cpp     **** #define NUMBER_OF_LED_STEPS 8
+  30:Tuner.cpp     **** 
+  31:Tuner.cpp     **** /* Global variables */
+  32:Tuner.cpp     **** volatile uint8_t Tuner_LED_Data[2] = {0};
+  33:Tuner.cpp     **** volatile uint8_t Tuner_7seg_Data[4] = {' ', ' ', ' ', ' '};
+  34:Tuner.cpp     **** volatile uint8_t Tuner_TransmitTimerOvfCnt = 0;
+  35:Tuner.cpp     **** volatile bool Tuner_TransmitTimerFlag = false;
+  36:Tuner.cpp     **** 
+  37:Tuner.cpp     **** /* Local variables */
+  38:Tuner.cpp     **** volatile uint32_t CountArray[WORK_ARRAY_SIZE] = {0};
+  39:Tuner.cpp     **** volatile uint32_t SumArray[WORK_ARRAY_SIZE] = {0};
+  40:Tuner.cpp     **** volatile uint32_t DiffArray[WORK_ARRAY_SIZE] = {0};
+  41:Tuner.cpp     **** volatile uint32_t CountResultArray[RESULT_ARRAY_SIZE] = {0};
+  42:Tuner.cpp     **** volatile uint8_t NoteResultArray[RESULT_ARRAY_SIZE] = {0};
+  43:Tuner.cpp     **** volatile uint8_t FundamentalNoteResultArray[RESULT_ARRAY_SIZE] = {0};
+  44:Tuner.cpp     **** 
+  45:Tuner.cpp     **** volatile uint8_t CntArrayHead = 0;
+  46:Tuner.cpp     **** volatile uint8_t ResultArrayHead = 0;
+  47:Tuner.cpp     **** volatile uint8_t ResultArrayTail = 0;
+  48:Tuner.cpp     **** 
+  49:Tuner.cpp     **** volatile uint8_t Harmonic_Result[HARMONICS] = {0};
+  50:Tuner.cpp     **** const uint8_t Harmonic_Mask[HARMONICS] = 
+  51:Tuner.cpp     **** {
+  52:Tuner.cpp     ****     0b00011111, // Mask for 1st harmonic (root frequency)
+  53:Tuner.cpp     ****     0b00010101, // Mask for 2nd harmonic
+  54:Tuner.cpp     ****     0b00001001, // Mask for 3rd harmonic
+  55:Tuner.cpp     ****     0b00010001, // Mask for 4th harmonic
+  56:Tuner.cpp     **** };
+  57:Tuner.cpp     **** 
+  58:Tuner.cpp     **** const char Tuner_NoteCharacter[NOTES][2] =
+  59:Tuner.cpp     **** {
+  60:Tuner.cpp     ****     {'C',' '},
+  61:Tuner.cpp     ****     {'D','b'},
+  62:Tuner.cpp     ****     {'D',' '},
+  63:Tuner.cpp     ****     {'E','b'},
+  64:Tuner.cpp     ****     {'E',' '},
+  65:Tuner.cpp     ****     {'F',' '},
+  66:Tuner.cpp     ****     {'G','b'},
+  67:Tuner.cpp     ****     {'G',' '},
+  68:Tuner.cpp     ****     {'A','b'},
+  69:Tuner.cpp     ****     {'A',' '},
+  70:Tuner.cpp     ****     {'B','b'},
+  71:Tuner.cpp     ****     {'B',' '}
+  72:Tuner.cpp     **** };
+  73:Tuner.cpp     **** 
+  74:Tuner.cpp     **** const uint8_t Tuner_RedLEDStates[NUMBER_OF_LED_STEPS * 2] =
+  75:Tuner.cpp     **** {
+  76:Tuner.cpp     ****     0b00010000,
+  77:Tuner.cpp     ****     0b00110000,
+  78:Tuner.cpp     ****     0b00100000,
+  79:Tuner.cpp     ****     0b01100000,
+  80:Tuner.cpp     ****     0b01000000,
+  81:Tuner.cpp     ****     0b11000000,
+  82:Tuner.cpp     ****     0b10000000,
+  83:Tuner.cpp     ****     0b00000000,
+  84:Tuner.cpp     ****     0b00001000,
+  85:Tuner.cpp     ****     0b00001100,
+  86:Tuner.cpp     ****     0b00000100,
+  87:Tuner.cpp     ****     0b00000110,
+  88:Tuner.cpp     ****     0b00000010,
+  89:Tuner.cpp     ****     0b00000011,
+  90:Tuner.cpp     ****     0b00000001,
+  91:Tuner.cpp     ****     0b00000000
+  92:Tuner.cpp     **** };
+  93:Tuner.cpp     **** 
+  94:Tuner.cpp     **** const uint32_t Tuner_NoteCycleArray[NOTES*OCTAVES] =
+  95:Tuner.cpp     **** {
+  96:Tuner.cpp     ****     1223122,    // C0	[20MHz / 16.35160Hz]    [0]
+  97:Tuner.cpp     ****     1154474,    // C#0	[20MHz / 17.32391Hz]
+  98:Tuner.cpp     ****     1089678,    // D0	[20MHz / 18.35405Hz]
+  99:Tuner.cpp     ****     1028519,    // D#0	[20MHz / 19.44544Hz]
+ 100:Tuner.cpp     ****      970793,    // E0	[20MHz / 20.60172Hz]
+ 101:Tuner.cpp     ****      916306,    // F0	[20MHz / 21.82676Hz]
+ 102:Tuner.cpp     ****      864878,    // F#0	[20MHz / 23.12465Hz]
+ 103:Tuner.cpp     ****      816336,    // G0	[20MHz / 24.49971Hz]
+ 104:Tuner.cpp     ****      770519,    // G#0	[20MHz / 25.95654Hz]
+ 105:Tuner.cpp     ****      727273,    // A0	[20MHz / 27.50000Hz]
+ 106:Tuner.cpp     ****      686454,    // A#0	[20MHz / 29.13524Hz]
+ 107:Tuner.cpp     ****      647926,    // B0	[20MHz / 30.86771Hz]
+ 108:Tuner.cpp     **** 
+ 109:Tuner.cpp     ****      611561,    // C1	[20MHz / 32.70320Hz]    [12]
+ 110:Tuner.cpp     ****      577237,    // C#1	[20MHz / 34.64783Hz]
+ 111:Tuner.cpp     ****      544839,    // D1	[20MHz / 36.70810Hz]
+ 112:Tuner.cpp     ****      514260,    // D#1	[20MHz / 38.89087Hz]
+ 113:Tuner.cpp     ****      485396,    // E1	[20MHz / 41.20344Hz]
+ 114:Tuner.cpp     ****      458153,    // F1	[20MHz / 43.65353Hz]
+ 115:Tuner.cpp     ****      432439,    // F#1	[20MHz / 46.24930Hz]
+ 116:Tuner.cpp     ****      408168,    // G1	[20MHz / 48.99943Hz]
+ 117:Tuner.cpp     ****      385259,    // G#1	[20MHz / 51.91309Hz]
+ 118:Tuner.cpp     ****      363636,    // A1	[20MHz / 55.00000Hz]
+ 119:Tuner.cpp     ****      343227,    // A#1	[20MHz / 58.27047Hz]
+ 120:Tuner.cpp     ****      323963,    // B1	[20MHz / 61.73541Hz]
+ 121:Tuner.cpp     **** 
+ 122:Tuner.cpp     ****      305781,    // C2	[20MHz / 65.40639Hz]    [24]
+ 123:Tuner.cpp     ****      288618,    // C#2	[20MHz / 69.29566Hz]
+ 124:Tuner.cpp     ****      272419,    // D2	[20MHz / 73.41619Hz]
+ 125:Tuner.cpp     ****      257130,    // D#2	[20MHz / 77.78175Hz]
+ 126:Tuner.cpp     ****      242698,    // E2	[20MHz / 82.40689Hz]
+ 127:Tuner.cpp     ****      229077,    // F2	[20MHz / 87.30706Hz]
+ 128:Tuner.cpp     ****      216219,    // F#2	[20MHz / 92.49861Hz]
+ 129:Tuner.cpp     ****      204084,    // G2	[20MHz / 97.99886Hz]
+ 130:Tuner.cpp     ****      192630,    // G#2	[20MHz / 103.8262Hz]
+ 131:Tuner.cpp     ****      181818,    // A2	[20MHz / 110.0000Hz]
+ 132:Tuner.cpp     ****      171614,    // A#2	[20MHz / 116.5409Hz]
+ 133:Tuner.cpp     ****      161982,    // B2	[20MHz / 123.4708Hz]
+ 134:Tuner.cpp     **** 
+ 135:Tuner.cpp     ****      152890,    // C3	[20MHz / 130.8128Hz]    [36]
+ 136:Tuner.cpp     ****      144309,    // C#3	[20MHz / 138.5913Hz]
+ 137:Tuner.cpp     ****      136210,    // D3	[20MHz / 146.8324Hz]
+ 138:Tuner.cpp     ****      128565,    // D#3	[20MHz / 155.5635Hz]
+ 139:Tuner.cpp     ****      121349,    // E3	[20MHz / 164.8138Hz]
+ 140:Tuner.cpp     ****      114538,    // F3	[20MHz / 174.6141Hz]
+ 141:Tuner.cpp     ****      108110,    // F#3	[20MHz / 184.9972Hz]
+ 142:Tuner.cpp     ****      102042,    // G3	[20MHz / 195.9977Hz]
+ 143:Tuner.cpp     ****       96315,    // G#3	[20MHz / 207.6523Hz]
+ 144:Tuner.cpp     ****       90909,    // A3	[20MHz / 220.0000Hz]
+ 145:Tuner.cpp     ****       85807,    // A#3	[20MHz / 233.0819Hz]
+ 146:Tuner.cpp     ****       80991,    // B3	[20MHz / 246.9417Hz]
+ 147:Tuner.cpp     **** 
+ 148:Tuner.cpp     ****       76445,    // C4	[20MHz / 261.6256Hz]    [48]
+ 149:Tuner.cpp     ****       72155,    // C#4	[20MHz / 277.1826Hz]
+ 150:Tuner.cpp     ****       68105,    // D4	[20MHz / 293.6648Hz]
+ 151:Tuner.cpp     ****       64282,    // D#4	[20MHz / 311.1270Hz]
+ 152:Tuner.cpp     ****       60675,    // E4	[20MHz / 329.6276Hz]
+ 153:Tuner.cpp     ****       57269,    // F4	[20MHz / 349.2282Hz]
+ 154:Tuner.cpp     ****       54055,    // F#4	[20MHz / 369.9944Hz]
+ 155:Tuner.cpp     ****       51021,    // G4	[20MHz / 391.9954Hz]
+ 156:Tuner.cpp     ****       48157,    // G#4	[20MHz / 415.3047Hz]
+ 157:Tuner.cpp     ****       45455,    // A4	[20MHz / 440.0000Hz]
+ 158:Tuner.cpp     ****       42903,    // A#4	[20MHz / 466.1638Hz]
+ 159:Tuner.cpp     ****       40495,    // B4	[20MHz / 493.8833Hz]
+ 160:Tuner.cpp     **** 
+ 161:Tuner.cpp     ****       38223,    // C5	[20MHz / 523.2511Hz]    [60]
+ 162:Tuner.cpp     ****       36077,    // C#5	[20MHz / 554.3653Hz]
+ 163:Tuner.cpp     ****       34052,    // D5	[20MHz / 587.3295Hz]
+ 164:Tuner.cpp     ****       32141,    // D#5	[20MHz / 622.2540Hz]
+ 165:Tuner.cpp     ****       30337,    // E5	[20MHz / 659.2551Hz]
+ 166:Tuner.cpp     ****       28635,    // F5	[20MHz / 698.4565Hz]
+ 167:Tuner.cpp     ****       27027,    // F#5	[20MHz / 739.9888Hz]
+ 168:Tuner.cpp     ****       25511,    // G5	[20MHz / 783.9909Hz]
+ 169:Tuner.cpp     ****       24079,    // G#5	[20MHz / 830.6094Hz]
+ 170:Tuner.cpp     ****       22727,    // A5	[20MHz / 880.0000Hz]
+ 171:Tuner.cpp     ****       21452,    // A#5	[20MHz / 932.3275Hz]
+ 172:Tuner.cpp     ****       20248,    // B5	[20MHz / 987.7666Hz]
+ 173:Tuner.cpp     **** 
+ 174:Tuner.cpp     ****       19111,    // C6	[20MHz / 1046.502Hz]    [72]
+ 175:Tuner.cpp     ****       18039,    // C#6	[20MHz / 1108.731Hz]
+ 176:Tuner.cpp     ****       17026,    // D6	[20MHz / 1174.659Hz]
+ 177:Tuner.cpp     ****       16071,    // D#6	[20MHz / 1244.508Hz]
+ 178:Tuner.cpp     ****       15169,    // E6	[20MHz / 1318.510Hz]
+ 179:Tuner.cpp     ****       14317,    // F6	[20MHz / 1396.913Hz]
+ 180:Tuner.cpp     ****       13514,    // F#6	[20MHz / 1479.978Hz]
+ 181:Tuner.cpp     ****       12755,    // G6	[20MHz / 1567.982Hz]
+ 182:Tuner.cpp     ****       12039,    // G#6	[20MHz / 1661.219Hz]
+ 183:Tuner.cpp     ****       11364,    // A6	[20MHz / 1760.000Hz]
+ 184:Tuner.cpp     ****       10726,    // A#6	[20MHz / 1864.655Hz]
+ 185:Tuner.cpp     ****       10124,    // B6	[20MHz / 1975.533Hz]
+ 186:Tuner.cpp     ****       
+ 187:Tuner.cpp     ****        9556,    // C7	[20MHz / 2093.005Hz]    [84]
+ 188:Tuner.cpp     ****        9019,    // C#7	[20MHz / 2217.461Hz]
+ 189:Tuner.cpp     ****        8513,    // D7	[20MHz / 2349.318Hz]
+ 190:Tuner.cpp     ****        8035,    // D#7	[20MHz / 2489.016Hz]
+ 191:Tuner.cpp     ****        7584,    // E7	[20MHz / 2637.020Hz]
+ 192:Tuner.cpp     ****        7159,    // F7	[20MHz / 2793.826Hz]
+ 193:Tuner.cpp     ****        6757,    // F#7	[20MHz / 2959.955Hz]
+ 194:Tuner.cpp     ****        6378,    // G7	[20MHz / 3135.963Hz]
+ 195:Tuner.cpp     ****        6020,    // G#7	[20MHz / 3322.438Hz]
+ 196:Tuner.cpp     ****        5682,    // A7	[20MHz / 3520.000Hz]
+ 197:Tuner.cpp     ****        5363,    // A#7	[20MHz / 3729.310Hz]
+ 198:Tuner.cpp     ****        5062     // B7	[20MHz / 3951.066Hz]
+ 199:Tuner.cpp     **** };
+ 200:Tuner.cpp     **** 
+ 201:Tuner.cpp     **** 
+ 202:Tuner.cpp     **** /* Function implementations */
+ 203:Tuner.cpp     **** 
+ 204:Tuner.cpp     **** void Tuner_Init()
+ 205:Tuner.cpp     **** {
+  15               		.loc 1 205 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+ 206:Tuner.cpp     ****     /* Set Mute signal GPIO to output */
+ 207:Tuner.cpp     ****     MUTE_DDR |= (1 << MUTE_PORT_PIN);
+  21               		.loc 1 207 5 view .LVU1
+  22               		.loc 1 207 14 is_stmt 0 view .LVU2
+  23 0000 559A      		sbi 0xa,5
+  24               	/* epilogue start */
+ 208:Tuner.cpp     **** }
+  25               		.loc 1 208 1 view .LVU3
+  26 0002 0895      		ret
+  27               		.cfi_endproc
+  28               	.LFE4:
+  30               	.global	_Z12Tuner_Enablev
+  32               	_Z12Tuner_Enablev:
+  33               	.LFB5:
+ 209:Tuner.cpp     **** 
+ 210:Tuner.cpp     **** void Tuner_Enable()
+ 211:Tuner.cpp     **** {
+  34               		.loc 1 211 1 is_stmt 1 view -0
+  35               		.cfi_startproc
+  36               	/* prologue: function */
+  37               	/* frame size = 0 */
+  38               	/* stack size = 0 */
+  39               	.L__stack_usage = 0
+ 212:Tuner.cpp     ****     /* Mute loop and thru outputs, turn on tuner signal */
+ 213:Tuner.cpp     ****     MUTE_PORT |= (1 << MUTE_PORT_PIN);
+  40               		.loc 1 213 5 view .LVU5
+  41               		.loc 1 213 15 is_stmt 0 view .LVU6
+  42 0004 5D9A      		sbi 0xb,5
+ 214:Tuner.cpp     **** 
+ 215:Tuner.cpp     ****     /* Start transmit timer */
+ 216:Tuner.cpp     ****     Tuner_TransmitTimerOvfCnt = 1;
+  43               		.loc 1 216 5 is_stmt 1 view .LVU7
+  44               		.loc 1 216 31 is_stmt 0 view .LVU8
+  45 0006 81E0      		ldi r24,lo8(1)
+  46 0008 8093 0000 		sts Tuner_TransmitTimerOvfCnt,r24
+ 217:Tuner.cpp     **** 	
+ 218:Tuner.cpp     ****     InputCapture_Enable();
+  47               		.loc 1 218 5 is_stmt 1 view .LVU9
+  48               		.loc 1 218 24 is_stmt 0 view .LVU10
+  49 000c 0C94 0000 		jmp _Z19InputCapture_Enablev
+  50               	.LVL0:
+  51               		.cfi_endproc
+  52               	.LFE5:
+  54               	.global	_Z13Tuner_Disablev
+  56               	_Z13Tuner_Disablev:
+  57               	.LFB6:
+ 219:Tuner.cpp     **** }
+ 220:Tuner.cpp     **** 
+ 221:Tuner.cpp     **** void Tuner_Disable()
+ 222:Tuner.cpp     **** {
+  58               		.loc 1 222 1 is_stmt 1 view -0
+  59               		.cfi_startproc
+  60               	/* prologue: function */
+  61               	/* frame size = 0 */
+  62               	/* stack size = 0 */
+  63               	.L__stack_usage = 0
+ 223:Tuner.cpp     ****     InputCapture_Disable();
+  64               		.loc 1 223 5 view .LVU12
+  65               		.loc 1 223 25 is_stmt 0 view .LVU13
+  66 0010 0E94 0000 		call _Z20InputCapture_Disablev
+  67               	.LVL1:
+ 224:Tuner.cpp     **** 
+ 225:Tuner.cpp     ****     /* Stop transmit timer and clear flag */
+ 226:Tuner.cpp     ****     Tuner_TransmitTimerOvfCnt = 0;
+  68               		.loc 1 226 5 is_stmt 1 view .LVU14
+  69               		.loc 1 226 31 is_stmt 0 view .LVU15
+  70 0014 1092 0000 		sts Tuner_TransmitTimerOvfCnt,__zero_reg__
+ 227:Tuner.cpp     ****     Tuner_TransmitTimerFlag = false;
+  71               		.loc 1 227 5 is_stmt 1 view .LVU16
+  72               		.loc 1 227 29 is_stmt 0 view .LVU17
+  73 0018 1092 0000 		sts Tuner_TransmitTimerFlag,__zero_reg__
+ 228:Tuner.cpp     **** 
+ 229:Tuner.cpp     ****     /* Clear Mute signal */
+ 230:Tuner.cpp     ****     MUTE_PORT &= ~(1 << MUTE_PORT_PIN);
+  74               		.loc 1 230 5 is_stmt 1 view .LVU18
+  75               		.loc 1 230 15 is_stmt 0 view .LVU19
+  76 001c 5D98      		cbi 0xb,5
+  77               	/* epilogue start */
+ 231:Tuner.cpp     **** }
+  78               		.loc 1 231 1 view .LVU20
+  79 001e 0895      		ret
+  80               		.cfi_endproc
+  81               	.LFE6:
+  83               	.global	_Z21Tuner_ResultAvailablev
+  85               	_Z21Tuner_ResultAvailablev:
+  86               	.LFB7:
+ 232:Tuner.cpp     **** 
+ 233:Tuner.cpp     **** bool Tuner_ResultAvailable()
+ 234:Tuner.cpp     **** {
+  87               		.loc 1 234 1 is_stmt 1 view -0
+  88               		.cfi_startproc
+  89               	/* prologue: function */
+  90               	/* frame size = 0 */
+  91               	/* stack size = 0 */
+  92               	.L__stack_usage = 0
+ 235:Tuner.cpp     ****     return (ResultArrayHead != ResultArrayTail);
+  93               		.loc 1 235 5 view .LVU22
+  94               		.loc 1 235 29 is_stmt 0 view .LVU23
+  95 0020 2091 0000 		lds r18,ResultArrayHead
+  96 0024 9091 0000 		lds r25,ResultArrayTail
+  97               		.loc 1 235 47 view .LVU24
+  98 0028 81E0      		ldi r24,lo8(1)
+  99 002a 2913      		cpse r18,r25
+ 100 002c 00C0      		rjmp .L5
+ 101 002e 80E0      		ldi r24,0
+ 102               	.L5:
+ 103               	/* epilogue start */
+ 236:Tuner.cpp     **** }
+ 104               		.loc 1 236 1 view .LVU25
+ 105 0030 0895      		ret
+ 106               		.cfi_endproc
+ 107               	.LFE7:
+ 109               	.global	_Z17Tuner_FetchCountsv
+ 111               	_Z17Tuner_FetchCountsv:
+ 112               	.LFB8:
+ 237:Tuner.cpp     **** 
+ 238:Tuner.cpp     **** void Tuner_FetchCounts()
+ 239:Tuner.cpp     **** {
+ 113               		.loc 1 239 1 is_stmt 1 view -0
+ 114               		.cfi_startproc
+ 115 0032 CF93      		push r28
+ 116               	.LCFI0:
+ 117               		.cfi_def_cfa_offset 3
+ 118               		.cfi_offset 28, -2
+ 119 0034 DF93      		push r29
+ 120               	.LCFI1:
+ 121               		.cfi_def_cfa_offset 4
+ 122               		.cfi_offset 29, -3
+ 123               	/* prologue: function */
+ 124               	/* frame size = 0 */
+ 125               	/* stack size = 2 */
+ 126               	.L__stack_usage = 2
+ 127               	.L8:
+ 240:Tuner.cpp     ****     /* Get new InputCapture counts */
+ 241:Tuner.cpp     ****     while (InputCapture_Available())
+ 128               		.loc 1 241 5 view .LVU27
+ 129               		.loc 1 241 34 view .LVU28
+ 130 0036 0E94 0000 		call _Z22InputCapture_Availablev
+ 131               	.LVL2:
+ 132 003a 8823      		tst r24
+ 133 003c 01F0      		breq .L6
+ 242:Tuner.cpp     ****     {
+ 243:Tuner.cpp     ****         /* Get next count */
+ 244:Tuner.cpp     ****         CountArray[CntArrayHead] = InputCapture_GetCount();
+ 134               		.loc 1 244 9 view .LVU29
+ 135               		.loc 1 244 20 is_stmt 0 view .LVU30
+ 136 003e C091 0000 		lds r28,CntArrayHead
+ 137 0042 D0E0      		ldi r29,0
+ 138               		.loc 1 244 57 view .LVU31
+ 139 0044 0E94 0000 		call _Z21InputCapture_GetCountv
+ 140               	.LVL3:
+ 141 0048 462F      		mov r20,r22
+ 142 004a 572F      		mov r21,r23
+ 143 004c BC01      		movw r22,r24
+ 144               		.loc 1 244 34 view .LVU32
+ 145 004e CC0F      		lsl r28
+ 146 0050 DD1F      		rol r29
+ 147 0052 CC0F      		lsl r28
+ 148 0054 DD1F      		rol r29
+ 149 0056 C050      		subi r28,lo8(-(CountArray))
+ 150 0058 D040      		sbci r29,hi8(-(CountArray))
+ 151 005a 4883      		st Y,r20
+ 152 005c 5983      		std Y+1,r21
+ 153 005e 6A83      		std Y+2,r22
+ 154 0060 7B83      		std Y+3,r23
+ 245:Tuner.cpp     **** 
+ 246:Tuner.cpp     ****         /* calculate new array head index (ignore overflow) */
+ 247:Tuner.cpp     **** 	    if (++CntArrayHead >= WORK_ARRAY_SIZE)
+ 155               		.loc 1 247 6 is_stmt 1 view .LVU33
+ 156               		.loc 1 247 10 is_stmt 0 view .LVU34
+ 157 0062 8091 0000 		lds r24,CntArrayHead
+ 158 0066 8F5F      		subi r24,lo8(-(1))
+ 159               		.loc 1 247 25 view .LVU35
+ 160 0068 8093 0000 		sts CntArrayHead,r24
+ 161               		.loc 1 247 6 view .LVU36
+ 162 006c 8530      		cpi r24,lo8(5)
+ 163 006e 00F0      		brlo .L8
+ 248:Tuner.cpp     ****             CntArrayHead = 0;
+ 164               		.loc 1 248 13 is_stmt 1 view .LVU37
+ 165               		.loc 1 248 26 is_stmt 0 view .LVU38
+ 166 0070 1092 0000 		sts CntArrayHead,__zero_reg__
+ 167 0074 00C0      		rjmp .L8
+ 168               	.L6:
+ 169               	/* epilogue start */
+ 249:Tuner.cpp     ****     }
+ 250:Tuner.cpp     **** }
+ 170               		.loc 1 250 1 view .LVU39
+ 171 0076 DF91      		pop r29
+ 172 0078 CF91      		pop r28
+ 173 007a 0895      		ret
+ 174               		.cfi_endproc
+ 175               	.LFE8:
+ 177               	.global	_Z21Tuner_DetectFrequencyv
+ 179               	_Z21Tuner_DetectFrequencyv:
+ 180               	.LFB9:
+ 251:Tuner.cpp     **** 
+ 252:Tuner.cpp     **** void Tuner_DetectFrequency()
+ 253:Tuner.cpp     **** {
+ 181               		.loc 1 253 1 is_stmt 1 view -0
+ 182               		.cfi_startproc
+ 183 007c 6F92      		push r6
+ 184               	.LCFI2:
+ 185               		.cfi_def_cfa_offset 3
+ 186               		.cfi_offset 6, -2
+ 187 007e 7F92      		push r7
+ 188               	.LCFI3:
+ 189               		.cfi_def_cfa_offset 4
+ 190               		.cfi_offset 7, -3
+ 191 0080 8F92      		push r8
+ 192               	.LCFI4:
+ 193               		.cfi_def_cfa_offset 5
+ 194               		.cfi_offset 8, -4
+ 195 0082 9F92      		push r9
+ 196               	.LCFI5:
+ 197               		.cfi_def_cfa_offset 6
+ 198               		.cfi_offset 9, -5
+ 199 0084 AF92      		push r10
+ 200               	.LCFI6:
+ 201               		.cfi_def_cfa_offset 7
+ 202               		.cfi_offset 10, -6
+ 203 0086 BF92      		push r11
+ 204               	.LCFI7:
+ 205               		.cfi_def_cfa_offset 8
+ 206               		.cfi_offset 11, -7
+ 207 0088 CF92      		push r12
+ 208               	.LCFI8:
+ 209               		.cfi_def_cfa_offset 9
+ 210               		.cfi_offset 12, -8
+ 211 008a DF92      		push r13
+ 212               	.LCFI9:
+ 213               		.cfi_def_cfa_offset 10
+ 214               		.cfi_offset 13, -9
+ 215 008c EF92      		push r14
+ 216               	.LCFI10:
+ 217               		.cfi_def_cfa_offset 11
+ 218               		.cfi_offset 14, -10
+ 219 008e FF92      		push r15
+ 220               	.LCFI11:
+ 221               		.cfi_def_cfa_offset 12
+ 222               		.cfi_offset 15, -11
+ 223 0090 1F93      		push r17
+ 224               	.LCFI12:
+ 225               		.cfi_def_cfa_offset 13
+ 226               		.cfi_offset 17, -12
+ 227 0092 CF93      		push r28
+ 228               	.LCFI13:
+ 229               		.cfi_def_cfa_offset 14
+ 230               		.cfi_offset 28, -13
+ 231 0094 DF93      		push r29
+ 232               	.LCFI14:
+ 233               		.cfi_def_cfa_offset 15
+ 234               		.cfi_offset 29, -14
+ 235               	/* prologue: function */
+ 236               	/* frame size = 0 */
+ 237               	/* stack size = 13 */
+ 238               	.L__stack_usage = 13
+ 254:Tuner.cpp     ****     /* Calculate sums and differences */
+ 255:Tuner.cpp     ****     uint32_t accum = 0;
+ 239               		.loc 1 255 5 view .LVU41
+ 240               	.LVL4:
+ 256:Tuner.cpp     ****     uint8_t accIdx = CntArrayHead;
+ 241               		.loc 1 256 5 view .LVU42
+ 242               		.loc 1 256 22 is_stmt 0 view .LVU43
+ 243 0096 2091 0000 		lds r18,CntArrayHead
+ 244               	.LVL5:
+ 257:Tuner.cpp     ****     for (uint8_t a = 0; a < WORK_ARRAY_SIZE; a++)
+ 245               		.loc 1 257 5 is_stmt 1 view .LVU44
+ 246               	.LBB2:
+ 247               		.loc 1 257 27 view .LVU45
+ 248               	.LBE2:
+ 256:Tuner.cpp     ****     uint8_t accIdx = CntArrayHead;
+ 249               		.loc 1 256 22 is_stmt 0 view .LVU46
+ 250 009a 50E0      		ldi r21,0
+ 251 009c 40E0      		ldi r20,0
+ 255:Tuner.cpp     ****     uint8_t accIdx = CntArrayHead;
+ 252               		.loc 1 255 14 view .LVU47
+ 253 009e C12C      		mov r12,__zero_reg__
+ 254 00a0 D12C      		mov r13,__zero_reg__
+ 255 00a2 7601      		movw r14,r12
+ 256               	.LVL6:
+ 257               	.L14:
+ 258               	.LBB3:
+ 258:Tuner.cpp     ****     {
+ 259:Tuner.cpp     ****         if (accIdx-- == 0)
+ 259               		.loc 1 259 9 is_stmt 1 view .LVU48
+ 260               		.loc 1 259 9 is_stmt 0 view .LVU49
+ 261 00a4 2223      		tst r18
+ 262 00a6 01F4      		brne .+2
+ 263 00a8 00C0      		rjmp .L19
+ 264               		.loc 1 259 19 view .LVU50
+ 265 00aa 2150      		subi r18,lo8(-(-1))
+ 266               	.LVL7:
+ 267               	.L12:
+ 260:Tuner.cpp     ****             accIdx = WORK_ARRAY_SIZE - 1;
+ 261:Tuner.cpp     ****         
+ 262:Tuner.cpp     ****         /* Find accumulated sums */
+ 263:Tuner.cpp     ****         accum += CountArray[accIdx];
+ 268               		.loc 1 263 9 is_stmt 1 discriminator 2 view .LVU51
+ 269               		.loc 1 263 35 is_stmt 0 discriminator 2 view .LVU52
+ 270 00ac 84E0      		ldi r24,lo8(4)
+ 271 00ae 289F      		mul r18,r24
+ 272 00b0 E001      		movw r28,r0
+ 273 00b2 1124      		clr __zero_reg__
+ 274 00b4 C050      		subi r28,lo8(-(CountArray))
+ 275 00b6 D040      		sbci r29,hi8(-(CountArray))
+ 276 00b8 8881      		ld r24,Y
+ 277 00ba 9981      		ldd r25,Y+1
+ 278 00bc AA81      		ldd r26,Y+2
+ 279 00be BB81      		ldd r27,Y+3
+ 280               		.loc 1 263 15 discriminator 2 view .LVU53
+ 281 00c0 C80E      		add r12,r24
+ 282 00c2 D91E      		adc r13,r25
+ 283 00c4 EA1E      		adc r14,r26
+ 284 00c6 FB1E      		adc r15,r27
+ 285               	.LVL8:
+ 264:Tuner.cpp     ****         SumArray[a] = accum;
+ 286               		.loc 1 264 9 is_stmt 1 discriminator 2 view .LVU54
+ 287               		.loc 1 264 21 is_stmt 0 discriminator 2 view .LVU55
+ 288 00c8 FA01      		movw r30,r20
+ 289 00ca EE0F      		lsl r30
+ 290 00cc FF1F      		rol r31
+ 291 00ce EE0F      		lsl r30
+ 292 00d0 FF1F      		rol r31
+ 293 00d2 DF01      		movw r26,r30
+ 294 00d4 A050      		subi r26,lo8(-(SumArray))
+ 295 00d6 B040      		sbci r27,hi8(-(SumArray))
+ 296 00d8 CD92      		st X+,r12
+ 297 00da DD92      		st X+,r13
+ 298 00dc ED92      		st X+,r14
+ 299 00de FC92      		st X,r15
+ 300 00e0 1397      		sbiw r26,3
+ 265:Tuner.cpp     **** 
+ 266:Tuner.cpp     ****         /* Find absolute difference values */
+ 267:Tuner.cpp     ****         DiffArray[a] = (uint32_t)abs((int32_t)(SumArray[0] - CountArray[accIdx]));
+ 301               		.loc 1 267 9 is_stmt 1 discriminator 2 view .LVU56
+ 302               		.loc 1 267 34 is_stmt 0 discriminator 2 view .LVU57
+ 303 00e2 8091 0000 		lds r24,SumArray
+ 304 00e6 9091 0000 		lds r25,SumArray+1
+ 305 00ea A091 0000 		lds r26,SumArray+2
+ 306 00ee B091 0000 		lds r27,SumArray+3
+ 307 00f2 8880      		ld r8,Y
+ 308 00f4 9980      		ldd r9,Y+1
+ 309 00f6 AA80      		ldd r10,Y+2
+ 310 00f8 BB80      		ldd r11,Y+3
+ 311 00fa 8819      		sub r24,r8
+ 312 00fc 9909      		sbc r25,r9
+ 313 00fe 97FF      		sbrs r25,7
+ 314 0100 00C0      		rjmp .L13
+ 315 0102 9195      		neg r25
+ 316 0104 8195      		neg r24
+ 317 0106 9109      		sbc r25,__zero_reg__
+ 318               	.L13:
+ 319               		.loc 1 267 24 discriminator 2 view .LVU58
+ 320 0108 092E      		mov __tmp_reg__,r25
+ 321 010a 000C      		lsl r0
+ 322 010c AA0B      		sbc r26,r26
+ 323 010e BB0B      		sbc r27,r27
+ 324               		.loc 1 267 22 discriminator 2 view .LVU59
+ 325 0110 E050      		subi r30,lo8(-(DiffArray))
+ 326 0112 F040      		sbci r31,hi8(-(DiffArray))
+ 327 0114 8083      		st Z,r24
+ 328 0116 9183      		std Z+1,r25
+ 329 0118 A283      		std Z+2,r26
+ 330 011a B383      		std Z+3,r27
+ 257:Tuner.cpp     ****     {
+ 331               		.loc 1 257 5 is_stmt 1 discriminator 2 view .LVU60
+ 332               	.LVL9:
+ 257:Tuner.cpp     ****     {
+ 333               		.loc 1 257 27 discriminator 2 view .LVU61
+ 334 011c 4F5F      		subi r20,-1
+ 335 011e 5F4F      		sbci r21,-1
+ 336               	.LVL10:
+ 257:Tuner.cpp     ****     {
+ 337               		.loc 1 257 27 is_stmt 0 discriminator 2 view .LVU62
+ 338 0120 4530      		cpi r20,5
+ 339 0122 5105      		cpc r21,__zero_reg__
+ 340 0124 01F0      		breq .+2
+ 341 0126 00C0      		rjmp .L14
+ 342               	.LBE3:
+ 343               	.LBB4:
+ 268:Tuner.cpp     ****     }
+ 269:Tuner.cpp     **** 
+ 270:Tuner.cpp     ****     /* Find harmonics */
+ 271:Tuner.cpp     ****     uint32_t limit = 0;
+ 272:Tuner.cpp     ****     for (uint8_t h = 0; h < HARMONICS; h++)
+ 344               		.loc 1 272 18 view .LVU63
+ 345 0128 80E0      		ldi r24,0
+ 346               	.LBB5:
+ 347               	.LBB6:
+ 273:Tuner.cpp     ****     {
+ 274:Tuner.cpp     ****         Harmonic_Result[h] = 0;
+ 275:Tuner.cpp     ****         limit = (SumArray[h] >> LIMIT_SHIFT_HARMONIC);   // Fraction of presumed period
+ 276:Tuner.cpp     **** 
+ 277:Tuner.cpp     ****         for (uint8_t d = 0; d < WORK_ARRAY_SIZE; d++)
+ 278:Tuner.cpp     ****         {
+ 279:Tuner.cpp     ****             if (DiffArray[d] <= limit)
+ 280:Tuner.cpp     ****             {
+ 281:Tuner.cpp     ****                 Harmonic_Result[h] |= (1 << d);
+ 348               		.loc 1 281 42 view .LVU64
+ 349 012a 6624      		clr r6
+ 350 012c 6394      		inc r6
+ 351 012e 712C      		mov r7,__zero_reg__
+ 352               	.LVL11:
+ 353               		.loc 1 281 42 view .LVU65
+ 354               	.LBE6:
+ 282:Tuner.cpp     ****             }
+ 283:Tuner.cpp     ****         }
+ 284:Tuner.cpp     **** 
+ 285:Tuner.cpp     ****         /* Evaluate resulting count - First encounter of correct harmonic pattern is result*/
+ 286:Tuner.cpp     ****         if (Harmonic_Result[h] == Harmonic_Mask[h])
+ 287:Tuner.cpp     ****         {
+ 288:Tuner.cpp     ****             /* Update result arrays */
+ 289:Tuner.cpp     ****             CountResultArray[ResultArrayHead] = SumArray[h];
+ 290:Tuner.cpp     ****             NoteResultArray[ResultArrayHead] = FindClosestArrayIndexDecending(Tuner_NoteCycleArray,
+ 291:Tuner.cpp     ****             FundamentalNoteResultArray[ResultArrayHead] = NoteResultArray[ResultArrayHead] % NOTES;
+ 355               		.loc 1 291 92 view .LVU66
+ 356 0130 1CE0      		ldi r17,lo8(12)
+ 357               	.LVL12:
+ 358               	.L18:
+ 274:Tuner.cpp     ****         limit = (SumArray[h] >> LIMIT_SHIFT_HARMONIC);   // Fraction of presumed period
+ 359               		.loc 1 274 9 is_stmt 1 view .LVU67
+ 274:Tuner.cpp     ****         limit = (SumArray[h] >> LIMIT_SHIFT_HARMONIC);   // Fraction of presumed period
+ 360               		.loc 1 274 25 is_stmt 0 view .LVU68
+ 361 0132 A82F      		mov r26,r24
+ 362 0134 B0E0      		ldi r27,0
+ 274:Tuner.cpp     ****         limit = (SumArray[h] >> LIMIT_SHIFT_HARMONIC);   // Fraction of presumed period
+ 363               		.loc 1 274 28 view .LVU69
+ 364 0136 AD01      		movw r20,r26
+ 365 0138 4050      		subi r20,lo8(-(Harmonic_Result))
+ 366 013a 5040      		sbci r21,hi8(-(Harmonic_Result))
+ 367 013c EA01      		movw r28,r20
+ 368 013e 1882      		st Y,__zero_reg__
+ 275:Tuner.cpp     **** 
+ 369               		.loc 1 275 9 is_stmt 1 view .LVU70
+ 275:Tuner.cpp     **** 
+ 370               		.loc 1 275 28 is_stmt 0 view .LVU71
+ 371 0140 FD01      		movw r30,r26
+ 372 0142 EE0F      		lsl r30
+ 373 0144 FF1F      		rol r31
+ 374 0146 EE0F      		lsl r30
+ 375 0148 FF1F      		rol r31
+ 376 014a 9F01      		movw r18,r30
+ 377 014c 2050      		subi r18,lo8(-(SumArray))
+ 378 014e 3040      		sbci r19,hi8(-(SumArray))
+ 379 0150 E901      		movw r28,r18
+ 380 0152 C880      		ld r12,Y
+ 381 0154 D980      		ldd r13,Y+1
+ 382 0156 EA80      		ldd r14,Y+2
+ 383 0158 FB80      		ldd r15,Y+3
+ 275:Tuner.cpp     **** 
+ 384               		.loc 1 275 15 view .LVU72
+ 385 015a 37E0      		ldi r19,7
+ 386               		1:
+ 387 015c F694      		lsr r15
+ 388 015e E794      		ror r14
+ 389 0160 D794      		ror r13
+ 390 0162 C794      		ror r12
+ 391 0164 3A95      		dec r19
+ 392 0166 01F4      		brne 1b
+ 393               	.LVL13:
+ 277:Tuner.cpp     ****         {
+ 394               		.loc 1 277 9 is_stmt 1 view .LVU73
+ 395               	.LBB7:
+ 277:Tuner.cpp     ****         {
+ 396               		.loc 1 277 31 view .LVU74
+ 397               	.LBE7:
+ 275:Tuner.cpp     **** 
+ 398               		.loc 1 275 15 is_stmt 0 view .LVU75
+ 399 0168 30E0      		ldi r19,0
+ 400 016a 20E0      		ldi r18,0
+ 401               	.LVL14:
+ 402               	.L16:
+ 403               	.LBB8:
+ 279:Tuner.cpp     ****             {
+ 404               		.loc 1 279 13 is_stmt 1 view .LVU76
+ 279:Tuner.cpp     ****             {
+ 405               		.loc 1 279 28 is_stmt 0 view .LVU77
+ 406 016c B901      		movw r22,r18
+ 407 016e 660F      		lsl r22
+ 408 0170 771F      		rol r23
+ 409 0172 660F      		lsl r22
+ 410 0174 771F      		rol r23
+ 411 0176 6050      		subi r22,lo8(-(DiffArray))
+ 412 0178 7040      		sbci r23,hi8(-(DiffArray))
+ 413 017a EB01      		movw r28,r22
+ 414 017c 8880      		ld r8,Y
+ 415 017e 9980      		ldd r9,Y+1
+ 416 0180 AA80      		ldd r10,Y+2
+ 417 0182 BB80      		ldd r11,Y+3
+ 279:Tuner.cpp     ****             {
+ 418               		.loc 1 279 13 view .LVU78
+ 419 0184 C814      		cp r12,r8
+ 420 0186 D904      		cpc r13,r9
+ 421 0188 EA04      		cpc r14,r10
+ 422 018a FB04      		cpc r15,r11
+ 423 018c 00F0      		brlo .L15
+ 281:Tuner.cpp     ****             }
+ 424               		.loc 1 281 17 is_stmt 1 view .LVU79
+ 281:Tuner.cpp     ****             }
+ 425               		.loc 1 281 36 is_stmt 0 view .LVU80
+ 426 018e EA01      		movw r28,r20
+ 427 0190 9881      		ld r25,Y
+ 281:Tuner.cpp     ****             }
+ 428               		.loc 1 281 42 view .LVU81
+ 429 0192 B301      		movw r22,r6
+ 430 0194 022E      		mov r0,r18
+ 431 0196 00C0      		rjmp 2f
+ 432               		1:
+ 433 0198 660F      		lsl r22
+ 434               		2:
+ 435 019a 0A94      		dec r0
+ 436 019c 02F4      		brpl 1b
+ 281:Tuner.cpp     ****             }
+ 437               		.loc 1 281 36 view .LVU82
+ 438 019e 962B      		or r25,r22
+ 439 01a0 9883      		st Y,r25
+ 440               	.L15:
+ 277:Tuner.cpp     ****         {
+ 441               		.loc 1 277 9 is_stmt 1 discriminator 2 view .LVU83
+ 442               	.LVL15:
+ 277:Tuner.cpp     ****         {
+ 443               		.loc 1 277 31 discriminator 2 view .LVU84
+ 444 01a2 2F5F      		subi r18,-1
+ 445 01a4 3F4F      		sbci r19,-1
+ 446               	.LVL16:
+ 277:Tuner.cpp     ****         {
+ 447               		.loc 1 277 31 is_stmt 0 discriminator 2 view .LVU85
+ 448 01a6 2530      		cpi r18,5
+ 449 01a8 3105      		cpc r19,__zero_reg__
+ 450 01aa 01F4      		brne .L16
+ 451               	.LBE8:
+ 286:Tuner.cpp     ****         {
+ 452               		.loc 1 286 9 is_stmt 1 view .LVU86
+ 286:Tuner.cpp     ****         {
+ 453               		.loc 1 286 30 is_stmt 0 view .LVU87
+ 454 01ac EA01      		movw r28,r20
+ 455 01ae 2881      		ld r18,Y
+ 456               	.LVL17:
+ 286:Tuner.cpp     ****         {
+ 457               		.loc 1 286 50 view .LVU88
+ 458 01b0 A050      		subi r26,lo8(-(_ZL13Harmonic_Mask))
+ 459 01b2 B040      		sbci r27,hi8(-(_ZL13Harmonic_Mask))
+ 286:Tuner.cpp     ****         {
+ 460               		.loc 1 286 9 view .LVU89
+ 461 01b4 9C91      		ld r25,X
+ 462 01b6 2913      		cpse r18,r25
+ 463 01b8 00C0      		rjmp .L17
+ 289:Tuner.cpp     ****             NoteResultArray[ResultArrayHead] = FindClosestArrayIndexDecending(Tuner_NoteCycleArray,
+ 464               		.loc 1 289 13 is_stmt 1 view .LVU90
+ 289:Tuner.cpp     ****             NoteResultArray[ResultArrayHead] = FindClosestArrayIndexDecending(Tuner_NoteCycleArray,
+ 465               		.loc 1 289 30 is_stmt 0 view .LVU91
+ 466 01ba A091 0000 		lds r26,ResultArrayHead
+ 289:Tuner.cpp     ****             NoteResultArray[ResultArrayHead] = FindClosestArrayIndexDecending(Tuner_NoteCycleArray,
+ 467               		.loc 1 289 59 view .LVU92
+ 468 01be E050      		subi r30,lo8(-(SumArray))
+ 469 01c0 F040      		sbci r31,hi8(-(SumArray))
+ 470 01c2 4081      		ld r20,Z
+ 471 01c4 5181      		ldd r21,Z+1
+ 472 01c6 6281      		ldd r22,Z+2
+ 473 01c8 7381      		ldd r23,Z+3
+ 289:Tuner.cpp     ****             NoteResultArray[ResultArrayHead] = FindClosestArrayIndexDecending(Tuner_NoteCycleArray,
+ 474               		.loc 1 289 47 view .LVU93
+ 475 01ca D4E0      		ldi r29,lo8(4)
+ 476 01cc AD9F      		mul r26,r29
+ 477 01ce D001      		movw r26,r0
+ 478 01d0 1124      		clr __zero_reg__
+ 479 01d2 A050      		subi r26,lo8(-(CountResultArray))
+ 480 01d4 B040      		sbci r27,hi8(-(CountResultArray))
+ 481 01d6 4D93      		st X+,r20
+ 482 01d8 5D93      		st X+,r21
+ 483 01da 6D93      		st X+,r22
+ 484 01dc 7C93      		st X,r23
+ 485 01de 1397      		sbiw r26,3
+ 290:Tuner.cpp     ****             FundamentalNoteResultArray[ResultArrayHead] = NoteResultArray[ResultArrayHead] % NOTES;
+ 486               		.loc 1 290 13 is_stmt 1 view .LVU94
+ 290:Tuner.cpp     ****             FundamentalNoteResultArray[ResultArrayHead] = NoteResultArray[ResultArrayHead] % NOTES;
+ 487               		.loc 1 290 126 is_stmt 0 view .LVU95
+ 488 01e0 2081      		ld r18,Z
+ 489 01e2 3181      		ldd r19,Z+1
+ 490 01e4 4281      		ldd r20,Z+2
+ 491 01e6 5381      		ldd r21,Z+3
+ 290:Tuner.cpp     ****             FundamentalNoteResultArray[ResultArrayHead] = NoteResultArray[ResultArrayHead] % NOTES;
+ 492               		.loc 1 290 29 view .LVU96
+ 493 01e8 E090 0000 		lds r14,ResultArrayHead
+ 494 01ec F12C      		mov r15,__zero_reg__
+ 290:Tuner.cpp     ****             FundamentalNoteResultArray[ResultArrayHead] = NoteResultArray[ResultArrayHead] % NOTES;
+ 495               		.loc 1 290 78 view .LVU97
+ 496 01ee 60E6      		ldi r22,lo8(96)
+ 497 01f0 80E0      		ldi r24,lo8(_ZL20Tuner_NoteCycleArray)
+ 498 01f2 90E0      		ldi r25,hi8(_ZL20Tuner_NoteCycleArray)
+ 499 01f4 0E94 0000 		call _Z30FindClosestArrayIndexDecendingPKmhm
+ 500               	.LVL18:
+ 290:Tuner.cpp     ****             FundamentalNoteResultArray[ResultArrayHead] = NoteResultArray[ResultArrayHead] % NOTES;
+ 501               		.loc 1 290 46 view .LVU98
+ 502 01f8 F701      		movw r30,r14
+ 503 01fa E050      		subi r30,lo8(-(NoteResultArray))
+ 504 01fc F040      		sbci r31,hi8(-(NoteResultArray))
+ 505 01fe 8083      		st Z,r24
+ 506               		.loc 1 291 13 is_stmt 1 view .LVU99
+ 507               		.loc 1 291 75 is_stmt 0 view .LVU100
+ 508 0200 E091 0000 		lds r30,ResultArrayHead
+ 509 0204 F0E0      		ldi r31,0
+ 510               		.loc 1 291 90 view .LVU101
+ 511 0206 E050      		subi r30,lo8(-(NoteResultArray))
+ 512 0208 F040      		sbci r31,hi8(-(NoteResultArray))
+ 513 020a 8081      		ld r24,Z
+ 514               		.loc 1 291 40 view .LVU102
+ 515 020c 2091 0000 		lds r18,ResultArrayHead
+ 516 0210 30E0      		ldi r19,0
+ 517               		.loc 1 291 92 view .LVU103
+ 518 0212 612F      		mov r22,r17
+ 519 0214 0E94 0000 		call __udivmodqi4
+ 520               		.loc 1 291 57 view .LVU104
+ 521 0218 2050      		subi r18,lo8(-(FundamentalNoteResultArray))
+ 522 021a 3040      		sbci r19,hi8(-(FundamentalNoteResultArray))
+ 523 021c F901      		movw r30,r18
+ 524 021e 9083      		st Z,r25
+ 292:Tuner.cpp     ****             
+ 293:Tuner.cpp     ****             /* Calculate new result buffer head index */
+ 294:Tuner.cpp     ****             ResultArrayHead = (ResultArrayHead + 1) & RESULT_ARRAY_MASK;
+ 525               		.loc 1 294 13 is_stmt 1 view .LVU105
+ 526               		.loc 1 294 53 is_stmt 0 view .LVU106
+ 527 0220 8091 0000 		lds r24,ResultArrayHead
+ 528               		.loc 1 294 48 view .LVU107
+ 529 0224 8F5F      		subi r24,lo8(-(1))
+ 530               		.loc 1 294 53 view .LVU108
+ 531 0226 8770      		andi r24,lo8(7)
+ 532               		.loc 1 294 29 view .LVU109
+ 533 0228 8093 0000 		sts ResultArrayHead,r24
+ 295:Tuner.cpp     **** 
+ 296:Tuner.cpp     ****             /* Check for buffer overflow */
+ 297:Tuner.cpp     ****             if ( ResultArrayHead == ResultArrayTail )
+ 534               		.loc 1 297 13 is_stmt 1 view .LVU110
+ 535               		.loc 1 297 34 is_stmt 0 view .LVU111
+ 536 022c 9091 0000 		lds r25,ResultArrayHead
+ 537 0230 8091 0000 		lds r24,ResultArrayTail
+ 538               		.loc 1 297 13 view .LVU112
+ 539 0234 9813      		cpse r25,r24
+ 540 0236 00C0      		rjmp .L20
+ 298:Tuner.cpp     ****             {
+ 299:Tuner.cpp     ****                 /* Calculate new result buffer tail index (ignore overflow)*/
+ 300:Tuner.cpp     ****                 ResultArrayTail = (ResultArrayTail + 1) & RESULT_ARRAY_MASK;
+ 541               		.loc 1 300 17 is_stmt 1 view .LVU113
+ 542               		.loc 1 300 57 is_stmt 0 view .LVU114
+ 543 0238 8091 0000 		lds r24,ResultArrayTail
+ 544               		.loc 1 300 52 view .LVU115
+ 545 023c 8F5F      		subi r24,lo8(-(1))
+ 546               		.loc 1 300 57 view .LVU116
+ 547 023e 8770      		andi r24,lo8(7)
+ 548               		.loc 1 300 33 view .LVU117
+ 549 0240 8093 0000 		sts ResultArrayTail,r24
+ 550               	.LVL19:
+ 551               	.L20:
+ 301:Tuner.cpp     ****             }
+ 302:Tuner.cpp     **** 
+ 303:Tuner.cpp     ****             /* Break for-loop */
+ 304:Tuner.cpp     ****             h = HARMONICS;
+ 552               		.loc 1 304 15 view .LVU118
+ 553 0244 84E0      		ldi r24,lo8(4)
+ 554               	.LVL20:
+ 555               	.L17:
+ 556               		.loc 1 304 15 view .LVU119
+ 557               	.LBE5:
+ 272:Tuner.cpp     ****     {
+ 558               		.loc 1 272 5 is_stmt 1 discriminator 2 view .LVU120
+ 272:Tuner.cpp     ****     {
+ 559               		.loc 1 272 5 is_stmt 0 discriminator 2 view .LVU121
+ 560 0246 8F5F      		subi r24,lo8(-(1))
+ 561               	.LVL21:
+ 272:Tuner.cpp     ****     {
+ 562               		.loc 1 272 27 is_stmt 1 discriminator 2 view .LVU122
+ 563 0248 8430      		cpi r24,lo8(4)
+ 564 024a 00F4      		brsh .+2
+ 565 024c 00C0      		rjmp .L18
+ 566               	/* epilogue start */
+ 567               	.LBE4:
+ 305:Tuner.cpp     ****         }
+ 306:Tuner.cpp     ****     }
+ 307:Tuner.cpp     **** }
+ 568               		.loc 1 307 1 is_stmt 0 view .LVU123
+ 569 024e DF91      		pop r29
+ 570 0250 CF91      		pop r28
+ 571 0252 1F91      		pop r17
+ 572 0254 FF90      		pop r15
+ 573 0256 EF90      		pop r14
+ 574 0258 DF90      		pop r13
+ 575 025a CF90      		pop r12
+ 576 025c BF90      		pop r11
+ 577 025e AF90      		pop r10
+ 578 0260 9F90      		pop r9
+ 579 0262 8F90      		pop r8
+ 580 0264 7F90      		pop r7
+ 581 0266 6F90      		pop r6
+ 582 0268 0895      		ret
+ 583               	.LVL22:
+ 584               	.L19:
+ 585               	.LBB9:
+ 260:Tuner.cpp     ****         
+ 586               		.loc 1 260 20 view .LVU124
+ 587 026a 24E0      		ldi r18,lo8(4)
+ 588               	.LVL23:
+ 260:Tuner.cpp     ****         
+ 589               		.loc 1 260 20 view .LVU125
+ 590 026c 00C0      		rjmp .L12
+ 591               	.LBE9:
+ 592               		.cfi_endproc
+ 593               	.LFE9:
+ 595               	.global	_Z25Tuner_GenerateDisplayDatav
+ 597               	_Z25Tuner_GenerateDisplayDatav:
+ 598               	.LFB10:
+ 308:Tuner.cpp     **** 
+ 309:Tuner.cpp     **** void Tuner_GenerateDisplayData()
+ 310:Tuner.cpp     **** {
+ 599               		.loc 1 310 1 is_stmt 1 view -0
+ 600               		.cfi_startproc
+ 601 026e CF92      		push r12
+ 602               	.LCFI15:
+ 603               		.cfi_def_cfa_offset 3
+ 604               		.cfi_offset 12, -2
+ 605 0270 DF92      		push r13
+ 606               	.LCFI16:
+ 607               		.cfi_def_cfa_offset 4
+ 608               		.cfi_offset 13, -3
+ 609 0272 EF92      		push r14
+ 610               	.LCFI17:
+ 611               		.cfi_def_cfa_offset 5
+ 612               		.cfi_offset 14, -4
+ 613 0274 FF92      		push r15
+ 614               	.LCFI18:
+ 615               		.cfi_def_cfa_offset 6
+ 616               		.cfi_offset 15, -5
+ 617 0276 0F93      		push r16
+ 618               	.LCFI19:
+ 619               		.cfi_def_cfa_offset 7
+ 620               		.cfi_offset 16, -6
+ 621 0278 1F93      		push r17
+ 622               	.LCFI20:
+ 623               		.cfi_def_cfa_offset 8
+ 624               		.cfi_offset 17, -7
+ 625 027a CF93      		push r28
+ 626               	.LCFI21:
+ 627               		.cfi_def_cfa_offset 9
+ 628               		.cfi_offset 28, -8
+ 629 027c DF93      		push r29
+ 630               	.LCFI22:
+ 631               		.cfi_def_cfa_offset 10
+ 632               		.cfi_offset 29, -9
+ 633               	/* prologue: function */
+ 634               	/* frame size = 0 */
+ 635               	/* stack size = 8 */
+ 636               	.L__stack_usage = 8
+ 311:Tuner.cpp     ****     /* Find most numerous fundamental note */
+ 312:Tuner.cpp     ****     uint8_t most_common = GetMostCommon((uint8_t*)FundamentalNoteResultArray, RESULT_ARRAY_SIZE);
+ 637               		.loc 1 312 5 view .LVU127
+ 638               		.loc 1 312 40 is_stmt 0 view .LVU128
+ 639 027e 68E0      		ldi r22,lo8(8)
+ 640 0280 80E0      		ldi r24,lo8(FundamentalNoteResultArray)
+ 641 0282 90E0      		ldi r25,hi8(FundamentalNoteResultArray)
+ 642 0284 0E94 0000 		call _Z13GetMostCommonPhh
+ 643               	.LVL24:
+ 313:Tuner.cpp     **** 
+ 314:Tuner.cpp     ****     /* Update note name */
+ 315:Tuner.cpp     ****     Tuner_7seg_Data[1] = Tuner_NoteCharacter[most_common][0];
+ 644               		.loc 1 315 5 is_stmt 1 view .LVU129
+ 645               		.loc 1 315 46 is_stmt 0 view .LVU130
+ 646 0288 E82F      		mov r30,r24
+ 647 028a F0E0      		ldi r31,0
+ 648               		.loc 1 315 60 view .LVU131
+ 649 028c EE0F      		lsl r30
+ 650 028e FF1F      		rol r31
+ 651 0290 E050      		subi r30,lo8(-(_ZL19Tuner_NoteCharacter))
+ 652 0292 F040      		sbci r31,hi8(-(_ZL19Tuner_NoteCharacter))
+ 653 0294 9081      		ld r25,Z
+ 654               		.loc 1 315 24 view .LVU132
+ 655 0296 9093 0000 		sts Tuner_7seg_Data+1,r25
+ 316:Tuner.cpp     ****     Tuner_7seg_Data[2] = Tuner_NoteCharacter[most_common][1];
+ 656               		.loc 1 316 5 is_stmt 1 view .LVU133
+ 657               		.loc 1 316 60 is_stmt 0 view .LVU134
+ 658 029a 9181      		ldd r25,Z+1
+ 659               		.loc 1 316 24 view .LVU135
+ 660 029c 9093 0000 		sts Tuner_7seg_Data+2,r25
+ 317:Tuner.cpp     **** 
+ 318:Tuner.cpp     ****     /* Find array index of newest instance of that note */
+ 319:Tuner.cpp     ****     uint8_t arrIdx = ResultArrayHead;
+ 661               		.loc 1 319 5 is_stmt 1 view .LVU136
+ 662               		.loc 1 319 22 is_stmt 0 view .LVU137
+ 663 02a0 9091 0000 		lds r25,ResultArrayHead
+ 664               	.LVL25:
+ 320:Tuner.cpp     ****     for (uint8_t i = 0; i < RESULT_ARRAY_SIZE; i++)
+ 665               		.loc 1 320 5 is_stmt 1 view .LVU138
+ 666               	.LBB10:
+ 667               		.loc 1 320 27 view .LVU139
+ 668               		.loc 1 320 18 is_stmt 0 view .LVU140
+ 669 02a4 40E0      		ldi r20,0
+ 670               	.LVL26:
+ 671               	.L27:
+ 321:Tuner.cpp     ****     {
+ 322:Tuner.cpp     ****         if (arrIdx-- == 0)
+ 672               		.loc 1 322 9 is_stmt 1 view .LVU141
+ 673               		.loc 1 322 9 is_stmt 0 view .LVU142
+ 674 02a6 9923      		tst r25
+ 675 02a8 01F4      		brne .+2
+ 676 02aa 00C0      		rjmp .L38
+ 677               	.LVL27:
+ 678               		.loc 1 322 19 view .LVU143
+ 679 02ac 9150      		subi r25,lo8(-(-1))
+ 680               	.LVL28:
+ 681               	.L25:
+ 323:Tuner.cpp     ****         {
+ 324:Tuner.cpp     ****             arrIdx = (RESULT_ARRAY_SIZE - 1);
+ 325:Tuner.cpp     ****         }
+ 326:Tuner.cpp     **** 
+ 327:Tuner.cpp     ****         if (FundamentalNoteResultArray[arrIdx] == most_common)
+ 682               		.loc 1 327 9 is_stmt 1 view .LVU144
+ 683               		.loc 1 327 40 is_stmt 0 view .LVU145
+ 684 02ae 292F      		mov r18,r25
+ 685 02b0 30E0      		ldi r19,0
+ 686               		.loc 1 327 46 view .LVU146
+ 687 02b2 F901      		movw r30,r18
+ 688 02b4 E050      		subi r30,lo8(-(FundamentalNoteResultArray))
+ 689 02b6 F040      		sbci r31,hi8(-(FundamentalNoteResultArray))
+ 690 02b8 5081      		ld r21,Z
+ 691               		.loc 1 327 9 view .LVU147
+ 692 02ba 5813      		cpse r21,r24
+ 693 02bc 00C0      		rjmp .L26
+ 694               	.LVL29:
+ 328:Tuner.cpp     ****         {
+ 329:Tuner.cpp     ****             /* Break for-loop */
+ 330:Tuner.cpp     ****             i = RESULT_ARRAY_SIZE;
+ 695               		.loc 1 330 15 view .LVU148
+ 696 02be 48E0      		ldi r20,lo8(8)
+ 697               	.LVL30:
+ 698               	.L26:
+ 320:Tuner.cpp     ****     {
+ 699               		.loc 1 320 5 is_stmt 1 discriminator 2 view .LVU149
+ 320:Tuner.cpp     ****     {
+ 700               		.loc 1 320 5 is_stmt 0 discriminator 2 view .LVU150
+ 701 02c0 4F5F      		subi r20,lo8(-(1))
+ 702               	.LVL31:
+ 320:Tuner.cpp     ****     {
+ 703               		.loc 1 320 27 is_stmt 1 discriminator 2 view .LVU151
+ 704 02c2 4830      		cpi r20,lo8(8)
+ 705 02c4 00F0      		brlo .L27
+ 320:Tuner.cpp     ****     {
+ 706               		.loc 1 320 27 is_stmt 0 discriminator 2 view .LVU152
+ 707               	.LBE10:
+ 331:Tuner.cpp     ****         }
+ 332:Tuner.cpp     ****     }
+ 333:Tuner.cpp     **** 
+ 334:Tuner.cpp     ****     /* Count difference negative if played note is lower than closest not */
+ 335:Tuner.cpp     ****     int32_t count_diff = Tuner_NoteCycleArray[NoteResultArray[arrIdx]] - CountResultArray[arrIdx];
+ 708               		.loc 1 335 5 is_stmt 1 view .LVU153
+ 709               		.loc 1 335 69 is_stmt 0 view .LVU154
+ 710 02c6 E901      		movw r28,r18
+ 711 02c8 C050      		subi r28,lo8(-(NoteResultArray))
+ 712 02ca D040      		sbci r29,hi8(-(NoteResultArray))
+ 713 02cc 8881      		ld r24,Y
+ 714               	.LVL32:
+ 715               		.loc 1 335 97 view .LVU155
+ 716 02ce 220F      		lsl r18
+ 717 02d0 331F      		rol r19
+ 718 02d2 220F      		lsl r18
+ 719 02d4 331F      		rol r19
+ 720 02d6 F901      		movw r30,r18
+ 721 02d8 E050      		subi r30,lo8(-(CountResultArray))
+ 722 02da F040      		sbci r31,hi8(-(CountResultArray))
+ 723 02dc 0081      		ld r16,Z
+ 724 02de 1181      		ldd r17,Z+1
+ 725 02e0 2281      		ldd r18,Z+2
+ 726 02e2 3381      		ldd r19,Z+3
+ 727               		.loc 1 335 70 view .LVU156
+ 728 02e4 94E0      		ldi r25,lo8(4)
+ 729 02e6 899F      		mul r24,r25
+ 730 02e8 F001      		movw r30,r0
+ 731 02ea 1124      		clr __zero_reg__
+ 732 02ec E050      		subi r30,lo8(-(_ZL20Tuner_NoteCycleArray))
+ 733 02ee F040      		sbci r31,hi8(-(_ZL20Tuner_NoteCycleArray))
+ 734               		.loc 1 335 72 view .LVU157
+ 735 02f0 4081      		ld r20,Z
+ 736 02f2 5181      		ldd r21,Z+1
+ 737 02f4 6281      		ldd r22,Z+2
+ 738 02f6 7381      		ldd r23,Z+3
+ 739               	.LVL33:
+ 740               		.loc 1 335 72 view .LVU158
+ 741 02f8 401B      		sub r20,r16
+ 742 02fa 510B      		sbc r21,r17
+ 743 02fc 620B      		sbc r22,r18
+ 744 02fe 730B      		sbc r23,r19
+ 745               	.LVL34:
+ 336:Tuner.cpp     **** 
+ 337:Tuner.cpp     ****     /* Calculate the number corresponding to one step change for red LEDs */
+ 338:Tuner.cpp     ****     uint32_t span = 0;
+ 746               		.loc 1 338 5 is_stmt 1 view .LVU159
+ 339:Tuner.cpp     ****     uint32_t res = 0;
+ 747               		.loc 1 339 5 view .LVU160
+ 340:Tuner.cpp     ****     
+ 341:Tuner.cpp     ****     if (count_diff < 0)
+ 748               		.loc 1 341 5 view .LVU161
+ 749 0300 77FF      		sbrs r23,7
+ 750 0302 00C0      		rjmp .L28
+ 342:Tuner.cpp     ****     {
+ 343:Tuner.cpp     ****         span = Tuner_NoteCycleArray[NoteResultArray[arrIdx] - 1] - Tuner_NoteCycleArray[NoteResultA
+ 751               		.loc 1 343 9 view .LVU162
+ 752               		.loc 1 343 59 is_stmt 0 view .LVU163
+ 753 0304 E881      		ld r30,Y
+ 754               		.loc 1 343 111 view .LVU164
+ 755 0306 C881      		ld r28,Y
+ 756               		.loc 1 343 64 view .LVU165
+ 757 0308 E150      		subi r30,1
+ 758 030a FF0B      		sbc r31,r31
+ 759 030c EE0F      		lsl r30
+ 760 030e FF1F      		rol r31
+ 761 0310 EE0F      		lsl r30
+ 762 0312 FF1F      		rol r31
+ 763 0314 E050      		subi r30,lo8(-(_ZL20Tuner_NoteCycleArray))
+ 764 0316 F040      		sbci r31,hi8(-(_ZL20Tuner_NoteCycleArray))
+ 765               		.loc 1 343 112 view .LVU166
+ 766 0318 84E0      		ldi r24,lo8(4)
+ 767 031a C89F      		mul r28,r24
+ 768 031c E001      		movw r28,r0
+ 769 031e 1124      		clr __zero_reg__
+ 770 0320 C050      		subi r28,lo8(-(_ZL20Tuner_NoteCycleArray))
+ 771 0322 D040      		sbci r29,hi8(-(_ZL20Tuner_NoteCycleArray))
+ 772               		.loc 1 343 14 view .LVU167
+ 773 0324 8081      		ld r24,Z
+ 774 0326 9181      		ldd r25,Z+1
+ 775 0328 A281      		ldd r26,Z+2
+ 776 032a B381      		ldd r27,Z+3
+ 777 032c 0881      		ld r16,Y
+ 778 032e 1981      		ldd r17,Y+1
+ 779 0330 2A81      		ldd r18,Y+2
+ 780 0332 3B81      		ldd r19,Y+3
+ 781               	.L43:
+ 344:Tuner.cpp     ****     }
+ 345:Tuner.cpp     ****     else
+ 346:Tuner.cpp     ****     {
+ 347:Tuner.cpp     ****         span = Tuner_NoteCycleArray[NoteResultArray[arrIdx]] - Tuner_NoteCycleArray[NoteResultArray
+ 782               		.loc 1 347 14 view .LVU168
+ 783 0334 801B      		sub r24,r16
+ 784 0336 910B      		sbc r25,r17
+ 785 0338 A20B      		sbc r26,r18
+ 786 033a B30B      		sbc r27,r19
+ 787               	.LVL35:
+ 348:Tuner.cpp     ****     }
+ 349:Tuner.cpp     **** 
+ 350:Tuner.cpp     ****     span /= 2;
+ 788               		.loc 1 350 5 is_stmt 1 view .LVU169
+ 351:Tuner.cpp     ****     res = span / NUMBER_OF_LED_STEPS;
+ 789               		.loc 1 351 5 view .LVU170
+ 352:Tuner.cpp     **** 
+ 353:Tuner.cpp     ****     if (abs(count_diff) < (span >> LIMIT_SHIFT_RIGHT_NOTE))
+ 790               		.loc 1 353 5 view .LVU171
+ 791               	.LBB11:
+ 792               		.loc 1 353 9 is_stmt 0 view .LVU172
+ 793 033c 8A01      		movw r16,r20
+ 794 033e 57FF      		sbrs r21,7
+ 795 0340 00C0      		rjmp .L30
+ 796 0342 0027      		clr r16
+ 797 0344 1127      		clr r17
+ 798 0346 041B      		sub r16,r20
+ 799 0348 150B      		sbc r17,r21
+ 800               	.L30:
+ 801 034a 012E      		mov __tmp_reg__,r17
+ 802 034c 000C      		lsl r0
+ 803 034e 220B      		sbc r18,r18
+ 804 0350 330B      		sbc r19,r19
+ 805               		.loc 1 353 33 view .LVU173
+ 806 0352 C92E      		mov r12,r25
+ 807 0354 DA2E      		mov r13,r26
+ 808 0356 EB2E      		mov r14,r27
+ 809 0358 FF24      		clr r15
+ 810               		.loc 1 353 5 view .LVU174
+ 811 035a 0C15      		cp r16,r12
+ 812 035c 1D05      		cpc r17,r13
+ 813 035e 2E05      		cpc r18,r14
+ 814 0360 3F05      		cpc r19,r15
+ 815 0362 00F0      		brlo .L31
+ 816               	.LBE11:
+ 351:Tuner.cpp     ****     res = span / NUMBER_OF_LED_STEPS;
+ 817               		.loc 1 351 9 view .LVU175
+ 818 0364 E4E0      		ldi r30,4
+ 819               		1:
+ 820 0366 B695      		lsr r27
+ 821 0368 A795      		ror r26
+ 822 036a 9795      		ror r25
+ 823 036c 8795      		ror r24
+ 824 036e EA95      		dec r30
+ 825 0370 01F4      		brne 1b
+ 826               	.LVL36:
+ 351:Tuner.cpp     ****     res = span / NUMBER_OF_LED_STEPS;
+ 827               		.loc 1 351 9 view .LVU176
+ 828 0372 6C01      		movw r12,r24
+ 829 0374 7D01      		movw r14,r26
+ 830               	.LBB15:
+ 831               	.LBB12:
+ 354:Tuner.cpp     ****     {
+ 355:Tuner.cpp     ****         Tuner_LED_Data[0] = 0x00;   // Clear all red LEDs
+ 356:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x01;   // Set green LED
+ 357:Tuner.cpp     ****         Tuner_7seg_Data[0] = ' ';
+ 358:Tuner.cpp     ****         Tuner_7seg_Data[3] = ' ';
+ 359:Tuner.cpp     ****     }
+ 360:Tuner.cpp     ****     else
+ 361:Tuner.cpp     ****     {
+ 362:Tuner.cpp     ****         uint8_t i = 0;
+ 363:Tuner.cpp     ****         for (i = 0; i <= NUMBER_OF_LED_STEPS; i++)
+ 832               		.loc 1 363 16 view .LVU177
+ 833 0376 E0E0      		ldi r30,0
+ 834               	.L32:
+ 835               	.LVL37:
+ 364:Tuner.cpp     ****         {
+ 365:Tuner.cpp     ****             if (abs(count_diff) < (res * (i+1)))
+ 836               		.loc 1 365 13 is_stmt 1 view .LVU178
+ 837 0378 FE2F      		mov r31,r30
+ 838 037a EF5F      		subi r30,lo8(-(1))
+ 839               	.LVL38:
+ 840               		.loc 1 365 13 is_stmt 0 view .LVU179
+ 841 037c 0C15      		cp r16,r12
+ 842 037e 1D05      		cpc r17,r13
+ 843 0380 2E05      		cpc r18,r14
+ 844 0382 3F05      		cpc r19,r15
+ 845 0384 00F4      		brsh .L35
+ 846 0386 EF2F      		mov r30,r31
+ 847 0388 00C0      		rjmp .L34
+ 848               	.LVL39:
+ 849               	.L38:
+ 850               		.loc 1 365 13 view .LVU180
+ 851               	.LBE12:
+ 852               	.LBE15:
+ 853               	.LBB16:
+ 324:Tuner.cpp     ****         }
+ 854               		.loc 1 324 20 view .LVU181
+ 855 038a 97E0      		ldi r25,lo8(7)
+ 856 038c 00C0      		rjmp .L25
+ 857               	.LVL40:
+ 858               	.L28:
+ 324:Tuner.cpp     ****         }
+ 859               		.loc 1 324 20 view .LVU182
+ 860               	.LBE16:
+ 347:Tuner.cpp     ****     }
+ 861               		.loc 1 347 9 is_stmt 1 view .LVU183
+ 347:Tuner.cpp     ****     }
+ 862               		.loc 1 347 59 is_stmt 0 view .LVU184
+ 863 038e A881      		ld r26,Y
+ 347:Tuner.cpp     ****     }
+ 864               		.loc 1 347 107 view .LVU185
+ 865 0390 E881      		ld r30,Y
+ 347:Tuner.cpp     ****     }
+ 866               		.loc 1 347 60 view .LVU186
+ 867 0392 94E0      		ldi r25,lo8(4)
+ 868 0394 A99F      		mul r26,r25
+ 869 0396 D001      		movw r26,r0
+ 870 0398 1124      		clr __zero_reg__
+ 871 039a A050      		subi r26,lo8(-(_ZL20Tuner_NoteCycleArray))
+ 872 039c B040      		sbci r27,hi8(-(_ZL20Tuner_NoteCycleArray))
+ 347:Tuner.cpp     ****     }
+ 873               		.loc 1 347 112 view .LVU187
+ 874 039e 84E0      		ldi r24,lo8(4)
+ 875 03a0 E89F      		mul r30,r24
+ 876 03a2 F001      		movw r30,r0
+ 877 03a4 1124      		clr __zero_reg__
+ 878 03a6 E050      		subi r30,lo8(-(_ZL20Tuner_NoteCycleArray+4))
+ 879 03a8 F040      		sbci r31,hi8(-(_ZL20Tuner_NoteCycleArray+4))
+ 347:Tuner.cpp     ****     }
+ 880               		.loc 1 347 14 view .LVU188
+ 881 03aa 8D91      		ld r24,X+
+ 882 03ac 9D91      		ld r25,X+
+ 883 03ae 0D90      		ld __tmp_reg__,X+
+ 884 03b0 BC91      		ld r27,X
+ 885 03b2 A02D      		mov r26,__tmp_reg__
+ 886 03b4 0081      		ld r16,Z
+ 887 03b6 1181      		ldd r17,Z+1
+ 888 03b8 2281      		ldd r18,Z+2
+ 889 03ba 3381      		ldd r19,Z+3
+ 890 03bc 00C0      		rjmp .L43
+ 891               	.LVL41:
+ 892               	.L31:
+ 893               	.LBB17:
+ 355:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x01;   // Set green LED
+ 894               		.loc 1 355 9 is_stmt 1 view .LVU189
+ 355:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x01;   // Set green LED
+ 895               		.loc 1 355 27 is_stmt 0 view .LVU190
+ 896 03be 1092 0000 		sts Tuner_LED_Data,__zero_reg__
+ 356:Tuner.cpp     ****         Tuner_7seg_Data[0] = ' ';
+ 897               		.loc 1 356 9 is_stmt 1 view .LVU191
+ 356:Tuner.cpp     ****         Tuner_7seg_Data[0] = ' ';
+ 898               		.loc 1 356 27 is_stmt 0 view .LVU192
+ 899 03c2 81E0      		ldi r24,lo8(1)
+ 900               	.LVL42:
+ 356:Tuner.cpp     ****         Tuner_7seg_Data[0] = ' ';
+ 901               		.loc 1 356 27 view .LVU193
+ 902 03c4 8093 0000 		sts Tuner_LED_Data+1,r24
+ 357:Tuner.cpp     ****         Tuner_7seg_Data[3] = ' ';
+ 903               		.loc 1 357 9 is_stmt 1 view .LVU194
+ 357:Tuner.cpp     ****         Tuner_7seg_Data[3] = ' ';
+ 904               		.loc 1 357 28 is_stmt 0 view .LVU195
+ 905 03c8 80E2      		ldi r24,lo8(32)
+ 906 03ca 8093 0000 		sts Tuner_7seg_Data,r24
+ 358:Tuner.cpp     ****     }
+ 907               		.loc 1 358 9 is_stmt 1 view .LVU196
+ 358:Tuner.cpp     ****     }
+ 908               		.loc 1 358 28 is_stmt 0 view .LVU197
+ 909 03ce 8093 0000 		sts Tuner_7seg_Data+3,r24
+ 910               	.L24:
+ 911               	/* epilogue start */
+ 912               	.LBE17:
+ 366:Tuner.cpp     ****             {
+ 367:Tuner.cpp     ****                 break;
+ 368:Tuner.cpp     ****             }
+ 369:Tuner.cpp     ****         }
+ 370:Tuner.cpp     **** 
+ 371:Tuner.cpp     ****         if (count_diff < 0)
+ 372:Tuner.cpp     ****         {
+ 373:Tuner.cpp     ****             Tuner_7seg_Data[0] = '-';
+ 374:Tuner.cpp     ****             Tuner_7seg_Data[3] = ' ';
+ 375:Tuner.cpp     ****         }
+ 376:Tuner.cpp     ****         else
+ 377:Tuner.cpp     ****         {
+ 378:Tuner.cpp     ****             i += NUMBER_OF_LED_STEPS;
+ 379:Tuner.cpp     ****             Tuner_7seg_Data[0] = ' ';
+ 380:Tuner.cpp     ****             Tuner_7seg_Data[3] = '-';
+ 381:Tuner.cpp     ****         }
+ 382:Tuner.cpp     **** 
+ 383:Tuner.cpp     ****         Tuner_LED_Data[0] = Tuner_RedLEDStates[i];  // Set red LEDs
+ 384:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x00;                   // Clear green LED
+ 385:Tuner.cpp     ****     }
+ 386:Tuner.cpp     **** }
+ 913               		.loc 1 386 1 view .LVU198
+ 914 03d2 DF91      		pop r29
+ 915 03d4 CF91      		pop r28
+ 916 03d6 1F91      		pop r17
+ 917 03d8 0F91      		pop r16
+ 918 03da FF90      		pop r15
+ 919 03dc EF90      		pop r14
+ 920 03de DF90      		pop r13
+ 921 03e0 CF90      		pop r12
+ 922 03e2 0895      		ret
+ 923               	.LVL43:
+ 924               	.L35:
+ 925               	.LBB18:
+ 926               	.LBB13:
+ 363:Tuner.cpp     ****         {
+ 927               		.loc 1 363 23 is_stmt 1 discriminator 1 view .LVU199
+ 928 03e4 C80E      		add r12,r24
+ 929 03e6 D91E      		adc r13,r25
+ 930 03e8 EA1E      		adc r14,r26
+ 931 03ea FB1E      		adc r15,r27
+ 932 03ec E930      		cpi r30,lo8(9)
+ 933 03ee 01F4      		brne .L32
+ 934               	.L34:
+ 371:Tuner.cpp     ****         {
+ 935               		.loc 1 371 9 view .LVU200
+ 936 03f0 77FF      		sbrs r23,7
+ 937 03f2 00C0      		rjmp .L36
+ 373:Tuner.cpp     ****             Tuner_7seg_Data[3] = ' ';
+ 938               		.loc 1 373 13 view .LVU201
+ 373:Tuner.cpp     ****             Tuner_7seg_Data[3] = ' ';
+ 939               		.loc 1 373 32 is_stmt 0 view .LVU202
+ 940 03f4 8DE2      		ldi r24,lo8(45)
+ 941 03f6 8093 0000 		sts Tuner_7seg_Data,r24
+ 374:Tuner.cpp     ****         }
+ 942               		.loc 1 374 13 is_stmt 1 view .LVU203
+ 374:Tuner.cpp     ****         }
+ 943               		.loc 1 374 32 is_stmt 0 view .LVU204
+ 944 03fa 80E2      		ldi r24,lo8(32)
+ 945               	.L44:
+ 380:Tuner.cpp     ****         }
+ 946               		.loc 1 380 32 view .LVU205
+ 947 03fc 8093 0000 		sts Tuner_7seg_Data+3,r24
+ 383:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x00;                   // Clear green LED
+ 948               		.loc 1 383 9 is_stmt 1 view .LVU206
+ 383:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x00;                   // Clear green LED
+ 949               		.loc 1 383 48 is_stmt 0 view .LVU207
+ 950 0400 F0E0      		ldi r31,0
+ 383:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x00;                   // Clear green LED
+ 951               		.loc 1 383 49 view .LVU208
+ 952 0402 E050      		subi r30,lo8(-(_ZL18Tuner_RedLEDStates))
+ 953 0404 F040      		sbci r31,hi8(-(_ZL18Tuner_RedLEDStates))
+ 954               	.LVL44:
+ 383:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x00;                   // Clear green LED
+ 955               		.loc 1 383 49 view .LVU209
+ 956 0406 8081      		ld r24,Z
+ 383:Tuner.cpp     ****         Tuner_LED_Data[1] = 0x00;                   // Clear green LED
+ 957               		.loc 1 383 27 view .LVU210
+ 958 0408 8093 0000 		sts Tuner_LED_Data,r24
+ 384:Tuner.cpp     ****     }
+ 959               		.loc 1 384 9 is_stmt 1 view .LVU211
+ 384:Tuner.cpp     ****     }
+ 960               		.loc 1 384 27 is_stmt 0 view .LVU212
+ 961 040c 1092 0000 		sts Tuner_LED_Data+1,__zero_reg__
+ 962               	.LBE13:
+ 963               	.LBE18:
+ 964               		.loc 1 386 1 view .LVU213
+ 965 0410 00C0      		rjmp .L24
+ 966               	.LVL45:
+ 967               	.L36:
+ 968               	.LBB19:
+ 969               	.LBB14:
+ 378:Tuner.cpp     ****             Tuner_7seg_Data[0] = ' ';
+ 970               		.loc 1 378 13 is_stmt 1 view .LVU214
+ 378:Tuner.cpp     ****             Tuner_7seg_Data[0] = ' ';
+ 971               		.loc 1 378 15 is_stmt 0 view .LVU215
+ 972 0412 E85F      		subi r30,lo8(-(8))
+ 973               	.LVL46:
+ 379:Tuner.cpp     ****             Tuner_7seg_Data[3] = '-';
+ 974               		.loc 1 379 13 is_stmt 1 view .LVU216
+ 379:Tuner.cpp     ****             Tuner_7seg_Data[3] = '-';
+ 975               		.loc 1 379 32 is_stmt 0 view .LVU217
+ 976 0414 80E2      		ldi r24,lo8(32)
+ 977 0416 8093 0000 		sts Tuner_7seg_Data,r24
+ 380:Tuner.cpp     ****         }
+ 978               		.loc 1 380 13 is_stmt 1 view .LVU218
+ 380:Tuner.cpp     ****         }
+ 979               		.loc 1 380 32 is_stmt 0 view .LVU219
+ 980 041a 8DE2      		ldi r24,lo8(45)
+ 981 041c 00C0      		rjmp .L44
+ 982               	.LBE14:
+ 983               	.LBE19:
+ 984               		.cfi_endproc
+ 985               	.LFE10:
+ 987               		.section	.rodata
+ 990               	_ZL20Tuner_NoteCycleArray:
+ 991 0000 D2        		.byte	-46
+ 992 0001 A9        		.byte	-87
+ 993 0002 12        		.byte	18
+ 994 0003 00        		.byte	0
+ 995 0004 AA        		.byte	-86
+ 996 0005 9D        		.byte	-99
+ 997 0006 11        		.byte	17
+ 998 0007 00        		.byte	0
+ 999 0008 8E        		.byte	-114
+ 1000 0009 A0        		.byte	-96
+ 1001 000a 10        		.byte	16
+ 1002 000b 00        		.byte	0
+ 1003 000c A7        		.byte	-89
+ 1004 000d B1        		.byte	-79
+ 1005 000e 0F        		.byte	15
+ 1006 000f 00        		.byte	0
+ 1007 0010 29        		.byte	41
+ 1008 0011 D0        		.byte	-48
+ 1009 0012 0E        		.byte	14
+ 1010 0013 00        		.byte	0
+ 1011 0014 52        		.byte	82
+ 1012 0015 FB        		.byte	-5
+ 1013 0016 0D        		.byte	13
+ 1014 0017 00        		.byte	0
+ 1015 0018 6E        		.byte	110
+ 1016 0019 32        		.byte	50
+ 1017 001a 0D        		.byte	13
+ 1018 001b 00        		.byte	0
+ 1019 001c D0        		.byte	-48
+ 1020 001d 74        		.byte	116
+ 1021 001e 0C        		.byte	12
+ 1022 001f 00        		.byte	0
+ 1023 0020 D7        		.byte	-41
+ 1024 0021 C1        		.byte	-63
+ 1025 0022 0B        		.byte	11
+ 1026 0023 00        		.byte	0
+ 1027 0024 E9        		.byte	-23
+ 1028 0025 18        		.byte	24
+ 1029 0026 0B        		.byte	11
+ 1030 0027 00        		.byte	0
+ 1031 0028 76        		.byte	118
+ 1032 0029 79        		.byte	121
+ 1033 002a 0A        		.byte	10
+ 1034 002b 00        		.byte	0
+ 1035 002c F6        		.byte	-10
+ 1036 002d E2        		.byte	-30
+ 1037 002e 09        		.byte	9
+ 1038 002f 00        		.byte	0
+ 1039 0030 E9        		.byte	-23
+ 1040 0031 54        		.byte	84
+ 1041 0032 09        		.byte	9
+ 1042 0033 00        		.byte	0
+ 1043 0034 D5        		.byte	-43
+ 1044 0035 CE        		.byte	-50
+ 1045 0036 08        		.byte	8
+ 1046 0037 00        		.byte	0
+ 1047 0038 47        		.byte	71
+ 1048 0039 50        		.byte	80
+ 1049 003a 08        		.byte	8
+ 1050 003b 00        		.byte	0
+ 1051 003c D4        		.byte	-44
+ 1052 003d D8        		.byte	-40
+ 1053 003e 07        		.byte	7
+ 1054 003f 00        		.byte	0
+ 1055 0040 14        		.byte	20
+ 1056 0041 68        		.byte	104
+ 1057 0042 07        		.byte	7
+ 1058 0043 00        		.byte	0
+ 1059 0044 A9        		.byte	-87
+ 1060 0045 FD        		.byte	-3
+ 1061 0046 06        		.byte	6
+ 1062 0047 00        		.byte	0
+ 1063 0048 37        		.byte	55
+ 1064 0049 99        		.byte	-103
+ 1065 004a 06        		.byte	6
+ 1066 004b 00        		.byte	0
+ 1067 004c 68        		.byte	104
+ 1068 004d 3A        		.byte	58
+ 1069 004e 06        		.byte	6
+ 1070 004f 00        		.byte	0
+ 1071 0050 EB        		.byte	-21
+ 1072 0051 E0        		.byte	-32
+ 1073 0052 05        		.byte	5
+ 1074 0053 00        		.byte	0
+ 1075 0054 74        		.byte	116
+ 1076 0055 8C        		.byte	-116
+ 1077 0056 05        		.byte	5
+ 1078 0057 00        		.byte	0
+ 1079 0058 BB        		.byte	-69
+ 1080 0059 3C        		.byte	60
+ 1081 005a 05        		.byte	5
+ 1082 005b 00        		.byte	0
+ 1083 005c 7B        		.byte	123
+ 1084 005d F1        		.byte	-15
+ 1085 005e 04        		.byte	4
+ 1086 005f 00        		.byte	0
+ 1087 0060 75        		.byte	117
+ 1088 0061 AA        		.byte	-86
+ 1089 0062 04        		.byte	4
+ 1090 0063 00        		.byte	0
+ 1091 0064 6A        		.byte	106
+ 1092 0065 67        		.byte	103
+ 1093 0066 04        		.byte	4
+ 1094 0067 00        		.byte	0
+ 1095 0068 23        		.byte	35
+ 1096 0069 28        		.byte	40
+ 1097 006a 04        		.byte	4
+ 1098 006b 00        		.byte	0
+ 1099 006c 6A        		.byte	106
+ 1100 006d EC        		.byte	-20
+ 1101 006e 03        		.byte	3
+ 1102 006f 00        		.byte	0
+ 1103 0070 0A        		.byte	10
+ 1104 0071 B4        		.byte	-76
+ 1105 0072 03        		.byte	3
+ 1106 0073 00        		.byte	0
+ 1107 0074 D5        		.byte	-43
+ 1108 0075 7E        		.byte	126
+ 1109 0076 03        		.byte	3
+ 1110 0077 00        		.byte	0
+ 1111 0078 9B        		.byte	-101
+ 1112 0079 4C        		.byte	76
+ 1113 007a 03        		.byte	3
+ 1114 007b 00        		.byte	0
+ 1115 007c 34        		.byte	52
+ 1116 007d 1D        		.byte	29
+ 1117 007e 03        		.byte	3
+ 1118 007f 00        		.byte	0
+ 1119 0080 76        		.byte	118
+ 1120 0081 F0        		.byte	-16
+ 1121 0082 02        		.byte	2
+ 1122 0083 00        		.byte	0
+ 1123 0084 3A        		.byte	58
+ 1124 0085 C6        		.byte	-58
+ 1125 0086 02        		.byte	2
+ 1126 0087 00        		.byte	0
+ 1127 0088 5E        		.byte	94
+ 1128 0089 9E        		.byte	-98
+ 1129 008a 02        		.byte	2
+ 1130 008b 00        		.byte	0
+ 1131 008c BE        		.byte	-66
+ 1132 008d 78        		.byte	120
+ 1133 008e 02        		.byte	2
+ 1134 008f 00        		.byte	0
+ 1135 0090 3A        		.byte	58
+ 1136 0091 55        		.byte	85
+ 1137 0092 02        		.byte	2
+ 1138 0093 00        		.byte	0
+ 1139 0094 B5        		.byte	-75
+ 1140 0095 33        		.byte	51
+ 1141 0096 02        		.byte	2
+ 1142 0097 00        		.byte	0
+ 1143 0098 12        		.byte	18
+ 1144 0099 14        		.byte	20
+ 1145 009a 02        		.byte	2
+ 1146 009b 00        		.byte	0
+ 1147 009c 35        		.byte	53
+ 1148 009d F6        		.byte	-10
+ 1149 009e 01        		.byte	1
+ 1150 009f 00        		.byte	0
+ 1151 00a0 05        		.byte	5
+ 1152 00a1 DA        		.byte	-38
+ 1153 00a2 01        		.byte	1
+ 1154 00a3 00        		.byte	0
+ 1155 00a4 6A        		.byte	106
+ 1156 00a5 BF        		.byte	-65
+ 1157 00a6 01        		.byte	1
+ 1158 00a7 00        		.byte	0
+ 1159 00a8 4E        		.byte	78
+ 1160 00a9 A6        		.byte	-90
+ 1161 00aa 01        		.byte	1
+ 1162 00ab 00        		.byte	0
+ 1163 00ac 9A        		.byte	-102
+ 1164 00ad 8E        		.byte	-114
+ 1165 00ae 01        		.byte	1
+ 1166 00af 00        		.byte	0
+ 1167 00b0 3B        		.byte	59
+ 1168 00b1 78        		.byte	120
+ 1169 00b2 01        		.byte	1
+ 1170 00b3 00        		.byte	0
+ 1171 00b4 1D        		.byte	29
+ 1172 00b5 63        		.byte	99
+ 1173 00b6 01        		.byte	1
+ 1174 00b7 00        		.byte	0
+ 1175 00b8 2F        		.byte	47
+ 1176 00b9 4F        		.byte	79
+ 1177 00ba 01        		.byte	1
+ 1178 00bb 00        		.byte	0
+ 1179 00bc 5F        		.byte	95
+ 1180 00bd 3C        		.byte	60
+ 1181 00be 01        		.byte	1
+ 1182 00bf 00        		.byte	0
+ 1183 00c0 9D        		.byte	-99
+ 1184 00c1 2A        		.byte	42
+ 1185 00c2 01        		.byte	1
+ 1186 00c3 00        		.byte	0
+ 1187 00c4 DB        		.byte	-37
+ 1188 00c5 19        		.byte	25
+ 1189 00c6 01        		.byte	1
+ 1190 00c7 00        		.byte	0
+ 1191 00c8 09        		.byte	9
+ 1192 00c9 0A        		.byte	10
+ 1193 00ca 01        		.byte	1
+ 1194 00cb 00        		.byte	0
+ 1195 00cc 1A        		.byte	26
+ 1196 00cd FB        		.byte	-5
+ 1197 00ce 00        		.byte	0
+ 1198 00cf 00        		.byte	0
+ 1199 00d0 03        		.byte	3
+ 1200 00d1 ED        		.byte	-19
+ 1201 00d2 00        		.byte	0
+ 1202 00d3 00        		.byte	0
+ 1203 00d4 B5        		.byte	-75
+ 1204 00d5 DF        		.byte	-33
+ 1205 00d6 00        		.byte	0
+ 1206 00d7 00        		.byte	0
+ 1207 00d8 27        		.byte	39
+ 1208 00d9 D3        		.byte	-45
+ 1209 00da 00        		.byte	0
+ 1210 00db 00        		.byte	0
+ 1211 00dc 4D        		.byte	77
+ 1212 00dd C7        		.byte	-57
+ 1213 00de 00        		.byte	0
+ 1214 00df 00        		.byte	0
+ 1215 00e0 1D        		.byte	29
+ 1216 00e1 BC        		.byte	-68
+ 1217 00e2 00        		.byte	0
+ 1218 00e3 00        		.byte	0
+ 1219 00e4 8F        		.byte	-113
+ 1220 00e5 B1        		.byte	-79
+ 1221 00e6 00        		.byte	0
+ 1222 00e7 00        		.byte	0
+ 1223 00e8 97        		.byte	-105
+ 1224 00e9 A7        		.byte	-89
+ 1225 00ea 00        		.byte	0
+ 1226 00eb 00        		.byte	0
+ 1227 00ec 2F        		.byte	47
+ 1228 00ed 9E        		.byte	-98
+ 1229 00ee 00        		.byte	0
+ 1230 00ef 00        		.byte	0
+ 1231 00f0 4F        		.byte	79
+ 1232 00f1 95        		.byte	-107
+ 1233 00f2 00        		.byte	0
+ 1234 00f3 00        		.byte	0
+ 1235 00f4 ED        		.byte	-19
+ 1236 00f5 8C        		.byte	-116
+ 1237 00f6 00        		.byte	0
+ 1238 00f7 00        		.byte	0
+ 1239 00f8 04        		.byte	4
+ 1240 00f9 85        		.byte	-123
+ 1241 00fa 00        		.byte	0
+ 1242 00fb 00        		.byte	0
+ 1243 00fc 8D        		.byte	-115
+ 1244 00fd 7D        		.byte	125
+ 1245 00fe 00        		.byte	0
+ 1246 00ff 00        		.byte	0
+ 1247 0100 81        		.byte	-127
+ 1248 0101 76        		.byte	118
+ 1249 0102 00        		.byte	0
+ 1250 0103 00        		.byte	0
+ 1251 0104 DB        		.byte	-37
+ 1252 0105 6F        		.byte	111
+ 1253 0106 00        		.byte	0
+ 1254 0107 00        		.byte	0
+ 1255 0108 93        		.byte	-109
+ 1256 0109 69        		.byte	105
+ 1257 010a 00        		.byte	0
+ 1258 010b 00        		.byte	0
+ 1259 010c A7        		.byte	-89
+ 1260 010d 63        		.byte	99
+ 1261 010e 00        		.byte	0
+ 1262 010f 00        		.byte	0
+ 1263 0110 0F        		.byte	15
+ 1264 0111 5E        		.byte	94
+ 1265 0112 00        		.byte	0
+ 1266 0113 00        		.byte	0
+ 1267 0114 C7        		.byte	-57
+ 1268 0115 58        		.byte	88
+ 1269 0116 00        		.byte	0
+ 1270 0117 00        		.byte	0
+ 1271 0118 CC        		.byte	-52
+ 1272 0119 53        		.byte	83
+ 1273 011a 00        		.byte	0
+ 1274 011b 00        		.byte	0
+ 1275 011c 18        		.byte	24
+ 1276 011d 4F        		.byte	79
+ 1277 011e 00        		.byte	0
+ 1278 011f 00        		.byte	0
+ 1279 0120 A7        		.byte	-89
+ 1280 0121 4A        		.byte	74
+ 1281 0122 00        		.byte	0
+ 1282 0123 00        		.byte	0
+ 1283 0124 77        		.byte	119
+ 1284 0125 46        		.byte	70
+ 1285 0126 00        		.byte	0
+ 1286 0127 00        		.byte	0
+ 1287 0128 82        		.byte	-126
+ 1288 0129 42        		.byte	66
+ 1289 012a 00        		.byte	0
+ 1290 012b 00        		.byte	0
+ 1291 012c C7        		.byte	-57
+ 1292 012d 3E        		.byte	62
+ 1293 012e 00        		.byte	0
+ 1294 012f 00        		.byte	0
+ 1295 0130 41        		.byte	65
+ 1296 0131 3B        		.byte	59
+ 1297 0132 00        		.byte	0
+ 1298 0133 00        		.byte	0
+ 1299 0134 ED        		.byte	-19
+ 1300 0135 37        		.byte	55
+ 1301 0136 00        		.byte	0
+ 1302 0137 00        		.byte	0
+ 1303 0138 CA        		.byte	-54
+ 1304 0139 34        		.byte	52
+ 1305 013a 00        		.byte	0
+ 1306 013b 00        		.byte	0
+ 1307 013c D3        		.byte	-45
+ 1308 013d 31        		.byte	49
+ 1309 013e 00        		.byte	0
+ 1310 013f 00        		.byte	0
+ 1311 0140 07        		.byte	7
+ 1312 0141 2F        		.byte	47
+ 1313 0142 00        		.byte	0
+ 1314 0143 00        		.byte	0
+ 1315 0144 64        		.byte	100
+ 1316 0145 2C        		.byte	44
+ 1317 0146 00        		.byte	0
+ 1318 0147 00        		.byte	0
+ 1319 0148 E6        		.byte	-26
+ 1320 0149 29        		.byte	41
+ 1321 014a 00        		.byte	0
+ 1322 014b 00        		.byte	0
+ 1323 014c 8C        		.byte	-116
+ 1324 014d 27        		.byte	39
+ 1325 014e 00        		.byte	0
+ 1326 014f 00        		.byte	0
+ 1327 0150 54        		.byte	84
+ 1328 0151 25        		.byte	37
+ 1329 0152 00        		.byte	0
+ 1330 0153 00        		.byte	0
+ 1331 0154 3B        		.byte	59
+ 1332 0155 23        		.byte	35
+ 1333 0156 00        		.byte	0
+ 1334 0157 00        		.byte	0
+ 1335 0158 41        		.byte	65
+ 1336 0159 21        		.byte	33
+ 1337 015a 00        		.byte	0
+ 1338 015b 00        		.byte	0
+ 1339 015c 63        		.byte	99
+ 1340 015d 1F        		.byte	31
+ 1341 015e 00        		.byte	0
+ 1342 015f 00        		.byte	0
+ 1343 0160 A0        		.byte	-96
+ 1344 0161 1D        		.byte	29
+ 1345 0162 00        		.byte	0
+ 1346 0163 00        		.byte	0
+ 1347 0164 F7        		.byte	-9
+ 1348 0165 1B        		.byte	27
+ 1349 0166 00        		.byte	0
+ 1350 0167 00        		.byte	0
+ 1351 0168 65        		.byte	101
+ 1352 0169 1A        		.byte	26
+ 1353 016a 00        		.byte	0
+ 1354 016b 00        		.byte	0
+ 1355 016c EA        		.byte	-22
+ 1356 016d 18        		.byte	24
+ 1357 016e 00        		.byte	0
+ 1358 016f 00        		.byte	0
+ 1359 0170 84        		.byte	-124
+ 1360 0171 17        		.byte	23
+ 1361 0172 00        		.byte	0
+ 1362 0173 00        		.byte	0
+ 1363 0174 32        		.byte	50
+ 1364 0175 16        		.byte	22
+ 1365 0176 00        		.byte	0
+ 1366 0177 00        		.byte	0
+ 1367 0178 F3        		.byte	-13
+ 1368 0179 14        		.byte	20
+ 1369 017a 00        		.byte	0
+ 1370 017b 00        		.byte	0
+ 1371 017c C6        		.byte	-58
+ 1372 017d 13        		.byte	19
+ 1373 017e 00        		.byte	0
+ 1374 017f 00        		.byte	0
+ 1377               	_ZL18Tuner_RedLEDStates:
+ 1378 0180 1030 2060 		.string	"\0200 `@\300\200"
+ 1378      40C0 8000 
+ 1379 0188 080C 0406 		.string	"\b\f\004\006\002\003\001"
+ 1379      0203 0100 
+ 1382               	_ZL19Tuner_NoteCharacter:
+ 1383 0190 4320      		.ascii	"C "
+ 1384 0192 4462      		.ascii	"Db"
+ 1385 0194 4420      		.ascii	"D "
+ 1386 0196 4562      		.ascii	"Eb"
+ 1387 0198 4520      		.ascii	"E "
+ 1388 019a 4620      		.ascii	"F "
+ 1389 019c 4762      		.ascii	"Gb"
+ 1390 019e 4720      		.ascii	"G "
+ 1391 01a0 4162      		.ascii	"Ab"
+ 1392 01a2 4120      		.ascii	"A "
+ 1393 01a4 4262      		.ascii	"Bb"
+ 1394 01a6 4220      		.ascii	"B "
+ 1397               	_ZL13Harmonic_Mask:
+ 1398 01a8 1F15 0911 		.ascii	"\037\025\t\021"
+ 1399               	.global	Harmonic_Result
+ 1400               		.section .bss
+ 1403               	Harmonic_Result:
+ 1404 0000 0000 0000 		.zero	4
+ 1405               	.global	ResultArrayTail
+ 1408               	ResultArrayTail:
+ 1409 0004 00        		.zero	1
+ 1410               	.global	ResultArrayHead
+ 1413               	ResultArrayHead:
+ 1414 0005 00        		.zero	1
+ 1415               	.global	CntArrayHead
+ 1418               	CntArrayHead:
+ 1419 0006 00        		.zero	1
+ 1420               	.global	FundamentalNoteResultArray
+ 1423               	FundamentalNoteResultArray:
+ 1424 0007 0000 0000 		.zero	8
+ 1424      0000 0000 
+ 1425               	.global	NoteResultArray
+ 1428               	NoteResultArray:
+ 1429 000f 0000 0000 		.zero	8
+ 1429      0000 0000 
+ 1430               	.global	CountResultArray
+ 1433               	CountResultArray:
+ 1434 0017 0000 0000 		.zero	32
+ 1434      0000 0000 
+ 1434      0000 0000 
+ 1434      0000 0000 
+ 1434      0000 0000 
+ 1435               	.global	DiffArray
+ 1438               	DiffArray:
+ 1439 0037 0000 0000 		.zero	20
+ 1439      0000 0000 
+ 1439      0000 0000 
+ 1439      0000 0000 
+ 1439      0000 0000 
+ 1440               	.global	SumArray
+ 1443               	SumArray:
+ 1444 004b 0000 0000 		.zero	20
+ 1444      0000 0000 
+ 1444      0000 0000 
+ 1444      0000 0000 
+ 1444      0000 0000 
+ 1445               	.global	CountArray
+ 1448               	CountArray:
+ 1449 005f 0000 0000 		.zero	20
+ 1449      0000 0000 
+ 1449      0000 0000 
+ 1449      0000 0000 
+ 1449      0000 0000 
+ 1450               	.global	Tuner_TransmitTimerFlag
+ 1453               	Tuner_TransmitTimerFlag:
+ 1454 0073 00        		.zero	1
+ 1455               	.global	Tuner_TransmitTimerOvfCnt
+ 1458               	Tuner_TransmitTimerOvfCnt:
+ 1459 0074 00        		.zero	1
+ 1460               	.global	Tuner_7seg_Data
+ 1461               		.data
+ 1464               	Tuner_7seg_Data:
+ 1465 0000 2020 2020 		.ascii	"    "
+ 1466               	.global	Tuner_LED_Data
+ 1467               		.section .bss
+ 1470               	Tuner_LED_Data:
+ 1471 0075 0000      		.zero	2
+ 1472               		.text
+ 1473               	.Letext0:
+ 1474               		.file 2 "/usr/avr/include/stdint.h"
+ 1475               		.file 3 "Tuner.h"
+ 1476               		.file 4 "util.h"
+ 1477               		.file 5 "InputCapture.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 Tuner.cpp
+     /tmp/ccvd2xX8.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccvd2xX8.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccvd2xX8.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccvd2xX8.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccvd2xX8.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccvd2xX8.s:12     .text:0000000000000000 _Z10Tuner_Initv
+     /tmp/ccvd2xX8.s:32     .text:0000000000000004 _Z12Tuner_Enablev
+     /tmp/ccvd2xX8.s:1458   .bss:0000000000000074 Tuner_TransmitTimerOvfCnt
+     /tmp/ccvd2xX8.s:56     .text:0000000000000010 _Z13Tuner_Disablev
+     /tmp/ccvd2xX8.s:1453   .bss:0000000000000073 Tuner_TransmitTimerFlag
+     /tmp/ccvd2xX8.s:85     .text:0000000000000020 _Z21Tuner_ResultAvailablev
+     /tmp/ccvd2xX8.s:1413   .bss:0000000000000005 ResultArrayHead
+     /tmp/ccvd2xX8.s:1408   .bss:0000000000000004 ResultArrayTail
+     /tmp/ccvd2xX8.s:111    .text:0000000000000032 _Z17Tuner_FetchCountsv
+     /tmp/ccvd2xX8.s:1418   .bss:0000000000000006 CntArrayHead
+     /tmp/ccvd2xX8.s:1448   .bss:000000000000005f CountArray
+     /tmp/ccvd2xX8.s:179    .text:000000000000007c _Z21Tuner_DetectFrequencyv
+     /tmp/ccvd2xX8.s:1443   .bss:000000000000004b SumArray
+     /tmp/ccvd2xX8.s:1438   .bss:0000000000000037 DiffArray
+     /tmp/ccvd2xX8.s:1403   .bss:0000000000000000 Harmonic_Result
+     /tmp/ccvd2xX8.s:1397   .rodata:00000000000001a8 _ZL13Harmonic_Mask
+     /tmp/ccvd2xX8.s:1433   .bss:0000000000000017 CountResultArray
+     /tmp/ccvd2xX8.s:990    .rodata:0000000000000000 _ZL20Tuner_NoteCycleArray
+     /tmp/ccvd2xX8.s:1428   .bss:000000000000000f NoteResultArray
+     /tmp/ccvd2xX8.s:1423   .bss:0000000000000007 FundamentalNoteResultArray
+     /tmp/ccvd2xX8.s:597    .text:000000000000026e _Z25Tuner_GenerateDisplayDatav
+     /tmp/ccvd2xX8.s:1382   .rodata:0000000000000190 _ZL19Tuner_NoteCharacter
+     /tmp/ccvd2xX8.s:1464   .data:0000000000000000 Tuner_7seg_Data
+     /tmp/ccvd2xX8.s:1470   .bss:0000000000000075 Tuner_LED_Data
+     /tmp/ccvd2xX8.s:1377   .rodata:0000000000000180 _ZL18Tuner_RedLEDStates
+
+UNDEFINED SYMBOLS
+_Z19InputCapture_Enablev
+_Z20InputCapture_Disablev
+_Z22InputCapture_Availablev
+_Z21InputCapture_GetCountv
+_Z30FindClosestArrayIndexDecendingPKmhm
+__udivmodqi4
+_Z13GetMostCommonPhh
+__do_copy_data
+__do_clear_bss

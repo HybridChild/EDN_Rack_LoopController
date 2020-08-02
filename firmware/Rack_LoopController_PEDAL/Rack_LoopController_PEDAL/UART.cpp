@@ -172,17 +172,20 @@ void UART_PutString_p(const char *progmem_s )
 
 
 /*************************************************************************
-Function: UART_Available()
+Function: UART_RxAvailable()
 Purpose:  Determine the number of bytes waiting in the receive buffer
 Input:    None
-Returns:  Integer number of bytes in the receive buffer
+Returns:  Boolean, false if buffer is empty
 **************************************************************************/
-int UART_Available(void)
+bool UART_RxAvailable(void)
 {
-	//return (UART_RX_BUFFER_MASK + UART_RxHead - UART_RxTail) % UART_RX_BUFFER_MASK;
 	return (UART_RxHead != UART_RxTail);
 }
 
+bool UART_TxAvailable(void)
+{
+	return (UART_TxHead != UART_TxTail);
+}
 
 /*************************************************************************
 Function: UART_Flush()

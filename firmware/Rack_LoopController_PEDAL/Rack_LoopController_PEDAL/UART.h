@@ -33,11 +33,11 @@ unsigned int	UART_GetChar(void);
 void			UART_PutChar(unsigned char data);
 void			UART_PutString(const char *s );
 void			UART_PutString_p(const char *progmem_s );
-int				UART_Available(void);
+bool			UART_RxAvailable(void);
+bool			UART_TxAvailable(void);
 void			UART_Flush(void);
 int				UART_QueueChar(unsigned char data);
 void			UART_QueueArray(const char *array, unsigned char length);
 void			UART_PutQueue(void);
-bool			UART_QueueIsEmpty();
 
 #endif /* UART_H_ */

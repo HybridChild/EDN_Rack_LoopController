@@ -44,8 +44,8 @@ struct CommandStruct
 };
 
 void PedalCom_Init();
-uint8_t PedalCom_RxAvailable();
-uint8_t PedalCom_TxAvailable();
+bool PedalCom_RxAvailable();
+bool PedalCom_TxAvailable();
 void PedalCom_FlushTxQueue();
 void PedalCom_Receive();
 void PedalCom_HandleReceived();

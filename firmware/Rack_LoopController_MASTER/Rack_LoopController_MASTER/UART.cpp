@@ -185,17 +185,20 @@ void UART0_PutString_p(const char *progmem_s )
 
 
 /*************************************************************************
-Function: UART0_Available()
+Function: UART0_RX_Available()
 Purpose:  Determine the number of bytes waiting in the receive buffer
 Input:    None
-Returns:  Integer number of bytes in the receive buffer
+Returns:  Boolean false if buffer is empty
 **************************************************************************/
-int UART0_Available(void)
+bool UART0_RxAvailable(void)
 {
-	//return (UART0_RX_BUFFER_MASK + UART0_RxHead - UART0_RxTail) % UART0_RX_BUFFER_MASK;
 	return (UART0_RxHead != UART0_RxTail);
 }
 
+bool UART0_TxAvailable(void)
+{
+	return (UART0_TxHead != UART0_TxTail);
+}
 
 /*************************************************************************
 Function: UART0_Flush()
@@ -242,12 +245,6 @@ void UART0_PutQueue(void)
 {
 	/* enable UDRE interrupt */
 	UCSR0B |= (1 << UDRIE0);
-}
-
-
-bool UART0_QueueIsEmpty(void)
-{
-	return (UART0_TxHead == UART0_TxTail);
 }
 
 
@@ -453,15 +450,19 @@ void UART1_PutString_p(const char *progmem_s )
 
 
 /*************************************************************************
-Function: UART1_Available()
+Function: UART1_RxAvailable()
 Purpose:  Determine the number of bytes waiting in the receive buffer
 Input:    None
-Returns:  Integer number of bytes in the receive buffer
+Returns:  Boolean false if buffer is empty
 **************************************************************************/
-int UART1_Available(void)
+bool UART1_RxAvailable(void)
 {
-	//return (UART1_RX_BUFFER_MASK + UART1_RxHead - UART1_RxTail) % UART1_RX_BUFFER_MASK;
 	return (UART1_RxHead != UART1_RxTail);
+}
+
+bool UART1_TxAvailable(void)
+{
+	return (UART1_TxHead != UART1_TxTail);
 }
 
 

@@ -1,0 +1,619 @@
+   1               		.file	"InputCapture.cpp"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	_Z17InputCapture_Initv
+  12               	_Z17InputCapture_Initv:
+  13               	.LFB0:
+  14               		.file 1 "InputCapture.cpp"
+   1:InputCapture.cpp **** #include <avr/io.h>
+   2:InputCapture.cpp **** #include <avr/interrupt.h>
+   3:InputCapture.cpp **** #include "InputCapture.h"
+   4:InputCapture.cpp **** 
+   5:InputCapture.cpp **** /* Defines */
+   6:InputCapture.cpp **** #define TIMER1_TOP 0xFFFF
+   7:InputCapture.cpp **** 
+   8:InputCapture.cpp **** /* Size of the circular count buffer, must be power of 2 */
+   9:InputCapture.cpp **** #define INPUT_CAPTURE_BUFFER_SIZE   8
+  10:InputCapture.cpp **** /* Mask for calculating count buffer head/tail */
+  11:InputCapture.cpp **** #define INPUT_CAPTURE_BUFFER_MASK	( INPUT_CAPTURE_BUFFER_SIZE - 1)
+  12:InputCapture.cpp **** 
+  13:InputCapture.cpp **** /* Local variables */
+  14:InputCapture.cpp **** volatile uint32_t CountBuffer[INPUT_CAPTURE_BUFFER_SIZE] = {0};
+  15:InputCapture.cpp **** volatile uint8_t BufHead = 0;
+  16:InputCapture.cpp **** volatile uint8_t BufTail = 0;
+  17:InputCapture.cpp **** volatile uint32_t newCnt = 0;
+  18:InputCapture.cpp **** volatile uint32_t lastCnt = 0;
+  19:InputCapture.cpp **** volatile uint32_t Timer1_OvfCnt = 0;
+  20:InputCapture.cpp **** 
+  21:InputCapture.cpp **** /* Function implementations */
+  22:InputCapture.cpp **** 
+  23:InputCapture.cpp **** void InputCapture_Init()
+  24:InputCapture.cpp **** {
+  15               		.loc 1 24 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  25:InputCapture.cpp **** 	DDRD &= ~(1 << PIND6);		// Set PortD 6 (ICP1) to input
+  21               		.loc 1 25 2 view .LVU1
+  22               		.loc 1 25 7 is_stmt 0 view .LVU2
+  23 0000 5698      		cbi 0xa,6
+  26:InputCapture.cpp **** 	TCCR1B &= ~(1 << ICES1);	// Input Capture - Falling-edge trigger
+  24               		.loc 1 26 2 is_stmt 1 view .LVU3
+  25               		.loc 1 26 9 is_stmt 0 view .LVU4
+  26 0002 E1E8      		ldi r30,lo8(-127)
+  27 0004 F0E0      		ldi r31,0
+  28 0006 8081      		ld r24,Z
+  29 0008 8F7B      		andi r24,lo8(-65)
+  30 000a 8083      		st Z,r24
+  27:InputCapture.cpp **** 	TCCR1B |= (1 << ICNC1);		// Input Capture - Enable Noise Canceler
+  31               		.loc 1 27 2 is_stmt 1 view .LVU5
+  32               		.loc 1 27 9 is_stmt 0 view .LVU6
+  33 000c 8081      		ld r24,Z
+  34 000e 8068      		ori r24,lo8(-128)
+  35 0010 8083      		st Z,r24
+  28:InputCapture.cpp **** 
+  29:InputCapture.cpp **** 	TIMSK1 |= (1 << TOIE1);		// Enable Counter/Timer1 Overflow interrupt
+  36               		.loc 1 29 2 is_stmt 1 view .LVU7
+  37               		.loc 1 29 9 is_stmt 0 view .LVU8
+  38 0012 EFE6      		ldi r30,lo8(111)
+  39 0014 F0E0      		ldi r31,0
+  40 0016 8081      		ld r24,Z
+  41 0018 8160      		ori r24,lo8(1)
+  42 001a 8083      		st Z,r24
+  43               	/* epilogue start */
+  30:InputCapture.cpp **** }
+  44               		.loc 1 30 1 view .LVU9
+  45 001c 0895      		ret
+  46               		.cfi_endproc
+  47               	.LFE0:
+  49               	.global	_Z19InputCapture_Enablev
+  51               	_Z19InputCapture_Enablev:
+  52               	.LFB1:
+  31:InputCapture.cpp **** 
+  32:InputCapture.cpp **** void InputCapture_Enable()
+  33:InputCapture.cpp **** {
+  53               		.loc 1 33 1 is_stmt 1 view -0
+  54               		.cfi_startproc
+  55               	/* prologue: function */
+  56               	/* frame size = 0 */
+  57               	/* stack size = 0 */
+  58               	.L__stack_usage = 0
+  34:InputCapture.cpp **** 	TCCR1B |= (1 << CS10);		// Counter/Timer1 Clock source - No prescaling
+  59               		.loc 1 34 2 view .LVU11
+  60               		.loc 1 34 9 is_stmt 0 view .LVU12
+  61 001e E1E8      		ldi r30,lo8(-127)
+  62 0020 F0E0      		ldi r31,0
+  63 0022 8081      		ld r24,Z
+  64 0024 8160      		ori r24,lo8(1)
+  65 0026 8083      		st Z,r24
+  35:InputCapture.cpp **** 	TIFR1 |= ((1 << ICF1) | (1 << TOV1));		// Clear pending interrupt
+  66               		.loc 1 35 2 is_stmt 1 view .LVU13
+  67               		.loc 1 35 8 is_stmt 0 view .LVU14
+  68 0028 86B3      		in r24,0x16
+  69 002a 8162      		ori r24,lo8(33)
+  70 002c 86BB      		out 0x16,r24
+  36:InputCapture.cpp **** 	TIMSK1 |= (1 << ICIE1);		// Enable Input Capture interrupt
+  71               		.loc 1 36 2 is_stmt 1 view .LVU15
+  72               		.loc 1 36 9 is_stmt 0 view .LVU16
+  73 002e EFE6      		ldi r30,lo8(111)
+  74 0030 F0E0      		ldi r31,0
+  75 0032 8081      		ld r24,Z
+  76 0034 8062      		ori r24,lo8(32)
+  77 0036 8083      		st Z,r24
+  78               	/* epilogue start */
+  37:InputCapture.cpp **** }
+  79               		.loc 1 37 1 view .LVU17
+  80 0038 0895      		ret
+  81               		.cfi_endproc
+  82               	.LFE1:
+  84               	.global	_Z20InputCapture_Disablev
+  86               	_Z20InputCapture_Disablev:
+  87               	.LFB2:
+  38:InputCapture.cpp **** 
+  39:InputCapture.cpp **** void InputCapture_Disable()
+  40:InputCapture.cpp **** {
+  88               		.loc 1 40 1 is_stmt 1 view -0
+  89               		.cfi_startproc
+  90               	/* prologue: function */
+  91               	/* frame size = 0 */
+  92               	/* stack size = 0 */
+  93               	.L__stack_usage = 0
+  41:InputCapture.cpp **** 	TCCR1B &= ~((1 << CS12) | (1 << CS11) | (1 << CS10));	// Counter/Timer1 Clock source - None (Count
+  94               		.loc 1 41 2 view .LVU19
+  95               		.loc 1 41 9 is_stmt 0 view .LVU20
+  96 003a E1E8      		ldi r30,lo8(-127)
+  97 003c F0E0      		ldi r31,0
+  98 003e 8081      		ld r24,Z
+  99 0040 887F      		andi r24,lo8(-8)
+ 100 0042 8083      		st Z,r24
+  42:InputCapture.cpp **** 	TIMSK1 &= ~(1 << ICIE1);	// Disable Input Capture interrupt
+ 101               		.loc 1 42 2 is_stmt 1 view .LVU21
+ 102               		.loc 1 42 9 is_stmt 0 view .LVU22
+ 103 0044 EFE6      		ldi r30,lo8(111)
+ 104 0046 F0E0      		ldi r31,0
+ 105 0048 8081      		ld r24,Z
+ 106 004a 8F7D      		andi r24,lo8(-33)
+ 107 004c 8083      		st Z,r24
+ 108               	/* epilogue start */
+  43:InputCapture.cpp **** }
+ 109               		.loc 1 43 1 view .LVU23
+ 110 004e 0895      		ret
+ 111               		.cfi_endproc
+ 112               	.LFE2:
+ 114               	.global	_Z22InputCapture_Availablev
+ 116               	_Z22InputCapture_Availablev:
+ 117               	.LFB3:
+  44:InputCapture.cpp **** 
+  45:InputCapture.cpp **** bool InputCapture_Available()
+  46:InputCapture.cpp **** {
+ 118               		.loc 1 46 1 is_stmt 1 view -0
+ 119               		.cfi_startproc
+ 120               	/* prologue: function */
+ 121               	/* frame size = 0 */
+ 122               	/* stack size = 0 */
+ 123               	.L__stack_usage = 0
+  47:InputCapture.cpp **** 	return BufHead != BufTail;
+ 124               		.loc 1 47 2 view .LVU25
+ 125               		.loc 1 47 17 is_stmt 0 view .LVU26
+ 126 0050 2091 0000 		lds r18,BufHead
+ 127 0054 9091 0000 		lds r25,BufTail
+ 128               		.loc 1 47 20 view .LVU27
+ 129 0058 81E0      		ldi r24,lo8(1)
+ 130 005a 2913      		cpse r18,r25
+ 131 005c 00C0      		rjmp .L5
+ 132 005e 80E0      		ldi r24,0
+ 133               	.L5:
+ 134               	/* epilogue start */
+  48:InputCapture.cpp **** }
+ 135               		.loc 1 48 1 view .LVU28
+ 136 0060 0895      		ret
+ 137               		.cfi_endproc
+ 138               	.LFE3:
+ 140               	.global	_Z21InputCapture_GetCountv
+ 142               	_Z21InputCapture_GetCountv:
+ 143               	.LFB4:
+  49:InputCapture.cpp **** 
+  50:InputCapture.cpp **** uint32_t InputCapture_GetCount()
+  51:InputCapture.cpp **** {
+ 144               		.loc 1 51 1 is_stmt 1 view -0
+ 145               		.cfi_startproc
+ 146 0062 CF93      		push r28
+ 147               	.LCFI0:
+ 148               		.cfi_def_cfa_offset 3
+ 149               		.cfi_offset 28, -2
+ 150 0064 DF93      		push r29
+ 151               	.LCFI1:
+ 152               		.cfi_def_cfa_offset 4
+ 153               		.cfi_offset 29, -3
+ 154 0066 00D0      		rcall .
+ 155 0068 00D0      		rcall .
+ 156               	.LCFI2:
+ 157               		.cfi_def_cfa_offset 8
+ 158 006a CDB7      		in r28,__SP_L__
+ 159 006c DEB7      		in r29,__SP_H__
+ 160               	.LCFI3:
+ 161               		.cfi_def_cfa_register 28
+ 162               	/* prologue: function */
+ 163               	/* frame size = 4 */
+ 164               	/* stack size = 6 */
+ 165               	.L__stack_usage = 6
+  52:InputCapture.cpp **** 	uint8_t tmpTail = BufTail;
+ 166               		.loc 1 52 2 view .LVU30
+ 167               		.loc 1 52 20 is_stmt 0 view .LVU31
+ 168 006e E091 0000 		lds r30,BufTail
+ 169               	.LVL0:
+  53:InputCapture.cpp **** 	BufTail = (BufTail + 1) & INPUT_CAPTURE_BUFFER_MASK;
+ 170               		.loc 1 53 2 is_stmt 1 view .LVU32
+ 171               		.loc 1 53 26 is_stmt 0 view .LVU33
+ 172 0072 8091 0000 		lds r24,BufTail
+ 173               		.loc 1 53 21 view .LVU34
+ 174 0076 8F5F      		subi r24,lo8(-(1))
+ 175               		.loc 1 53 26 view .LVU35
+ 176 0078 8770      		andi r24,lo8(7)
+ 177               		.loc 1 53 10 view .LVU36
+ 178 007a 8093 0000 		sts BufTail,r24
+  54:InputCapture.cpp **** 	return CountBuffer[tmpTail];
+ 179               		.loc 1 54 2 is_stmt 1 view .LVU37
+ 180               		.loc 1 54 28 is_stmt 0 view .LVU38
+ 181 007e 84E0      		ldi r24,lo8(4)
+ 182 0080 E89F      		mul r30,r24
+ 183 0082 F001      		movw r30,r0
+ 184 0084 1124      		clr __zero_reg__
+ 185               	.LVL1:
+ 186               		.loc 1 54 28 view .LVU39
+ 187 0086 E050      		subi r30,lo8(-(CountBuffer))
+ 188 0088 F040      		sbci r31,hi8(-(CountBuffer))
+ 189 008a 8081      		ld r24,Z
+ 190 008c 9181      		ldd r25,Z+1
+ 191 008e A281      		ldd r26,Z+2
+ 192 0090 B381      		ldd r27,Z+3
+  55:InputCapture.cpp **** }
+ 193               		.loc 1 55 1 view .LVU40
+ 194 0092 BC01      		movw r22,r24
+ 195 0094 CD01      		movw r24,r26
+ 196               	/* epilogue start */
+ 197 0096 0F90      		pop __tmp_reg__
+ 198 0098 0F90      		pop __tmp_reg__
+ 199 009a 0F90      		pop __tmp_reg__
+ 200 009c 0F90      		pop __tmp_reg__
+ 201 009e DF91      		pop r29
+ 202 00a0 CF91      		pop r28
+ 203 00a2 0895      		ret
+ 204               		.cfi_endproc
+ 205               	.LFE4:
+ 207               	.global	__vector_12
+ 209               	__vector_12:
+ 210               	.LFB5:
+  56:InputCapture.cpp **** 
+  57:InputCapture.cpp **** /* Input Capture Interrupt Service Routine */
+  58:InputCapture.cpp **** ISR(TIMER1_CAPT_vect)
+  59:InputCapture.cpp **** {
+ 211               		.loc 1 59 1 is_stmt 1 view -0
+ 212               		.cfi_startproc
+ 213 00a4 0F92 0FB6 		__gcc_isr 1
+ 213      0F92 1F92 
+ 213      1124 8F92 
+ 214 00b0 9F92      		push r9
+ 215               	.LCFI4:
+ 216               		.cfi_def_cfa_offset 3
+ 217               		.cfi_offset 9, -2
+ 218 00b2 AF92      		push r10
+ 219               	.LCFI5:
+ 220               		.cfi_def_cfa_offset 4
+ 221               		.cfi_offset 10, -3
+ 222 00b4 BF92      		push r11
+ 223               	.LCFI6:
+ 224               		.cfi_def_cfa_offset 5
+ 225               		.cfi_offset 11, -4
+ 226 00b6 CF92      		push r12
+ 227               	.LCFI7:
+ 228               		.cfi_def_cfa_offset 6
+ 229               		.cfi_offset 12, -5
+ 230 00b8 DF92      		push r13
+ 231               	.LCFI8:
+ 232               		.cfi_def_cfa_offset 7
+ 233               		.cfi_offset 13, -6
+ 234 00ba EF92      		push r14
+ 235               	.LCFI9:
+ 236               		.cfi_def_cfa_offset 8
+ 237               		.cfi_offset 14, -7
+ 238 00bc FF92      		push r15
+ 239               	.LCFI10:
+ 240               		.cfi_def_cfa_offset 9
+ 241               		.cfi_offset 15, -8
+ 242 00be 2F93      		push r18
+ 243               	.LCFI11:
+ 244               		.cfi_def_cfa_offset 10
+ 245               		.cfi_offset 18, -9
+ 246 00c0 3F93      		push r19
+ 247               	.LCFI12:
+ 248               		.cfi_def_cfa_offset 11
+ 249               		.cfi_offset 19, -10
+ 250 00c2 4F93      		push r20
+ 251               	.LCFI13:
+ 252               		.cfi_def_cfa_offset 12
+ 253               		.cfi_offset 20, -11
+ 254 00c4 5F93      		push r21
+ 255               	.LCFI14:
+ 256               		.cfi_def_cfa_offset 13
+ 257               		.cfi_offset 21, -12
+ 258 00c6 6F93      		push r22
+ 259               	.LCFI15:
+ 260               		.cfi_def_cfa_offset 14
+ 261               		.cfi_offset 22, -13
+ 262 00c8 7F93      		push r23
+ 263               	.LCFI16:
+ 264               		.cfi_def_cfa_offset 15
+ 265               		.cfi_offset 23, -14
+ 266 00ca 8F93      		push r24
+ 267               	.LCFI17:
+ 268               		.cfi_def_cfa_offset 16
+ 269               		.cfi_offset 24, -15
+ 270 00cc 9F93      		push r25
+ 271               	.LCFI18:
+ 272               		.cfi_def_cfa_offset 17
+ 273               		.cfi_offset 25, -16
+ 274 00ce AF93      		push r26
+ 275               	.LCFI19:
+ 276               		.cfi_def_cfa_offset 18
+ 277               		.cfi_offset 26, -17
+ 278 00d0 BF93      		push r27
+ 279               	.LCFI20:
+ 280               		.cfi_def_cfa_offset 19
+ 281               		.cfi_offset 27, -18
+ 282 00d2 EF93      		push r30
+ 283               	.LCFI21:
+ 284               		.cfi_def_cfa_offset 20
+ 285               		.cfi_offset 30, -19
+ 286 00d4 FF93      		push r31
+ 287               	.LCFI22:
+ 288               		.cfi_def_cfa_offset 21
+ 289               		.cfi_offset 31, -20
+ 290 00d6 CF93      		push r28
+ 291               	.LCFI23:
+ 292               		.cfi_def_cfa_offset 22
+ 293               		.cfi_offset 28, -21
+ 294 00d8 DF93      		push r29
+ 295               	.LCFI24:
+ 296               		.cfi_def_cfa_offset 23
+ 297               		.cfi_offset 29, -22
+ 298 00da 00D0      		rcall .
+ 299 00dc 00D0      		rcall .
+ 300               	.LCFI25:
+ 301               		.cfi_def_cfa_offset 27
+ 302 00de CDB7      		in r28,__SP_L__
+ 303 00e0 DEB7      		in r29,__SP_H__
+ 304               	.LCFI26:
+ 305               		.cfi_def_cfa_register 28
+ 306               	/* prologue: Signal */
+ 307               	/* frame size = 4 */
+ 308               	/* stack size = 25...29 */
+ 309               	.L__stack_usage = 25 + __gcc_isr.n_pushed
+  60:InputCapture.cpp **** 	/* Read count register */
+  61:InputCapture.cpp **** 	newCnt = ICR1;
+ 310               		.loc 1 61 2 view .LVU42
+ 311               		.loc 1 61 11 is_stmt 0 view .LVU43
+ 312 00e2 8091 8600 		lds r24,134
+ 313 00e6 9091 8700 		lds r25,134+1
+ 314 00ea B0E0      		ldi r27,0
+ 315 00ec A0E0      		ldi r26,0
+ 316               		.loc 1 61 9 view .LVU44
+ 317 00ee 8093 0000 		sts newCnt,r24
+ 318 00f2 9093 0000 		sts newCnt+1,r25
+ 319 00f6 A093 0000 		sts newCnt+2,r26
+ 320 00fa B093 0000 		sts newCnt+3,r27
+  62:InputCapture.cpp **** 
+  63:InputCapture.cpp **** 	/* Store counts since last input event */
+  64:InputCapture.cpp **** 	CountBuffer[BufHead] = newCnt + (Timer1_OvfCnt*TIMER1_TOP) - lastCnt;
+ 321               		.loc 1 64 2 is_stmt 1 view .LVU45
+ 322               		.loc 1 64 35 is_stmt 0 view .LVU46
+ 323 00fe 2091 0000 		lds r18,Timer1_OvfCnt
+ 324 0102 3091 0000 		lds r19,Timer1_OvfCnt+1
+ 325 0106 4091 0000 		lds r20,Timer1_OvfCnt+2
+ 326 010a 5091 0000 		lds r21,Timer1_OvfCnt+3
+ 327               		.loc 1 64 25 view .LVU47
+ 328 010e C090 0000 		lds r12,newCnt
+ 329 0112 D090 0000 		lds r13,newCnt+1
+ 330 0116 E090 0000 		lds r14,newCnt+2
+ 331 011a F090 0000 		lds r15,newCnt+3
+ 332               		.loc 1 64 63 view .LVU48
+ 333 011e 8090 0000 		lds r8,lastCnt
+ 334 0122 9090 0000 		lds r9,lastCnt+1
+ 335 0126 A090 0000 		lds r10,lastCnt+2
+ 336 012a B090 0000 		lds r11,lastCnt+3
+ 337               		.loc 1 64 14 view .LVU49
+ 338 012e E091 0000 		lds r30,BufHead
+ 339               		.loc 1 64 48 view .LVU50
+ 340 0132 AFEF      		ldi r26,lo8(-1)
+ 341 0134 BFEF      		ldi r27,lo8(-1)
+ 342 0136 0E94 0000 		call __muluhisi3
+ 343 013a 6983      		std Y+1,r22
+ 344 013c 7A83      		std Y+2,r23
+ 345 013e 8B83      		std Y+3,r24
+ 346 0140 9C83      		std Y+4,r25
+ 347               		.loc 1 64 61 view .LVU51
+ 348 0142 DC01      		movw r26,r24
+ 349 0144 CB01      		movw r24,r22
+ 350 0146 8819      		sub r24,r8
+ 351 0148 9909      		sbc r25,r9
+ 352 014a AA09      		sbc r26,r10
+ 353 014c BB09      		sbc r27,r11
+ 354 014e 8C0D      		add r24,r12
+ 355 0150 9D1D      		adc r25,r13
+ 356 0152 AE1D      		adc r26,r14
+ 357 0154 BF1D      		adc r27,r15
+ 358               		.loc 1 64 23 view .LVU52
+ 359 0156 24E0      		ldi r18,lo8(4)
+ 360 0158 E29F      		mul r30,r18
+ 361 015a F001      		movw r30,r0
+ 362 015c 1124      		clr __zero_reg__
+ 363 015e E050      		subi r30,lo8(-(CountBuffer))
+ 364 0160 F040      		sbci r31,hi8(-(CountBuffer))
+ 365 0162 8083      		st Z,r24
+ 366 0164 9183      		std Z+1,r25
+ 367 0166 A283      		std Z+2,r26
+ 368 0168 B383      		std Z+3,r27
+  65:InputCapture.cpp **** 
+  66:InputCapture.cpp **** 	lastCnt = newCnt;
+ 369               		.loc 1 66 2 is_stmt 1 view .LVU53
+ 370               		.loc 1 66 10 is_stmt 0 view .LVU54
+ 371 016a 8091 0000 		lds r24,newCnt
+ 372 016e 9091 0000 		lds r25,newCnt+1
+ 373 0172 A091 0000 		lds r26,newCnt+2
+ 374 0176 B091 0000 		lds r27,newCnt+3
+ 375 017a 8093 0000 		sts lastCnt,r24
+ 376 017e 9093 0000 		sts lastCnt+1,r25
+ 377 0182 A093 0000 		sts lastCnt+2,r26
+ 378 0186 B093 0000 		sts lastCnt+3,r27
+  67:InputCapture.cpp **** 	Timer1_OvfCnt = 0;
+ 379               		.loc 1 67 2 is_stmt 1 view .LVU55
+ 380               		.loc 1 67 16 is_stmt 0 view .LVU56
+ 381 018a 1092 0000 		sts Timer1_OvfCnt,__zero_reg__
+ 382 018e 1092 0000 		sts Timer1_OvfCnt+1,__zero_reg__
+ 383 0192 1092 0000 		sts Timer1_OvfCnt+2,__zero_reg__
+ 384 0196 1092 0000 		sts Timer1_OvfCnt+3,__zero_reg__
+  68:InputCapture.cpp **** 
+  69:InputCapture.cpp **** 	/* Calculate new buffer head index */
+  70:InputCapture.cpp **** 	BufHead = (BufHead + 1) & INPUT_CAPTURE_BUFFER_MASK;
+ 385               		.loc 1 70 2 is_stmt 1 view .LVU57
+ 386               		.loc 1 70 26 is_stmt 0 view .LVU58
+ 387 019a 8091 0000 		lds r24,BufHead
+ 388               		.loc 1 70 21 view .LVU59
+ 389 019e 8F5F      		subi r24,lo8(-(1))
+ 390               		.loc 1 70 26 view .LVU60
+ 391 01a0 8770      		andi r24,lo8(7)
+ 392               		.loc 1 70 10 view .LVU61
+ 393 01a2 8093 0000 		sts BufHead,r24
+  71:InputCapture.cpp **** 
+  72:InputCapture.cpp **** 	/* Check for buffer overflow */
+  73:InputCapture.cpp **** 	if ( BufHead == BufTail )
+ 394               		.loc 1 73 2 is_stmt 1 view .LVU62
+ 395               		.loc 1 73 15 is_stmt 0 view .LVU63
+ 396 01a6 9091 0000 		lds r25,BufHead
+ 397 01aa 8091 0000 		lds r24,BufTail
+ 398               		.loc 1 73 2 view .LVU64
+ 399 01ae 9813      		cpse r25,r24
+ 400 01b0 00C0      		rjmp .L7
+  74:InputCapture.cpp **** 	{
+  75:InputCapture.cpp **** 		/* Calculate new buffer tail index (ignore overflow)*/
+  76:InputCapture.cpp **** 		BufTail = (BufTail + 1) & INPUT_CAPTURE_BUFFER_MASK;
+ 401               		.loc 1 76 3 is_stmt 1 view .LVU65
+ 402               		.loc 1 76 27 is_stmt 0 view .LVU66
+ 403 01b2 8091 0000 		lds r24,BufTail
+ 404               		.loc 1 76 22 view .LVU67
+ 405 01b6 8F5F      		subi r24,lo8(-(1))
+ 406               		.loc 1 76 27 view .LVU68
+ 407 01b8 8770      		andi r24,lo8(7)
+ 408               		.loc 1 76 11 view .LVU69
+ 409 01ba 8093 0000 		sts BufTail,r24
+ 410               	.L7:
+ 411               	/* epilogue start */
+  77:InputCapture.cpp **** 	}
+  78:InputCapture.cpp **** }
+ 412               		.loc 1 78 1 view .LVU70
+ 413 01be 0F90      		pop __tmp_reg__
+ 414 01c0 0F90      		pop __tmp_reg__
+ 415 01c2 0F90      		pop __tmp_reg__
+ 416 01c4 0F90      		pop __tmp_reg__
+ 417 01c6 DF91      		pop r29
+ 418 01c8 CF91      		pop r28
+ 419 01ca FF91      		pop r31
+ 420 01cc EF91      		pop r30
+ 421 01ce BF91      		pop r27
+ 422 01d0 AF91      		pop r26
+ 423 01d2 9F91      		pop r25
+ 424 01d4 8F91      		pop r24
+ 425 01d6 7F91      		pop r23
+ 426 01d8 6F91      		pop r22
+ 427 01da 5F91      		pop r21
+ 428 01dc 4F91      		pop r20
+ 429 01de 3F91      		pop r19
+ 430 01e0 2F91      		pop r18
+ 431 01e2 FF90      		pop r15
+ 432 01e4 EF90      		pop r14
+ 433 01e6 DF90      		pop r13
+ 434 01e8 CF90      		pop r12
+ 435 01ea BF90      		pop r11
+ 436 01ec AF90      		pop r10
+ 437 01ee 9F90      		pop r9
+ 438 01f0 8F90 1F90 		__gcc_isr 2
+ 438      0F90 0FBE 
+ 438      0F90 
+ 439 01fa 1895      		reti
+ 440               		__gcc_isr 0,r8
+ 441               		.cfi_endproc
+ 442               	.LFE5:
+ 444               	.global	__vector_15
+ 446               	__vector_15:
+ 447               	.LFB6:
+  79:InputCapture.cpp **** 
+  80:InputCapture.cpp **** /* Timer1 overflow Interrupt Service Routine */
+  81:InputCapture.cpp **** ISR(TIMER1_OVF_vect)
+  82:InputCapture.cpp **** {
+ 448               		.loc 1 82 1 is_stmt 1 view -0
+ 449               		.cfi_startproc
+ 450 01fc 1F92 1FB6 		__gcc_isr 1
+ 450      1F92 1124 
+ 450      8F93 
+ 451 0206 9F93      		push r25
+ 452               	.LCFI27:
+ 453               		.cfi_def_cfa_offset 3
+ 454               		.cfi_offset 25, -2
+ 455 0208 AF93      		push r26
+ 456               	.LCFI28:
+ 457               		.cfi_def_cfa_offset 4
+ 458               		.cfi_offset 26, -3
+ 459 020a BF93      		push r27
+ 460               	.LCFI29:
+ 461               		.cfi_def_cfa_offset 5
+ 462               		.cfi_offset 27, -4
+ 463               	/* prologue: Signal */
+ 464               	/* frame size = 0 */
+ 465               	/* stack size = 3...7 */
+ 466               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+  83:InputCapture.cpp **** 	Timer1_OvfCnt++;
+ 467               		.loc 1 83 2 view .LVU72
+ 468               		.loc 1 83 15 is_stmt 0 view .LVU73
+ 469 020c 8091 0000 		lds r24,Timer1_OvfCnt
+ 470 0210 9091 0000 		lds r25,Timer1_OvfCnt+1
+ 471 0214 A091 0000 		lds r26,Timer1_OvfCnt+2
+ 472 0218 B091 0000 		lds r27,Timer1_OvfCnt+3
+ 473 021c 0196      		adiw r24,1
+ 474 021e A11D      		adc r26,__zero_reg__
+ 475 0220 B11D      		adc r27,__zero_reg__
+ 476 0222 8093 0000 		sts Timer1_OvfCnt,r24
+ 477 0226 9093 0000 		sts Timer1_OvfCnt+1,r25
+ 478 022a A093 0000 		sts Timer1_OvfCnt+2,r26
+ 479 022e B093 0000 		sts Timer1_OvfCnt+3,r27
+ 480               	/* epilogue start */
+  84:InputCapture.cpp **** }
+ 481               		.loc 1 84 1 view .LVU74
+ 482 0232 BF91      		pop r27
+ 483 0234 AF91      		pop r26
+ 484 0236 9F91      		pop r25
+ 485 0238 8F91 1F90 		__gcc_isr 2
+ 485      1FBE 1F90 
+ 486 0240 1895      		reti
+ 487               		__gcc_isr 0,r24
+ 488               		.cfi_endproc
+ 489               	.LFE6:
+ 491               	.global	Timer1_OvfCnt
+ 492               		.section .bss
+ 495               	Timer1_OvfCnt:
+ 496 0000 0000 0000 		.zero	4
+ 497               	.global	lastCnt
+ 500               	lastCnt:
+ 501 0004 0000 0000 		.zero	4
+ 502               	.global	newCnt
+ 505               	newCnt:
+ 506 0008 0000 0000 		.zero	4
+ 507               	.global	BufTail
+ 510               	BufTail:
+ 511 000c 00        		.zero	1
+ 512               	.global	BufHead
+ 515               	BufHead:
+ 516 000d 00        		.zero	1
+ 517               	.global	CountBuffer
+ 520               	CountBuffer:
+ 521 000e 0000 0000 		.zero	32
+ 521      0000 0000 
+ 521      0000 0000 
+ 521      0000 0000 
+ 521      0000 0000 
+ 522               		.text
+ 523               	.Letext0:
+ 524               		.file 2 "/usr/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 InputCapture.cpp
+     /tmp/ccgliCYl.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccgliCYl.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccgliCYl.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccgliCYl.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccgliCYl.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccgliCYl.s:12     .text:0000000000000000 _Z17InputCapture_Initv
+     /tmp/ccgliCYl.s:51     .text:000000000000001e _Z19InputCapture_Enablev
+     /tmp/ccgliCYl.s:86     .text:000000000000003a _Z20InputCapture_Disablev
+     /tmp/ccgliCYl.s:116    .text:0000000000000050 _Z22InputCapture_Availablev
+     /tmp/ccgliCYl.s:515    .bss:000000000000000d BufHead
+     /tmp/ccgliCYl.s:510    .bss:000000000000000c BufTail
+     /tmp/ccgliCYl.s:142    .text:0000000000000062 _Z21InputCapture_GetCountv
+     /tmp/ccgliCYl.s:520    .bss:000000000000000e CountBuffer
+     /tmp/ccgliCYl.s:209    .text:00000000000000a4 __vector_12
+                            *ABS*:0000000000000004 __gcc_isr.n_pushed.001
+     /tmp/ccgliCYl.s:505    .bss:0000000000000008 newCnt
+     /tmp/ccgliCYl.s:495    .bss:0000000000000000 Timer1_OvfCnt
+     /tmp/ccgliCYl.s:500    .bss:0000000000000004 lastCnt
+     /tmp/ccgliCYl.s:446    .text:00000000000001fc __vector_15
+                            *ABS*:0000000000000003 __gcc_isr.n_pushed.002
+
+UNDEFINED SYMBOLS
+__muluhisi3
+__do_clear_bss

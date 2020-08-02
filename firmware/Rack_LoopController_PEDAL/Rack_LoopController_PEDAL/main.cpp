@@ -45,7 +45,7 @@ int main(void)
     while (1) 
     {
 		/* Handle incoming data from Master */
-		while (UART_Available())
+		while (UART_RxAvailable())
 		{
 			MasterCom_Receive();
 		}
@@ -67,7 +67,7 @@ int main(void)
 		{
 			MasterCom_DelayTxFlag = false;
 			
-			if (!UART_QueueIsEmpty())
+			if (UART_TxAvailable())
 			{
 				MasterCom_Transmit();
 			}

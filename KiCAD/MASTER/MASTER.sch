@@ -5257,7 +5257,7 @@ F 3 "" H 5100 3200 50  0001 C CNN
 	1    5200 2300
 	-1   0    0    -1  
 $EndComp
-Text Label 8250 6000 2    50   ~ 0
+Text Label 8250 7900 2    50   ~ 0
 Mute_signal
 $Comp
 L Amplifier_Operational:RC4558 U?
@@ -5493,9 +5493,6 @@ F 3 "" H 4700 3750 50  0001 C CNN
 	1    4800 2850
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	8350 6000 8250 6000
-NoConn ~ 8350 7900
 NoConn ~ 8350 7800
 $Comp
 L Device:CP C?
@@ -5793,4 +5790,7 @@ Wire Wire Line
 	4200 1550 4200 1650
 Wire Wire Line
 	4200 1250 4200 1050
+Wire Wire Line
+	8350 7900 8250 7900
+NoConn ~ 8350 6000
 $EndSCHEMATC

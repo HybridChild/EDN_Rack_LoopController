@@ -1358,12 +1358,6 @@ F 3 "" H 800 6200 50  0001 C CNN
 	1    800  6200
 	1    0    0    -1  
 $EndComp
-Wire Wire Line
-	3200 7300 3950 7300
-Wire Wire Line
-	3450 5850 3950 5850
-Wire Wire Line
-	3950 5850 3950 7300
 Connection ~ 1850 6800
 Wire Wire Line
 	1850 7300 1850 6800
@@ -1385,9 +1379,7 @@ Wire Wire Line
 Text Label 3450 5550 0    50   ~ 0
 TX_Pedal
 Connection ~ 3450 6700
-Wire Wire Line
-	3550 6700 3450 6700
-Text Label 3550 6700 0    50   ~ 0
+Text Label 3850 6700 0    50   ~ 0
 RX_Pedal
 Wire Wire Line
 	2750 6800 1850 6800
@@ -1575,7 +1567,7 @@ F 3 "http://www.ti.com/lit/gpn/sn74HC14" H 2900 7300 50  0001 C CNN
 	4    2900 7300
 	-1   0    0    1   
 $EndComp
-Text Label 4050 7300 0    50   ~ 0
+Text Label 3850 7300 0    50   ~ 0
 RX_TX_Select
 Text Label 12150 8500 0    50   ~ 0
 Sig_Relay1
@@ -3671,9 +3663,6 @@ Wire Wire Line
 	10250 7600 10600 7600
 Connection ~ 10600 7600
 Wire Wire Line
-	4050 7300 3950 7300
-Connection ~ 3950 7300
-Wire Wire Line
 	13350 7700 13400 7700
 Wire Wire Line
 	13350 7600 13400 7600
@@ -5692,12 +5681,12 @@ Wire Wire Line
 $Comp
 L Device:R R?
 U 1 1 6469E0EC
-P 4200 1450
-F 0 "R?" H 4270 1496 50  0000 L CNN
-F 1 "2,2M" H 4270 1405 50  0000 L CNN
-F 2 "" V 4130 1450 50  0001 C CNN
-F 3 "~" H 4200 1450 50  0001 C CNN
-	1    4200 1450
+P 4200 1400
+F 0 "R?" H 4270 1446 50  0000 L CNN
+F 1 "2,2M" H 4270 1355 50  0000 L CNN
+F 2 "" V 4130 1400 50  0001 C CNN
+F 3 "~" H 4200 1400 50  0001 C CNN
+	1    4200 1400
 	-1   0    0    -1  
 $EndComp
 Wire Wire Line
@@ -5713,8 +5702,6 @@ F 3 "" H 4200 1650 50  0001 C CNN
 	1    4200 1650
 	-1   0    0    -1  
 $EndComp
-Wire Wire Line
-	4200 1650 4200 1600
 Wire Wire Line
 	4450 1200 4450 1050
 Wire Wire Line
@@ -5745,8 +5732,6 @@ F 3 "~" H 4100 900 50  0001 C CNN
 	0    1    -1   0   
 $EndComp
 Wire Wire Line
-	4200 1300 4200 1050
-Wire Wire Line
 	4200 1050 4450 1050
 Connection ~ 4450 1050
 Wire Wire Line
@@ -5769,13 +5754,7 @@ Wire Wire Line
 	4250 900  4300 900 
 Connection ~ 4300 900 
 Wire Wire Line
-	4800 1400 4800 1900
-Wire Wire Line
-	4800 1900 5400 1900
-Wire Wire Line
 	5400 1900 5400 2300
-Wire Wire Line
-	4700 1400 4800 1400
 Connection ~ 5400 2300
 Wire Wire Line
 	5400 2300 6000 2300
@@ -5793,4 +5772,25 @@ $EndComp
 Wire Wire Line
 	6100 2300 6000 2300
 Connection ~ 6000 2300
+Wire Wire Line
+	3450 5850 3750 5850
+Wire Wire Line
+	3200 7300 3750 7300
+Wire Wire Line
+	3750 7300 3750 5850
+Wire Wire Line
+	3850 7300 3750 7300
+Connection ~ 3750 7300
+Wire Wire Line
+	3450 6700 3850 6700
+Wire Wire Line
+	5000 1400 5000 1900
+Wire Wire Line
+	4700 1400 5000 1400
+Wire Wire Line
+	5000 1900 5400 1900
+Wire Wire Line
+	4200 1550 4200 1650
+Wire Wire Line
+	4200 1250 4200 1050
 $EndSCHEMATC

@@ -7,6 +7,7 @@
 #include "MCP23017.h"
 #include "PedalCom.h"
 #include "System.h"
+#include "Tuner.h"
 
 void Timer0_Init()
 {
@@ -83,6 +84,16 @@ ISR(TIMER0_COMPA_vect)
 		{
 			PedalCom_FullFrameTimeoutOvfCnt = 0;	// Stop counter
 			PedalCom_FullFrameTimeoutFlag = true;
+		}
+	}
+
+	/* Overflow counter for updating Pedal display in Tuner mode */
+	if (Tuner_TransmitTimerOvfCnt)
+	{
+		if (++Tuner_TransmitTimerOvfCnt > TUNER_TRANSMIT_TIMEOUT)
+		{
+			Tuner_TransmitTimerOvfCnt = 1;	// Auto-reset counter
+			Tuner_TransmitTimerFlag = true;
 		}
 	}
 	

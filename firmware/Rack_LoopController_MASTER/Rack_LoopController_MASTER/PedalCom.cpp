@@ -84,12 +84,12 @@ void PedalCom_Init()
 	UCSR0B |= (1 << TXCIE0);
 }
 
-uint8_t PedalCom_RxAvailable()
+bool PedalCom_RxAvailable()
 {
 	return (RxHead != RxTail);
 }
 
-uint8_t PedalCom_TxAvailable()
+bool PedalCom_TxAvailable()
 {
 	return (TxHead != TxTail);
 }

@@ -14,12 +14,14 @@
 #include "Timer.h"
 #include "i2cmaster.h"
 #include "UART.h"
+#include "InputCapture.h"
 #include "RotaryEncoder.h"
 #include "SP10281_3x7segment.h"
 #include "MCP23017.h"
 #include "UI.h"
 #include "PedalCom.h"
 #include "MIDI.h"
+#include "Tuner.h"
 #include "System.h"
 
 /* Main application */
@@ -31,7 +33,10 @@ int main(void)
 	UART0_Init(PEDAL_UART_BAUDRATE, UART_2_STOP_BITS, UART_NO_PARITY);
 	UART1_Init(MIDI_UART_BAUDRATE, UART_1_STOP_BIT, UART_NO_PARITY);
 	PedalCom_Init();
+	InputCapture_Init();
 	
+	Tuner_Init();
+	Tuner_Disable();
 	RotaryEncoder_Init();
 	SP10281_Init();
 	UI_Init();
@@ -43,11 +48,12 @@ int main(void)
     while (1) 
     {
 		/* Handle incoming MIDI */
-		if (UART1_Available())
+		if (UART1_RxAvailable())
 		{
 			MIDI_ReceiveIncoming();
 		}
 		
+		/* Handle received MIDI program change */
 		if (MIDI_ProgramChangeFlag)
 		{
 			MIDI_ProgramChangeFlag = false;
@@ -55,7 +61,7 @@ int main(void)
 		}
 		
 		/* Handle incoming data from Pedal */
-		while (UART0_Available())
+		while (UART0_RxAvailable())
 		{
 			PedalCom_Receive();
 		}
@@ -77,7 +83,7 @@ int main(void)
 		{
 			PedalCom_DelayTxFlag = false;
 			
-			if (!UART0_QueueIsEmpty())
+			if (UART0_TxAvailable())
 			{
 				PedalCom_Transmit();
 			}

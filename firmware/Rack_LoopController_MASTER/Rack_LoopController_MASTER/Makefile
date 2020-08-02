@@ -84,7 +84,7 @@ SRC =
 
 
 # List C++ source files here. (C dependencies are automatically generated.)
-CPPSRC = $(TARGET).cpp i2cmaster.cpp MCP23017.cpp MIDI.cpp PedalCom.cpp RotaryEncoder.cpp SP10281_3x7segment.cpp System.cpp Timer.cpp UART.cpp UI.cpp util.cpp
+CPPSRC = $(TARGET).cpp i2cmaster.cpp InputCapture.cpp MCP23017.cpp MIDI.cpp PedalCom.cpp RotaryEncoder.cpp SP10281_3x7segment.cpp System.cpp Timer.cpp Tuner.cpp UART.cpp UI.cpp util.cpp
 
 
 # List Assembler source files here.

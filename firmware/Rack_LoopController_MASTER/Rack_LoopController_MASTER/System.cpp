@@ -8,10 +8,12 @@
 #include <avr/eeprom.h>
 #include "System.h"
 #include "MCP23017.h"
+#include "InputCapture.h"
 #include "SP10281_3x7segment.h"
 #include "RotaryEncoder.h"
 #include "PedalCom.h"
 #include "UI.h"
+#include "Tuner.h"
 #include "util.h"
 
 void System_UpdateUI_LEDs();
@@ -114,12 +116,17 @@ void System_Run()
 		
 		case INITIALIZE_SYSTEM:			
 			/* Write active preset to 7-segment display */
-			SP10281_WriteNumber(ActivePreset+1);
+			SP10281_WriteNumber(ActivePreset + 1);
 			
 			/* Update mode LEDs */
 			ModeRunLED.Set();
 			ModeEditPresetLED.Clear();
 			ModeEditMidiLED.Clear();
+
+			if (LastSystemState == TUNER)
+			{
+				Tuner_Disable();
+			}
 			
 			/* Set appropriate System State */
 			if (SystemRunMode == RUN_PRESET_MODE)
@@ -199,8 +206,31 @@ void System_Run()
 			break;
 		
 		case ENTER_TUNER:
-		
+			/* Activate tuner function */
+			Tuner_Enable();
+
+			/* Update 7-segment display */
+			SP10281_WriteAll('t', 'u', 'n', 0, 0, 0);
+			
+			SystemState = TUNER;
+
 		case TUNER:
+			/* Analyze InputCapture data if new counts are available */
+			if (InputCapture_Available())
+			{
+				Tuner_FetchCounts();
+				Tuner_DetectFrequency();
+			}
+
+			if (Tuner_TransmitTimerFlag)
+			{
+				Tuner_TransmitTimerFlag = false;
+
+				Tuner_GenerateDisplayData();
+				PedalCom_QueueCommand(UpdateTunerLEDs, 2, (uint8_t*)&Tuner_LED_Data);
+				PedalCom_QueueCommand(Update7segments, 4, (uint8_t*)&Tuner_7seg_Data);
+			}
+
 			break;
 		
 		case ENTER_EDIT_UI_MODE:
@@ -718,7 +748,7 @@ unsigned char System_HandlePedalCommand(CMD cmd, uint8_t length, uint8_t *dat)
 	{
 		if (SystemState == RUN_PRESET_CTRL || SystemState == RUN_LOOP_CTRL)
 		{
-			SystemState = TUNER;
+			SystemState = ENTER_TUNER;
 		}
 		else if (SystemState == TUNER)
 		{
