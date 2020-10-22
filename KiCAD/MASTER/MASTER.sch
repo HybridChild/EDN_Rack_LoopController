@@ -551,10 +551,10 @@ F 3 "" H 900 9100 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L Device:Rotary_Encoder_Switch SW?
+L Device:Rotary_Encoder_Switch SW2
 U 1 1 5E857C31
 P 1300 8900
-F 0 "SW?" H 1400 9150 50  0000 C CNN
+F 0 "SW2" H 1400 9150 50  0000 C CNN
 F 1 "Rotary_Encoder" H 1300 8650 50  0000 C CNN
 F 2 "" H 1150 9060 50  0001 C CNN
 F 3 "~" H 1300 9160 50  0001 C CNN
@@ -3386,10 +3386,10 @@ Wire Wire Line
 	13500 5400 13650 5400
 Connection ~ 13650 5400
 $Comp
-L Switch:SW_DPST SW?
+L Switch:SW_DPST SW1
 U 1 1 63151333
 P 10200 10450
-F 0 "SW?" H 10200 10250 50  0000 C CNN
+F 0 "SW1" H 10200 10250 50  0000 C CNN
 F 1 "SW_DPST" H 10200 10684 50  0001 C CNN
 F 2 "" H 10200 10450 50  0001 C CNN
 F 3 "~" H 10200 10450 50  0001 C CNN
@@ -3436,19 +3436,6 @@ Wire Wire Line
 	10450 10750 10500 10750
 $Comp
 L power:GND #PWR?
-U 1 1 6355E792
-P 1000 1800
-F 0 "#PWR?" H 1000 1550 50  0001 C CNN
-F 1 "GND" H 1005 1627 50  0001 C CNN
-F 2 "" H 1000 1800 50  0001 C CNN
-F 3 "" H 1000 1800 50  0001 C CNN
-	1    1000 1800
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	1000 1800 1000 1750
-$Comp
-L power:GND #PWR?
 U 1 1 637657AD
 P 5100 2850
 F 0 "#PWR?" H 5100 2600 50  0001 C CNN
@@ -3477,82 +3464,6 @@ Wire Wire Line
 	3900 900  3850 900 
 Wire Wire Line
 	3250 2100 3200 2100
-NoConn ~ 1000 1450
-Wire Wire Line
-	800  3500 800  3600
-$Comp
-L power:GND #PWR?
-U 1 1 63F0BE98
-P 800 3600
-F 0 "#PWR?" H 800 3350 50  0001 C CNN
-F 1 "GND" H 805 3427 50  0001 C CNN
-F 2 "" H 800 3600 50  0001 C CNN
-F 3 "" H 800 3600 50  0001 C CNN
-	1    800  3600
-	-1   0    0    -1  
-$EndComp
-$Comp
-L EDN-symbol:ZVN3306A Q?
-U 1 1 63F0BE9E
-P 900 3300
-F 0 "Q?" H 800 3450 50  0000 L CNN
-F 1 "ZVN3306A" V 1150 3100 50  0000 L CNN
-F 2 "Package_TO_SOT_THT:TO-92Flat" H 1700 3300 50  0001 C CIN
-F 3 "" H 800 4200 50  0001 C CNN
-	1    900  3300
-	-1   0    0    -1  
-$EndComp
-Wire Wire Line
-	800  3100 800  3050
-$Comp
-L power:+5VP #PWR?
-U 1 1 63F0BEA5
-P 800 2300
-F 0 "#PWR?" H 800 2150 50  0001 C CNN
-F 1 "+5VP" H 815 2473 50  0000 C CNN
-F 2 "" H 800 2300 50  0001 C CNN
-F 3 "" H 800 2300 50  0001 C CNN
-	1    800  2300
-	-1   0    0    -1  
-$EndComp
-Wire Wire Line
-	800  2400 800  2350
-$Comp
-L Diode:1N4148 D?
-U 1 1 63F0BEAC
-P 1100 2700
-F 0 "D?" V 1000 2700 50  0000 L CNN
-F 1 "1N4148" H 950 2600 50  0000 L CNN
-F 2 "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal" H 1100 2525 50  0001 C CNN
-F 3 "https://assets.nexperia.com/documents/data-sheet/1N4148_1N4448.pdf" H 1100 2700 50  0001 C CNN
-	1    1100 2700
-	0    -1   1    0   
-$EndComp
-Wire Wire Line
-	1100 2850 1100 3050
-Wire Wire Line
-	1100 3050 800  3050
-Connection ~ 800  3050
-Wire Wire Line
-	800  3050 800  3000
-Wire Wire Line
-	1100 2550 1100 2350
-Wire Wire Line
-	1100 2350 800  2350
-Connection ~ 800  2350
-Wire Wire Line
-	800  2350 800  2300
-$Comp
-L EDN-symbol:D2n_V23105 RL?
-U 2 1 63F0BEBA
-P 800 2700
-F 0 "RL?" H 850 2450 50  0000 L CNN
-F 1 "D2n_V23105" V 650 2450 50  0000 L CNN
-F 2 "" H 1400 3550 50  0001 C CNN
-F 3 "" H 1400 3550 50  0001 C CNN
-	2    800  2700
-	-1   0    0    -1  
-$EndComp
 $Comp
 L power:+12V #PWR?
 U 1 1 645655CA
@@ -3625,21 +3536,6 @@ Wire Wire Line
 	2350 1250 2600 1250
 Wire Wire Line
 	3000 1250 3100 1250
-$Comp
-L power:GND #PWR?
-U 1 1 64A070D2
-P 1000 1100
-F 0 "#PWR?" H 1000 850 50  0001 C CNN
-F 1 "GND" H 1005 927 50  0001 C CNN
-F 2 "" H 1000 1100 50  0001 C CNN
-F 3 "" H 1000 1100 50  0001 C CNN
-	1    1000 1100
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	1000 1100 1000 1050
-NoConn ~ 1000 750 
-NoConn ~ 1000 950 
 Wire Wire Line
 	9650 1800 9650 1750
 Wire Wire Line
@@ -4514,28 +4410,6 @@ $EndComp
 Wire Wire Line
 	4500 2500 4500 2450
 $Comp
-L power:+5VP #PWR?
-U 1 1 63F85D85
-P 1600 2750
-F 0 "#PWR?" H 1600 2600 50  0001 C CNN
-F 1 "+5VP" H 1615 2923 50  0000 C CNN
-F 2 "" H 1600 2750 50  0001 C CNN
-F 3 "" H 1600 2750 50  0001 C CNN
-	1    1600 2750
-	-1   0    0    -1  
-$EndComp
-$Comp
-L Device:R R?
-U 1 1 63F7CAE7
-P 1600 3000
-F 0 "R?" H 1670 3046 50  0000 L CNN
-F 1 "8,2k" H 1670 2955 50  0000 L CNN
-F 2 "" V 1530 3000 50  0001 C CNN
-F 3 "~" H 1600 3000 50  0001 C CNN
-	1    1600 3000
-	-1   0    0    -1  
-$EndComp
-$Comp
 L Device:R R?
 U 1 1 5F55BA3C
 P 4100 4200
@@ -4878,37 +4752,15 @@ F 3 "~" H 15050 1100 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:AudioJack2_Switch J23
+L Connector:AudioJack2_Switch J24
 U 1 1 60419AD2
 P 15550 1550
-F 0 "J23" H 15600 1850 50  0000 R CNN
-F 1 "To Poweramp" H 15550 1350 50  0000 C CNN
+F 0 "J24" H 15600 1850 50  0000 R CNN
+F 1 "To Preamp Return" V 15500 1000 50  0000 C CNN
 F 2 "" H 15550 1750 50  0001 C CNN
 F 3 "~" H 15550 1750 50  0001 C CNN
 	1    15550 1550
 	-1   0    0    1   
-$EndComp
-$Comp
-L Connector:AudioJack2_Switch J22
-U 1 1 6044B4F1
-P 800 1550
-F 0 "J22" H 800 1350 50  0000 R CNN
-F 1 "Front Input" H 700 1850 50  0000 C CNN
-F 2 "" H 800 1750 50  0001 C CNN
-F 3 "~" H 800 1750 50  0001 C CNN
-	1    800  1550
-	1    0    0    1   
-$EndComp
-$Comp
-L Connector:AudioJack2_Switch J?21
-U 1 1 605B3C64
-P 800 850
-F 0 "J?21" H 800 650 50  0000 R CNN
-F 1 "Rear Input" H 700 1150 50  0000 C CNN
-F 2 "" H 800 1050 50  0001 C CNN
-F 3 "~" H 800 1050 50  0001 C CNN
-	1    800  850 
-	1    0    0    1   
 $EndComp
 $Comp
 L Connector:AudioJack3_Switch J10
@@ -4937,7 +4789,7 @@ L Connector:AudioJack2_Switch J9
 U 1 1 607C0B69
 P 9950 1550
 F 0 "J9" H 10000 1350 50  0000 R CNN
-F 1 "To Preamp" H 9982 1884 50  0000 C CNN
+F 1 "To Preamp Input" V 9900 950 50  0000 C CNN
 F 2 "" H 9950 1750 50  0001 C CNN
 F 3 "~" H 9950 1750 50  0001 C CNN
 	1    9950 1550
@@ -4948,7 +4800,7 @@ L Connector:AudioJack2_Switch J19
 U 1 1 607C2006
 P 10450 1550
 F 0 "J19" H 10450 1350 50  0000 R CNN
-F 1 "From Preamp" H 10482 1884 50  0000 C CNN
+F 1 "From Preamp Send" V 10400 900 50  0000 C CNN
 F 2 "" H 10450 1750 50  0001 C CNN
 F 3 "~" H 10450 1750 50  0001 C CNN
 	1    10450 1550
@@ -4964,17 +4816,6 @@ F 2 "" H 1600 2000 50  0001 C CNN
 F 3 "" H 1600 2000 50  0001 C CNN
 	1    1600 2000
 	1    0    0    -1  
-$EndComp
-$Comp
-L EDN-symbol:D2n_V23105 RL?
-U 1 1 639DDD52
-P 1650 1200
-F 0 "RL?" H 1850 1450 50  0000 L CNN
-F 1 "D2n_V23105" H 1850 1450 50  0001 L CNN
-F 2 "" H 2250 2050 50  0001 C CNN
-F 3 "" H 2250 2050 50  0001 C CNN
-	1    1650 1200
-	1    0    0    1   
 $EndComp
 $Comp
 L Device:R R?
@@ -4999,10 +4840,10 @@ F 3 "~" H 2850 1900 50  0001 C CNN
 	0    1    -1   0   
 $EndComp
 $Comp
-L Connector:AudioJack2_Switch J?
+L Connector:AudioJack2_Switch J23
 U 1 1 61286484
 P 4750 900
-F 0 "J?" H 4800 1200 50  0000 R CNN
+F 0 "J23" H 4800 1200 50  0000 R CNN
 F 1 "Thru Out" H 4750 700 50  0000 C CNN
 F 2 "" H 4750 1100 50  0001 C CNN
 F 3 "~" H 4750 1100 50  0001 C CNN
@@ -5024,28 +4865,6 @@ NoConn ~ 4550 800
 NoConn ~ 4550 1000
 Wire Wire Line
 	3850 2000 3900 2000
-Wire Wire Line
-	1000 1550 1550 1550
-Wire Wire Line
-	1750 1550 1750 1500
-Wire Wire Line
-	1550 1550 1550 1500
-Connection ~ 1550 1550
-Wire Wire Line
-	1550 1550 1750 1550
-Wire Wire Line
-	1000 850  1550 850 
-Wire Wire Line
-	1550 850  1550 900 
-Wire Wire Line
-	1750 900  1750 850 
-Wire Wire Line
-	1750 850  1550 850 
-Connection ~ 1550 850 
-Wire Wire Line
-	1150 1200 1200 1200
-Wire Wire Line
-	2150 1200 2100 1200
 $Comp
 L Device:R R?
 U 1 1 6390D1A6
@@ -5176,31 +4995,6 @@ F 3 "" H 6450 4800 50  0001 C CNN
 	1    6450 4800
 	-1   0    0    -1  
 $EndComp
-Wire Wire Line
-	1600 3150 1600 3300
-Wire Wire Line
-	2150 1200 2150 750 
-Wire Wire Line
-	2150 750  1150 750 
-Wire Wire Line
-	1150 750  1150 1200
-Wire Wire Line
-	1600 2850 1600 2750
-Wire Wire Line
-	1000 1650 1300 1650
-Wire Wire Line
-	1300 1650 1300 3300
-Connection ~ 1300 3300
-Wire Wire Line
-	1300 3300 1600 3300
-Wire Wire Line
-	1050 3300 1300 3300
-Wire Wire Line
-	2150 1200 2150 1900
-Connection ~ 2150 1200
-Connection ~ 2150 1900
-Wire Wire Line
-	2150 1900 2700 1900
 Wire Wire Line
 	3000 1900 3100 1900
 Wire Wire Line
@@ -5348,8 +5142,6 @@ Wire Wire Line
 Connection ~ 5650 3250
 Wire Wire Line
 	1700 1900 1600 1900
-Wire Wire Line
-	2000 1900 2150 1900
 Wire Wire Line
 	1600 1900 1600 2000
 Connection ~ 2650 3500
@@ -5793,4 +5585,74 @@ Wire Wire Line
 Wire Wire Line
 	8350 7900 8250 7900
 NoConn ~ 8350 6000
+Wire Wire Line
+	2000 1900 2150 1900
+Wire Wire Line
+	2150 1550 2150 1900
+Connection ~ 2150 1900
+Wire Wire Line
+	2150 1900 2700 1900
+NoConn ~ 1200 1650
+$Comp
+L Connector:AudioJack2_Switch J21
+U 1 1 605B3C64
+P 1000 850
+F 0 "J21" H 1000 650 50  0000 R CNN
+F 1 "Rear Input" H 900 1150 50  0000 C CNN
+F 2 "" H 1000 1050 50  0001 C CNN
+F 3 "~" H 1000 1050 50  0001 C CNN
+	1    1000 850 
+	1    0    0    1   
+$EndComp
+$Comp
+L Connector:AudioJack2_Switch J22
+U 1 1 6044B4F1
+P 1000 1550
+F 0 "J22" H 1000 1350 50  0000 R CNN
+F 1 "Front Input" H 900 1850 50  0000 C CNN
+F 2 "" H 1000 1750 50  0001 C CNN
+F 3 "~" H 1000 1750 50  0001 C CNN
+	1    1000 1550
+	1    0    0    1   
+$EndComp
+NoConn ~ 1200 950 
+NoConn ~ 1200 750 
+$Comp
+L power:GND #PWR?
+U 1 1 64A070D2
+P 1250 1150
+F 0 "#PWR?" H 1250 900 50  0001 C CNN
+F 1 "GND" H 1255 977 50  0001 C CNN
+F 2 "" H 1250 1150 50  0001 C CNN
+F 3 "" H 1250 1150 50  0001 C CNN
+	1    1250 1150
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 6355E792
+P 1250 2000
+F 0 "#PWR?" H 1250 1750 50  0001 C CNN
+F 1 "GND" H 1255 1827 50  0001 C CNN
+F 2 "" H 1250 2000 50  0001 C CNN
+F 3 "" H 1250 2000 50  0001 C CNN
+	1    1250 2000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	2150 1550 1200 1550
+Wire Wire Line
+	1250 2000 1250 1750
+Wire Wire Line
+	1250 1750 1200 1750
+Wire Wire Line
+	1250 1150 1250 1050
+Wire Wire Line
+	1250 1050 1200 1050
+Wire Wire Line
+	1400 850  1400 1450
+Wire Wire Line
+	1200 1450 1400 1450
+Wire Wire Line
+	1200 850  1400 850 
 $EndSCHEMATC
