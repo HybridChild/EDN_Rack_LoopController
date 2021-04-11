@@ -4443,7 +4443,7 @@ Wire Wire Line
 	6050 4400 6050 3800
 Wire Wire Line
 	6050 3800 6000 3800
-Text Label 7100 4400 0    50   ~ 0
+Text Label 7400 4400 0    50   ~ 0
 Tuner_signal
 $Comp
 L Device:C C?
@@ -4882,7 +4882,7 @@ L Connector:AudioJack2_Switch J23
 U 1 1 60419AD2
 P 15550 1550
 F 0 "J23" H 15600 1850 50  0000 R CNN
-F 1 "To Poweramp" H 15550 1350 50  0000 C CNN
+F 1 "To FX Return" H 15550 1325 50  0000 C CNN
 F 2 "" H 15550 1750 50  0001 C CNN
 F 3 "~" H 15550 1750 50  0001 C CNN
 	1    15550 1550
@@ -4937,7 +4937,7 @@ L Connector:AudioJack2_Switch J9
 U 1 1 607C0B69
 P 9950 1550
 F 0 "J9" H 10000 1350 50  0000 R CNN
-F 1 "To Preamp" H 9982 1884 50  0000 C CNN
+F 1 "To Preamp In" H 9925 1925 50  0000 C CNN
 F 2 "" H 9950 1750 50  0001 C CNN
 F 3 "~" H 9950 1750 50  0001 C CNN
 	1    9950 1550
@@ -4948,7 +4948,7 @@ L Connector:AudioJack2_Switch J19
 U 1 1 607C2006
 P 10450 1550
 F 0 "J19" H 10450 1350 50  0000 R CNN
-F 1 "From Preamp" H 10482 1884 50  0000 C CNN
+F 1 "From FX Send" H 10400 1850 50  0000 C CNN
 F 2 "" H 10450 1750 50  0001 C CNN
 F 3 "~" H 10450 1750 50  0001 C CNN
 	1    10450 1550
@@ -5793,4 +5793,32 @@ Wire Wire Line
 Wire Wire Line
 	8350 7900 8250 7900
 NoConn ~ 8350 6000
+$Comp
+L dk_Rectangular-Connectors-Headers-Male-Pins:22-23-2021 J?
+U 1 1 5FA352BF
+P 7200 4550
+F 0 "J?" H 7378 4558 50  0000 L CNN
+F 1 "22-23-2021" H 7378 4513 50  0001 L CNN
+F 2 "digikey-footprints:PinHeader_1x2_P2.54mm_Drill1.02mm" H 7400 4750 60  0001 L CNN
+F 3 "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf" H 7400 4850 60  0001 L CNN
+F 4 "WM4200-ND" H 7400 4950 60  0001 L CNN "Digi-Key_PN"
+F 5 "22-23-2021" H 7400 5050 60  0001 L CNN "MPN"
+F 6 "Connectors, Interconnects" H 7400 5150 60  0001 L CNN "Category"
+F 7 "Rectangular Connectors - Headers, Male Pins" H 7400 5250 60  0001 L CNN "Family"
+F 8 "https://media.digikey.com/pdf/Data%20Sheets/Molex%20PDFs/A-6373-N_Series_Dwg_2010-12-03.pdf" H 7400 5350 60  0001 L CNN "DK_Datasheet_Link"
+F 9 "/product-detail/en/molex/22-23-2021/WM4200-ND/26667" H 7400 5450 60  0001 L CNN "DK_Detail_Page"
+F 10 "CONN HEADER VERT 2POS 2.54MM" H 7400 5550 60  0001 L CNN "Description"
+F 11 "Molex" H 7400 5650 60  0001 L CNN "Manufacturer"
+F 12 "Active" H 7400 5750 60  0001 L CNN "Status"
+	1    7200 4550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7400 4400 7300 4400
+Wire Wire Line
+	7300 4400 7300 4450
+Wire Wire Line
+	7200 4450 7200 4400
+Wire Wire Line
+	7200 4400 7100 4400
 $EndSCHEMATC
